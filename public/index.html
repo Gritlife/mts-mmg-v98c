@@ -1,0 +1,681 @@
+import { useState, useEffect, useRef, useCallback } from “react”;
+
+const SP500 = [
+{t:“AAPL”,n:“Apple Inc.”},{t:“MSFT”,n:“Microsoft Corp.”},{t:“NVDA”,n:“NVIDIA Corp.”},
+{t:“GOOGL”,n:“Alphabet Inc.”},{t:“AMZN”,n:“Amazon.com Inc.”},{t:“META”,n:“Meta Platforms”},
+{t:“TSLA”,n:“Tesla Inc.”},{t:“JPM”,n:“JPMorgan Chase”},{t:“V”,n:“Visa Inc.”},
+{t:“WMT”,n:“Walmart Inc.”},{t:“JNJ”,n:“Johnson & Johnson”},{t:“PG”,n:“Procter & Gamble”},
+{t:“MA”,n:“Mastercard Inc.”},{t:“HD”,n:“Home Depot Inc.”},{t:“MCD”,n:“McDonald’s Corp.”},
+{t:“NFLX”,n:“Netflix Inc.”},{t:“CRM”,n:“Salesforce Inc.”},{t:“AMD”,n:“Adv. Micro Devices”},
+{t:“TXN”,n:“Texas Instruments”},{t:“CSCO”,n:“Cisco Systems”},{t:“SBUX”,n:“Starbucks Corp.”},
+{t:“ADBE”,n:“Adobe Inc.”},{t:“NKE”,n:“Nike Inc.”},{t:“AVGO”,n:“Broadcom Inc.”},
+{t:“COST”,n:“Costco Wholesale”},{t:“LMT”,n:“Lockheed Martin”},{t:“QCOM”,n:“Qualcomm Inc.”},
+{t:“AMAT”,n:“Applied Materials”},{t:“DDOG”,n:“Datadog Inc.”},{t:“BAC”,n:“Bank of America”},
+{t:“GS”,n:“Goldman Sachs”},{t:“MS”,n:“Morgan Stanley”},{t:“UNH”,n:“UnitedHealth Group”},
+{t:“ABBV”,n:“AbbVie Inc.”},{t:“CVX”,n:“Chevron Corp.”},{t:“XOM”,n:“Exxon Mobil”},
+{t:“PFE”,n:“Pfizer Inc.”},{t:“RTX”,n:“Raytheon Tech.”},{t:“CAT”,n:“Caterpillar Inc.”},
+{t:“GE”,n:“GE Aerospace”},{t:“C”,n:“Citigroup Inc.”},{t:“INTU”,n:“Intuit Inc.”},
+{t:“BKNG”,n:“Booking Holdings”},{t:“MU”,n:“Micron Technology”},{t:“REGN”,n:“Regeneron Pharma”},
+{t:“VRTX”,n:“Vertex Pharma”},{t:“CI”,n:“Cigna Group”},{t:“SPGI”,n:“S&P Global Inc.”},
+{t:“PM”,n:“Philip Morris Intl.”},{t:“AXP”,n:“American Express”},{t:“PEP”,n:“PepsiCo Inc.”},
+{t:“KO”,n:“Coca-Cola Co.”},{t:“GILD”,n:“Gilead Sciences”},{t:“NET”,n:“Cloudflare Inc.”},
+{t:“CRWD”,n:“CrowdStrike”},{t:“FTNT”,n:“Fortinet Inc.”},{t:“ZTS”,n:“Zoetis Inc.”},
+{t:“SYK”,n:“Stryker Corp.”},{t:“MMM”,n:“3M Company”},{t:“IBM”,n:“IBM Corp.”},
+{t:“TMO”,n:“Thermo Fisher Sci.”},{t:“DHR”,n:“Danaher Corp.”},{t:“BMY”,n:“Bristol-Myers Squibb”},
+{t:“AMGN”,n:“Amgen Inc.”},{t:“ISRG”,n:“Intuitive Surgical”},{t:“HUM”,n:“Humana Inc.”},
+{t:“CVS”,n:“CVS Health”},{t:“MCK”,n:“McKesson Corp.”},{t:“MRVL”,n:“Marvell Technology”}
+];
+const DOW30 = [
+{t:“AAPL”,n:“Apple Inc.”},{t:“MSFT”,n:“Microsoft Corp.”},{t:“JPM”,n:“JPMorgan Chase”},
+{t:“V”,n:“Visa Inc.”},{t:“WMT”,n:“Walmart Inc.”},{t:“JNJ”,n:“Johnson & Johnson”},
+{t:“PG”,n:“Procter & Gamble”},{t:“HD”,n:“Home Depot Inc.”},{t:“MCD”,n:“McDonald’s Corp.”},
+{t:“CSCO”,n:“Cisco Systems”},{t:“AMGN”,n:“Amgen Inc.”},{t:“NKE”,n:“Nike Inc.”},
+{t:“GS”,n:“Goldman Sachs”},{t:“UNH”,n:“UnitedHealth Group”},{t:“CAT”,n:“Caterpillar Inc.”},
+{t:“BA”,n:“Boeing Co.”},{t:“AXP”,n:“American Express”},{t:“TRV”,n:“Travelers Companies”},
+{t:“CVX”,n:“Chevron Corp.”},{t:“IBM”,n:“IBM Corp.”},{t:“MMM”,n:“3M Company”},
+{t:“MRK”,n:“Merck & Co.”},{t:“DIS”,n:“Walt Disney Co.”},{t:“KO”,n:“Coca-Cola Co.”},
+{t:“HON”,n:“Honeywell Intl.”},{t:“VZ”,n:“Verizon Comms.”},{t:“DOW”,n:“Dow Inc.”},
+{t:“INTC”,n:“Intel Corp.”},{t:“SHW”,n:“Sherwin-Williams”},{t:“CRM”,n:“Salesforce Inc.”}
+];
+const RUT2K = [
+{t:“SMCI”,n:“Super Micro Computer”},{t:“CHWY”,n:“Chewy Inc.”},{t:“RKT”,n:“Rocket Companies”},
+{t:“RIVN”,n:“Rivian Automotive”},{t:“LCID”,n:“Lucid Group”},{t:“JOBY”,n:“Joby Aviation”},
+{t:“COIN”,n:“Coinbase Global”},{t:“HOOD”,n:“Robinhood Markets”},{t:“AFRM”,n:“Affirm Holdings”},
+{t:“UPST”,n:“Upstart Holdings”},{t:“SOFI”,n:“SoFi Technologies”},{t:“OPEN”,n:“Opendoor Tech.”},
+{t:“BLNK”,n:“Blink Charging”},{t:“PLUG”,n:“Plug Power Inc.”},{t:“FCEL”,n:“FuelCell Energy”},
+{t:“SNDX”,n:“Syndax Pharma”},{t:“PRCT”,n:“Procept BioRobotics”},{t:“ACVA”,n:“ACV Auctions”},
+{t:“BBIO”,n:“BridgeBio Pharma”},{t:“TMDX”,n:“TransMedics Group”}
+];
+const UNIVERSES = { SP500, DOW30, RUT2K };
+
+// ============================================================
+// INDICATORS
+// ============================================================
+function calcEMA(data, period) {
+if (data.length < 2) return null;
+const p = Math.min(period, data.length);
+const k = 2 / (p + 1);
+let ema = data.slice(0, p).reduce((a, b) => a + b, 0) / p;
+for (let i = p; i < data.length; i++) ema = data[i] * k + ema * (1 - k);
+return ema;
+}
+
+function calcSAR(bars, step = 0.02, maxStep = 0.2) {
+if (bars.length < 3) return null;
+let bull = bars[1].c > bars[0].c;
+let af = step, ep = bull ? bars[0].l : bars[0].h;
+let sar = bull ? bars[0].l - atrOf(bars[0]) : bars[0].h + atrOf(bars[0]);
+for (let i = 1; i < bars.length; i++) {
+sar = sar + af * (ep - sar);
+if (bull) {
+sar = Math.min(sar, bars[Math.max(0,i-1)].l, bars[Math.max(0,i-2)].l);
+if (bars[i].l < sar) { bull = false; af = step; ep = bars[i].l; sar = bars[i].h; }
+else if (bars[i].h > ep) { ep = bars[i].h; af = Math.min(af+step, maxStep); }
+} else {
+sar = Math.max(sar, bars[Math.max(0,i-1)].h, bars[Math.max(0,i-2)].h);
+if (bars[i].h > sar) { bull = true; af = step; ep = bars[i].h; sar = bars[i].l; }
+else if (bars[i].l < ep) { ep = bars[i].l; af = Math.min(af+step, maxStep); }
+}
+}
+return { sar, bull };
+}
+
+function atrOf(bar) { return (bar.h - bar.l) || bar.c * 0.01; }
+
+function calcBB(closes, period = 20, mult = 2) {
+if (closes.length < 5) return null;
+const p = Math.min(period, closes.length);
+const slice = closes.slice(-p);
+const mean = slice.reduce((a,b) => a+b, 0) / p;
+const std = Math.sqrt(slice.reduce((s,v) => s+Math.pow(v-mean,2), 0) / p);
+return { upper: mean+mult*std, middle: mean, lower: mean-mult*std, std, bandwidth: std/mean };
+}
+
+function calcATR(bars, period = 14) {
+if (bars.length < 2) return bars[0] ? bars[0].h - bars[0].l : 0;
+const n = Math.min(period, bars.length-1);
+let sum = 0;
+for (let i = 0; i < n; i++) {
+const tr = Math.max(bars[i].h - bars[i].l, Math.abs(bars[i].h - bars[i+1]?.c||0), Math.abs(bars[i].l - bars[i+1]?.c||0));
+sum += tr;
+}
+return sum / n;
+}
+
+function detectBullFlag(bars) {
+if (bars.length < 15) return false;
+const pole = bars.slice(-20, -8);
+const flag = bars.slice(-8);
+if (pole.length < 5) return false;
+const poleGain = (pole[pole.length-1].c - pole[0].c) / pole[0].c;
+const flagRange = (Math.max(…flag.map(b=>b.h)) - Math.min(…flag.map(b=>b.l))) / pole[pole.length-1].c;
+return poleGain > 0.02 && flagRange < poleGain * 0.6;
+}
+
+function detectBearFlag(bars) {
+if (bars.length < 15) return false;
+const pole = bars.slice(-20, -8);
+const flag = bars.slice(-8);
+if (pole.length < 5) return false;
+const poleDrop = (pole[0].c - pole[pole.length-1].c) / pole[0].c;
+const flagRange = (Math.max(…flag.map(b=>b.h)) - Math.min(…flag.map(b=>b.l))) / pole[0].c;
+return poleDrop > 0.02 && flagRange < poleDrop * 0.6;
+}
+
+function detectVShape(bars) {
+if (bars.length < 6) return false;
+const mid = Math.floor(bars.length/2);
+const firstHalf = bars.slice(0, mid);
+const secondHalf = bars.slice(mid);
+const dropped = firstHalf[firstHalf.length-1].c < firstHalf[0].c * 0.98;
+const recovered = secondHalf[secondHalf.length-1].c > secondHalf[0].c * 1.01;
+return dropped && recovered;
+}
+
+function calcORB(minuteBars) {
+if (!minuteBars || minuteBars.length < 5) return null;
+const orbBars = minuteBars.slice(0, Math.min(30, Math.floor(minuteBars.length * 0.15) + 1));
+const orbHigh = Math.max(…orbBars.map(b=>b.h));
+const orbLow  = Math.min(…orbBars.map(b=>b.l));
+const last = minuteBars[minuteBars.length-1].c;
+return { orbHigh, orbLow, breakoutUp: last > orbHigh * 1.001, breakoutDown: last < orbLow * 0.999 };
+}
+
+function calcChannel(bars) {
+if (bars.length < 5) return null;
+const n = bars.length;
+const linReg = pts => {
+const sx = pts.reduce((s,p)=>s+p.x,0), sy = pts.reduce((s,p)=>s+p.y,0);
+const sxy = pts.reduce((s,p)=>s+p.x*p.y,0), sx2 = pts.reduce((s,p)=>s+p.x*p.x,0);
+const m = (n*sxy-sx*sy)/(n*sx2-sx*sx||1);
+return { m, b: (sy-m*sx)/n };
+};
+const upper = linReg(bars.map((b,i)=>({x:i,y:b.h})));
+const lower = linReg(bars.map((b,i)=>({x:i,y:b.l})));
+const uVal = upper.m*(n-1)+upper.b;
+const lVal = lower.m*(n-1)+lower.b;
+const close = bars[n-1].c;
+const pos = uVal > lVal ? (close-lVal)/(uVal-lVal) : 0.5;
+return { channelDir: upper.m > 0.001 ? 1 : upper.m < -0.001 ? -1 : 0, posInChannel: pos, uVal, lVal };
+}
+
+// ============================================================
+// SCORING
+// ============================================================
+function scoreStock(stock, snap, dailyBars, minuteBars) {
+if (!snap) return null;
+
+const day = snap.day || {};
+const prevDay = snap.prevDay || {};
+const lastTrade = snap.lastTrade || {};
+
+const close = day.c || lastTrade.p || prevDay.c;
+const open  = day.o || prevDay.c || close;
+const high  = day.h || close;
+const low   = day.l || close;
+const vol   = day.v || 0;
+const vwap  = day.vw || ((high+low+close)/3);
+
+if (!close || close <= 0) return null;
+
+// Avg vol
+let avgVol = vol;
+if (dailyBars.length >= 3) {
+const n = Math.min(dailyBars.length, 20);
+avgVol = dailyBars.slice(0,n).reduce((s,b)=>s+b.v,0)/n;
+}
+const relVol = avgVol > 0 ? vol/avgVol : 1.0;
+
+// ATR
+const atr = dailyBars.length >= 2 ? calcATR(dailyBars) : high-low || close*0.01;
+
+const prevClose = prevDay.c || open;
+const changePct = prevClose > 0 ? ((close-prevClose)/prevClose)*100 : 0;
+
+// Use minute bars if we have enough, else daily
+const intradayBars = (minuteBars && minuteBars.length >= 5) ? minuteBars : null;
+const barsUsed = intradayBars || dailyBars;
+const closes = barsUsed.map(b=>b.c);
+
+const signals = [];
+
+// 1. EMA21 vs price
+const ema21 = calcEMA([…closes, close], 21);
+if (ema21) signals.push({ name:“EMA21”, bull: close > ema21 });
+
+// 2. VWAP
+signals.push({ name:“VWAP”, bull: close > vwap });
+
+// 3. SAR
+const sar = calcSAR(barsUsed.slice(-30));
+if (sar) {
+signals.push({ name:“SAR”, bull: sar.bull });
+const sarDist = Math.abs(close - sar.sar) / (atr||1);
+if (sarDist > 0.3) signals.push({ name:“SAR_DIST”, bull: sar.bull });
+}
+
+// 4. VWAP vs EMA
+if (ema21) signals.push({ name:“VWAP_EMA”, bull: vwap > ema21 });
+
+// 5. Bollinger Bands
+const bb = calcBB([…closes, close]);
+if (bb) {
+signals.push({ name:“BB_POS”, bull: close > bb.middle });
+if (bb.bandwidth > 0.01) signals.push({ name:“BB_EXP”, bull: close > bb.middle });
+}
+
+// 6. Channel
+const ch = calcChannel(barsUsed.slice(-20));
+if (ch && ch.channelDir !== 0) {
+signals.push({ name:“CHANNEL”, bull: ch.channelDir === 1 });
+signals.push({ name:“CHAN_POS”, bull: ch.posInChannel > 0.5 });
+}
+
+// 7. Bull/Bear flag
+if (detectBullFlag(barsUsed)) signals.push({ name:“BULL_FLAG”, bull: true });
+if (detectBearFlag(barsUsed)) signals.push({ name:“BEAR_FLAG”, bull: false });
+
+// 8. V-Shape
+if (detectVShape(barsUsed.slice(-10))) signals.push({ name:“V_SHAPE”, bull: true });
+
+// 9. HOD/LOD
+const hodDist = atr > 0 ? Math.abs(close-high)/atr : 1;
+const lodDist = atr > 0 ? Math.abs(close-low)/atr : 1;
+if (hodDist < 0.5) signals.push({ name:“NEAR_HOD”, bull: true });
+if (lodDist < 0.5) signals.push({ name:“NEAR_LOD”, bull: false });
+
+// 10. ORB
+const orb = calcORB(intradayBars);
+if (orb) {
+if (orb.breakoutUp) signals.push({ name:“ORB_UP”, bull: true });
+if (orb.breakoutDown) signals.push({ name:“ORB_DN”, bull: false });
+}
+
+// 11. Volume
+signals.push({ name:“VOL_FLOW”, bull: (relVol >= 1.05 && close > open) || (relVol >= 1.05 && changePct > 0) });
+
+// 12. Candle body
+const body = Math.abs(close-open);
+const range = high-low||1;
+if (body/range > 0.3) signals.push({ name:“CANDLE”, bull: close > open });
+
+// 13. Momentum
+if (Math.abs(changePct) > 0.2) signals.push({ name:“MOMENTUM”, bull: changePct > 0 });
+
+// 14. Price vs prev close
+signals.push({ name:“DAY_DIR”, bull: close > prevClose });
+
+// –– DIRECTION VOTE ––
+const bullCount = signals.filter(s=>s.bull).length;
+const bearCount = signals.filter(s=>!s.bull).length;
+const total = signals.length;
+
+if (total < 2) return null;
+
+const bullPct = bullCount/total;
+const bearPct = bearCount/total;
+
+// Threshold: 45% - much more permissive
+let dir = 0;
+if (bullPct >= 0.45) dir = 1;
+else if (bearPct >= 0.45) dir = -1;
+
+if (dir === 0) return null;
+
+const alignment = Math.max(bullPct, bearPct);
+const certainty = Math.min((alignment*65) + (Math.min(relVol/2,1)*20) + (total>=6?10:0) + (Math.abs(changePct)>1?5:0), 99);
+const instScore = Math.min((Math.min(relVol,5)/5*0.45) + (alignment*0.35) + ((total/14)*0.2), 1.0);
+
+const station = dir===1 ? close+atr*1.618 : close-atr*1.618;
+const pctMove = ((station-close)/close*100);
+
+const alignedSignals = signals.filter(s=>s.bull===(dir===1)).map(s=>s.name);
+const bullFlag = detectBullFlag(barsUsed);
+const bearFlag = detectBearFlag(barsUsed);
+const vShape = detectVShape(barsUsed.slice(-10));
+
+return {
+t:stock.t, n:stock.n,
+price: close.toFixed(2),
+dir, direction: dir===1?“LONG”:“SHORT”,
+changePct: changePct.toFixed(2),
+relVol: relVol.toFixed(2),
+vol: fmtVol(vol),
+instScore: instScore.toFixed(2),
+certainty: certainty.toFixed(1),
+station: station.toFixed(2),
+atr: atr.toFixed(2),
+pctMove: pctMove.toFixed(1),
+vwap: vwap.toFixed(2),
+signalCount: total,
+bullCount, bearCount,
+alignedCount: dir===1?bullCount:bearCount,
+alignedSignals: alignedSignals.slice(0,8),
+ema21: ema21?ema21.toFixed(2):null,
+sarBull: sar?sar.bull:null,
+bb: bb?{upper:bb.upper.toFixed(2),lower:bb.lower.toFixed(2),mid:bb.middle.toFixed(2)}:null,
+orb, bullFlag, bearFlag, vShape,
+hasMinute: !!intradayBars,
+bullPct: (bullPct*100).toFixed(0),
+bearPct: (bearPct*100).toFixed(0),
+};
+}
+
+function fmtVol(v) {
+if(v>=1e9) return (v/1e9).toFixed(1)+“B”;
+if(v>=1e6) return (v/1e6).toFixed(1)+“M”;
+if(v>=1e3) return (v/1e3).toFixed(0)+“K”;
+return String(v);
+}
+
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+async function fetchSnapshot(ticker, key) {
+const r = await fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apiKey=${key}`);
+const d = await r.json();
+return d.ticker||null;
+}
+
+async function fetchDailyBars(ticker, key) {
+const to = new Date().toISOString().split(“T”)[0];
+const from = new Date(Date.now()-35*86400000).toISOString().split(“T”)[0];
+const r = await fetch(`https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}?adjusted=true&sort=desc&limit=25&apiKey=${key}`);
+const d = await r.json();
+return d.results||[];
+}
+
+async function fetchMinuteBars(ticker, key) {
+const now = new Date();
+const today = now.toISOString().split(“T”)[0];
+const dow = now.getDay();
+const daysBack = dow===1?3:dow===0?2:1;
+const from = new Date(Date.now()-daysBack*86400000).toISOString().split(“T”)[0];
+const r = await fetch(`https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/minute/${from}/${today}?adjusted=true&sort=asc&limit=390&apiKey=${key}`);
+const d = await r.json();
+return d.results||[];
+}
+
+// ============================================================
+// APP
+// ============================================================
+export default function App() {
+const [apiKey, setApiKey] = useState(()=>{try{return localStorage.getItem(“mmg_k3”)||””;}catch{return “”;}});
+const [keyInput, setKeyInput] = useState(””);
+const [universe, setUniverse] = useState(“SP500”);
+const [results, setResults] = useState([]);
+const [allScored, setAllScored] = useState([]); // for debug
+const [completed, setCompleted] = useState([]);
+const [scanning, setScanning] = useState(false);
+const [progress, setProgress] = useState(0);
+const [statusText, setStatusText] = useState(””);
+const [lastScan, setLastScan] = useState(null);
+const [error, setError] = useState(””);
+const [time, setTime] = useState(new Date().toLocaleTimeString());
+const [showKeyEdit, setShowKeyEdit] = useState(false);
+const [keyEditVal, setKeyEditVal] = useState(””);
+const [showDebug, setShowDebug] = useState(false);
+const [debugData, setDebugData] = useState([]);
+const scanRef = useRef(null);
+const scanningRef = useRef(false);
+
+useEffect(()=>{
+const t = setInterval(()=>setTime(new Date().toLocaleTimeString()),1000);
+return ()=>clearInterval(t);
+},[]);
+
+const doScan = useCallback(async(key, univ)=>{
+if(!key||scanningRef.current) return;
+scanningRef.current = true;
+setScanning(true);
+setResults([]);
+setAllScored([]);
+setProgress(0);
+setError(””);
+
+```
+const stocks = UNIVERSES[univ];
+const scored = [];
+const debugRows = [];
+
+for(let i=0; i<stocks.length; i++){
+  const stock = stocks[i];
+  setProgress(Math.round(((i+1)/stocks.length)*100));
+  setStatusText(`${stock.t} (${i+1}/${stocks.length})`);
+  try {
+    const [snap, daily, minute] = await Promise.all([
+      fetchSnapshot(stock.t, key),
+      fetchDailyBars(stock.t, key),
+      fetchMinuteBars(stock.t, key),
+    ]);
+    await sleep(180);
+    const result = scoreStock(stock, snap, daily, minute);
+    if(result) {
+      scored.push(result);
+      debugRows.push({ t:stock.t, bullPct:result.bullPct, bearPct:result.bearPct, signals:result.signalCount, dir:result.direction, cert:result.certainty });
+    } else {
+      // Still log for debug even if filtered out
+      const day = snap?.day||{};
+      const prevDay = snap?.prevDay||{};
+      const close = day.c||prevDay.c||0;
+      debugRows.push({ t:stock.t, bullPct:"?", bearPct:"?", signals: close>0?snap?"no_dir":"no_snap":"no_data", dir:"—", cert:"—" });
+    }
+  } catch(e) {
+    debugRows.push({ t:stock.t, bullPct:"ERR", bearPct:"ERR", signals:"ERR", dir:"—", cert:"—" });
+  }
+}
+
+scored.sort((a,b)=>{
+  const id = parseFloat(b.instScore)-parseFloat(a.instScore);
+  return Math.abs(id)>0.05?id:parseFloat(b.certainty)-parseFloat(a.certainty);
+});
+
+setResults(scored.slice(0,10));
+setAllScored(scored);
+setDebugData(debugRows);
+setCompleted([]);
+setLastScan(new Date());
+scanningRef.current = false;
+setScanning(false);
+setProgress(0);
+setStatusText("");
+
+if(scored.length===0) setError(`No setups found. Scanned ${stocks.length} stocks. Check debug tab for signal breakdown.`);
+```
+
+},[]);
+
+useEffect(()=>{
+if(apiKey){
+doScan(apiKey,universe);
+clearInterval(scanRef.current);
+scanRef.current = setInterval(()=>doScan(apiKey,universe), 5*60*1000);
+}
+return()=>clearInterval(scanRef.current);
+},[apiKey,universe]);
+
+const connect = ()=>{
+const k = keyInput.trim();
+if(!k) return;
+try{localStorage.setItem(“mmg_k3”,k);}catch{}
+setApiKey(k); setKeyInput(””);
+};
+
+const certColor = v=>{const n=parseFloat(v);return n>=75?”#00ff88”:n>=55?”#ffcc00”:”#ff8844”;};
+const instColor = v=>{const n=parseFloat(v);return n>=0.7?”#00ff88”:n>=0.5?”#ffcc00”:”#ff8844”;};
+const volColor  = v=>{const n=parseFloat(v);return n>=1.5?”#00ff88”:n>=1.1?”#ffcc00”:”#fff”;};
+
+const univLabel = universe===“SP500”?“S&P 500”:universe===“DOW30”?“DOW 30”:“RUSSELL 2K”;
+const visible = results.filter(r=>!completed.includes(r.t));
+
+return (
+<div style={{background:”#06060f”,minHeight:“100vh”,padding:14,fontFamily:”‘Courier New’,monospace”,color:”#fff”,maxWidth:480,margin:“0 auto”}}>
+
+```
+  {/* HEADER */}
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid #2a2a50",paddingBottom:12,marginBottom:14}}>
+    <div>
+      <div style={{fontSize:10,color:"#bbbbdd",letterSpacing:3,marginBottom:2}}>MMG V9.8C · 16-SIGNAL</div>
+      <div style={{fontSize:18,fontWeight:"bold",color:"#00ccff",letterSpacing:1}}>⬡ EQUITY SCANNER</div>
+    </div>
+    <div style={{textAlign:"right"}}>
+      <div style={{fontSize:11,fontWeight:"bold",color:scanning?"#ffcc00":"#00ccff"}}>{scanning?"⟳ LIVE":"● LIVE"}</div>
+      <div style={{fontSize:10,color:"#bbbbdd"}}>{time}</div>
+    </div>
+  </div>
+
+  {/* UNIVERSE TABS */}
+  <div style={{display:"flex",gap:6,marginBottom:14}}>
+    {[["SP500","S&P 500"],["DOW30","DOW 30"],["RUT2K","RUT 2K"]].map(([k,l])=>(
+      <button key={k} onClick={()=>setUniverse(k)} style={{flex:1,padding:"10px 4px",borderRadius:8,fontFamily:"'Courier New',monospace",fontWeight:"bold",fontSize:11,cursor:"pointer",letterSpacing:1,border:universe===k?"none":"1px solid #333366",background:universe===k?"#00ccff":"#1a1a3a",color:universe===k?"#000":"#bbbbdd"}}>{l}</button>
+    ))}
+  </div>
+
+  {/* VIEW TABS */}
+  {apiKey && (
+    <div style={{display:"flex",gap:6,marginBottom:14}}>
+      <button onClick={()=>setShowDebug(false)} style={{flex:1,padding:"8px 4px",borderRadius:6,fontFamily:"'Courier New',monospace",fontWeight:"bold",fontSize:10,cursor:"pointer",border:!showDebug?"none":"1px solid #333366",background:!showDebug?"#00ccff":"#1a1a3a",color:!showDebug?"#000":"#bbbbdd"}}>SETUPS</button>
+      <button onClick={()=>setShowDebug(true)} style={{flex:1,padding:"8px 4px",borderRadius:6,fontFamily:"'Courier New',monospace",fontWeight:"bold",fontSize:10,cursor:"pointer",border:showDebug?"none":"1px solid #333366",background:showDebug?"#ffcc00":"#1a1a3a",color:showDebug?"#000":"#bbbbdd"}}>🔍 DEBUG</button>
+    </div>
+  )}
+
+  {/* API INPUT */}
+  {!apiKey?(
+    <div style={{background:"#12122a",border:"2px solid #5555cc",borderRadius:12,padding:20,marginBottom:16}}>
+      <div style={{color:"#ffcc00",fontSize:14,fontWeight:"bold",textAlign:"center",marginBottom:10}}>⚠ CONNECT POLYGON API</div>
+      <div style={{color:"#ccccdd",fontSize:11,textAlign:"center",marginBottom:14,lineHeight:1.6}}>Enter your Polygon.io API key to start scanning with real market data.</div>
+      <input style={{width:"100%",background:"#1a1a3a",border:"2px solid #6666bb",borderRadius:8,color:"#fff",padding:14,fontSize:15,fontFamily:"'Courier New',monospace",marginBottom:12,outline:"none",display:"block"}}
+        type="text" placeholder="Paste your Polygon API key here..."
+        value={keyInput} onChange={e=>setKeyInput(e.target.value)}
+        autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false"/>
+      <button onClick={connect} style={{width:"100%",padding:14,borderRadius:8,border:"none",background:"#00ccff",color:"#000",fontFamily:"'Courier New',monospace",fontWeight:"bold",fontSize:14,cursor:"pointer"}}>
+        CONNECT &amp; START SCANNING
+      </button>
+    </div>
+  ):(
+    <>
+      <div style={{display:"flex",gap:8,marginBottom:14}}>
+        <button disabled={scanning} onClick={()=>doScan(apiKey,universe)} style={{flex:1,padding:12,borderRadius:8,border:"none",background:scanning?"#1a1a3a":"#00ccff",color:scanning?"#aaa":"#000",fontFamily:"'Courier New',monospace",fontWeight:"bold",fontSize:13,cursor:scanning?"not-allowed":"pointer",letterSpacing:2}}>
+          {scanning?`⟳ ${statusText}`:"⟳ REFRESH SCAN"}
+        </button>
+        <button onClick={()=>setShowKeyEdit(!showKeyEdit)} style={{padding:"12px 14px",borderRadius:8,background:"#1a1a3a",color:"#ddddff",border:"1px solid #5555aa",fontFamily:"'Courier New',monospace",fontSize:12,cursor:"pointer",fontWeight:"bold"}}>KEY</button>
+      </div>
+      {showKeyEdit&&(
+        <div style={{background:"#0e0e22",border:"1px solid #333366",borderRadius:8,padding:14,marginBottom:14}}>
+          <div style={{fontSize:11,color:"#ddddee",marginBottom:10}}>Update API key:</div>
+          <input style={{width:"100%",background:"#1a1a3a",border:"2px solid #6666bb",borderRadius:8,color:"#fff",padding:12,fontSize:14,fontFamily:"'Courier New',monospace",marginBottom:10,outline:"none",display:"block"}}
+            type="text" placeholder="New API key..." value={keyEditVal} onChange={e=>setKeyEditVal(e.target.value)} autoComplete="off" autoCapitalize="none"/>
+          <button onClick={()=>{const k=keyEditVal.trim();if(!k)return;try{localStorage.setItem("mmg_k3",k);}catch{}setApiKey(k);setKeyEditVal("");setShowKeyEdit(false);}}
+            style={{width:"100%",padding:12,borderRadius:8,border:"none",background:"#00ccff",color:"#000",fontFamily:"'Courier New',monospace",fontWeight:"bold",fontSize:13,cursor:"pointer"}}>SAVE KEY</button>
+        </div>
+      )}
+    </>
+  )}
+
+  {/* PROGRESS */}
+  {scanning&&(
+    <div style={{marginBottom:14}}>
+      <div style={{background:"#1a1a3a",borderRadius:4,height:6,overflow:"hidden",marginBottom:6}}>
+        <div style={{height:"100%",background:"#00ccff",borderRadius:4,width:`${progress}%`,transition:"width 0.3s"}}/>
+      </div>
+      <div style={{fontSize:11,color:"#bbbbdd",textAlign:"center"}}>Scanning {statusText}</div>
+    </div>
+  )}
+
+  {/* INFO */}
+  {lastScan&&!scanning&&(
+    <div style={{fontSize:11,color:"#bbbbcc",textAlign:"center",marginBottom:12}}>
+      {univLabel} · {visible.length} SETUPS · {lastScan.toLocaleTimeString()}
+    </div>
+  )}
+
+  {error&&!scanning&&(
+    <div style={{fontSize:11,color:"#ff8866",background:"#1a0a0a",border:"1px solid #ff4422",borderRadius:6,padding:10,marginBottom:12,textAlign:"center"}}>{error}</div>
+  )}
+
+  {/* DEBUG VIEW */}
+  {showDebug&&!scanning&&(
+    <div>
+      <div style={{fontSize:11,color:"#ffcc00",marginBottom:8,fontWeight:"bold"}}>🔍 SIGNAL DEBUG — All Scanned Stocks</div>
+      <div style={{fontSize:9,color:"#bbbbdd",marginBottom:10}}>Shows bull% / bear% signal alignment for every ticker. Threshold: 45%+</div>
+      {debugData.map((row,i)=>(
+        <div key={i} style={{display:"flex",gap:4,alignItems:"center",marginBottom:4,background:"#0e0e22",borderRadius:4,padding:"6px 8px"}}>
+          <div style={{width:50,fontSize:11,fontWeight:"bold",color:"#fff"}}>{row.t}</div>
+          <div style={{width:40,fontSize:10,color:"#00ff88"}}>▲{row.bullPct}%</div>
+          <div style={{width:40,fontSize:10,color:"#ff4466"}}>▼{row.bearPct}%</div>
+          <div style={{width:30,fontSize:9,color:"#bbbbdd"}}>{row.signals}sig</div>
+          <div style={{flex:1,fontSize:10,color:row.dir==="LONG"?"#00ff88":row.dir==="SHORT"?"#ff4466":"#666"}}>{row.dir}</div>
+          <div style={{fontSize:10,color:"#ffcc00"}}>{row.cert}%</div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {/* SETUPS VIEW */}
+  {!showDebug&&!scanning&&visible.length===0&&apiKey&&(
+    <div style={{textAlign:"center",padding:40,color:"#bbbbcc",fontSize:13,lineHeight:1.8}}>
+      NO SETUPS CONFIRMED<br/>
+      Tap 🔍 DEBUG to see signal scores.<br/>
+      Hit REFRESH to rescan.
+    </div>
+  )}
+
+  {!showDebug&&!scanning&&visible.map((item,idx)=>{
+    const isLong = item.direction==="LONG";
+    const dc = isLong?"#00ff88":"#ff4466";
+    const db = isLong?"rgba(0,255,136,0.15)":"rgba(255,68,102,0.15)";
+    const chg = parseFloat(item.changePct)>=0?`+${item.changePct}%`:`${item.changePct}%`;
+    const chgC = parseFloat(item.changePct)>=0?"#00ff88":"#ff4466";
+
+    return(
+      <div key={item.t} style={{background:"#0e0e22",border:"2px solid #333366",borderLeft:`5px solid ${dc}`,borderRadius:10,padding:16,marginBottom:12}}>
+
+        <div style={{marginBottom:8}}>
+          <span style={{display:"inline-block",background:"#1a0a35",border:"1px solid #aa66ff",borderRadius:4,padding:"3px 10px",fontSize:10,color:"#dd99ff",letterSpacing:1,fontWeight:"bold"}}>◈ INSTITUTION ENTRY</span>
+          <span style={{display:"inline-block",fontSize:9,color:"#00ff88",background:"#001a0a",border:"1px solid #00aa44",borderRadius:4,padding:"2px 8px",marginLeft:6}}>⚡ LIVE</span>
+          <span style={{display:"inline-block",fontSize:9,color:"#ffcc00",background:"#1a1500",border:"1px solid #554400",borderRadius:4,padding:"2px 8px",marginLeft:6}}>{item.alignedCount}/{item.signalCount} SIGNALS · {isLong?item.bullPct:item.bearPct}% ALIGNED</span>
+        </div>
+
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+          <div style={{width:28,height:28,background:"#1a1a3a",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#ccccee",fontWeight:"bold",flexShrink:0}}>{idx+1}</div>
+          <div>
+            <div style={{fontSize:22,fontWeight:"bold",color:"#fff",letterSpacing:1}}>{item.t}</div>
+            <div style={{fontSize:11,color:"#bbbbdd"}}>{item.n}</div>
+          </div>
+          <div style={{marginLeft:"auto",border:`2px solid ${dc}`,borderRadius:6,padding:"5px 14px",fontSize:14,fontWeight:"bold",color:dc,letterSpacing:2,background:db,flexShrink:0}}>{item.direction}</div>
+        </div>
+
+        <div style={{display:"flex",gap:8,marginBottom:10}}>
+          {[{label:"ENTRY",value:`$${item.price}`,color:"#fff"},{label:"TARGET",value:`$${parseFloat(item.station).toFixed(2)}`,color:dc},{label:"MOVE",value:`${isLong?"+":""}${item.pctMove}%`,color:dc}].map(m=>(
+            <div key={m.label} style={{flex:1,background:"#0a0a20",borderRadius:8,padding:"10px 6px",textAlign:"center",border:"1px solid #333366"}}>
+              <div style={{fontSize:9,color:"#ccccdd",marginBottom:4,letterSpacing:1}}>{m.label}</div>
+              <div style={{fontSize:15,fontWeight:"bold",color:m.color}}>{m.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:"flex",gap:6,marginBottom:10}}>
+          {[
+            {label:"VWAP",value:`$${item.vwap}`,color:"#88ddff"},
+            {label:"EMA21",value:item.ema21?`$${item.ema21}`:"—",color:"#ffcc88"},
+            {label:"SAR",value:item.sarBull===null?"—":item.sarBull?"BULL":"BEAR",color:item.sarBull?"#00ff88":item.sarBull===false?"#ff4466":"#aaa"},
+            {label:"ATR",value:`$${item.atr}`,color:"#ffcc88"},
+          ].map(s=>(
+            <div key={s.label} style={{flex:1,background:"#0a0a20",borderRadius:6,padding:"8px 4px",textAlign:"center",border:"1px solid #333366"}}>
+              <div style={{fontSize:8,color:"#ccccdd",marginBottom:3}}>{s.label}</div>
+              <div style={{fontSize:11,fontWeight:"bold",color:s.color}}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:"flex",gap:6,marginBottom:10}}>
+          {[
+            {label:"CERTAINTY",value:`${item.certainty}%`,color:certColor(item.certainty)},
+            {label:"INST SCORE",value:item.instScore,color:instColor(item.instScore)},
+            {label:"REL VOL",value:`${item.relVol}x`,color:volColor(item.relVol)},
+            {label:"DAY CHG",value:chg,color:chgC},
+          ].map(s=>(
+            <div key={s.label} style={{flex:1,background:"#0a0a20",borderRadius:6,padding:"8px 4px",textAlign:"center",border:"1px solid #333366"}}>
+              <div style={{fontSize:8,color:"#ccccdd",marginBottom:3}}>{s.label}</div>
+              <div style={{fontSize:11,fontWeight:"bold",color:s.color}}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {item.bb&&(
+          <div style={{display:"flex",gap:6,marginBottom:10}}>
+            {[{label:"BB UPPER",value:`$${item.bb.upper}`,color:"#ff9999"},{label:"BB MID",value:`$${item.bb.mid}`,color:"#fff"},{label:"BB LOWER",value:`$${item.bb.lower}`,color:"#88ddff"},{label:"VOLUME",value:item.vol,color:"#fff"}].map(s=>(
+              <div key={s.label} style={{flex:1,background:"#0a0a20",borderRadius:6,padding:"6px 4px",textAlign:"center",border:"1px solid #333366"}}>
+                <div style={{fontSize:8,color:"#ccccdd",marginBottom:2}}>{s.label}</div>
+                <div style={{fontSize:11,fontWeight:"bold",color:s.color}}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap"}}>
+          {item.bullFlag&&<span style={{fontSize:9,background:"rgba(0,255,136,0.15)",border:"1px solid #00ff88",borderRadius:4,padding:"2px 6px",color:"#00ff88"}}>🚩 BULL FLAG</span>}
+          {item.bearFlag&&<span style={{fontSize:9,background:"rgba(255,68,102,0.15)",border:"1px solid #ff4466",borderRadius:4,padding:"2px 6px",color:"#ff4466"}}>🚩 BEAR FLAG</span>}
+          {item.vShape&&<span style={{fontSize:9,background:"rgba(0,204,255,0.15)",border:"1px solid #00ccff",borderRadius:4,padding:"2px 6px",color:"#00ccff"}}>V RECOVERY</span>}
+          {item.orb?.breakoutUp&&<span style={{fontSize:9,background:"rgba(0,255,136,0.15)",border:"1px solid #00ff88",borderRadius:4,padding:"2px 6px",color:"#00ff88"}}>ORB ↑</span>}
+          {item.orb?.breakoutDown&&<span style={{fontSize:9,background:"rgba(255,68,102,0.15)",border:"1px solid #ff4466",borderRadius:4,padding:"2px 6px",color:"#ff4466"}}>ORB ↓</span>}
+          {item.hasMinute&&<span style={{fontSize:9,background:"#001a0a",border:"1px solid #00aa44",borderRadius:4,padding:"2px 6px",color:"#00ff88"}}>INTRADAY DATA</span>}
+          {item.alignedSignals.map(s=>(
+            <span key={s} style={{fontSize:9,background:"#1a1a3a",border:"1px solid #333366",borderRadius:4,padding:"2px 6px",color:"#aaaacc"}}>{s}</span>
+          ))}
+        </div>
+
+        <button onClick={()=>setCompleted(p=>[...p,item.t])} style={{width:"100%",background:"transparent",border:"1px solid #444466",borderRadius:8,color:"#ccccdd",padding:10,fontFamily:"'Courier New',monospace",fontSize:12,cursor:"pointer",letterSpacing:1,fontWeight:"bold"}}>
+          ✓ MARK TRADED — REMOVE
+        </button>
+      </div>
+    );
+  })}
+
+  <div style={{marginTop:24,padding:12,borderTop:"1px solid #2a2a50",fontSize:10,color:"#9999bb",textAlign:"center",letterSpacing:1}}>
+    MMG V9.8C · 16-SIGNAL ENGINE · POLYGON.IO · NOT FINANCIAL ADVICE
+  </div>
+</div>
+```
+
+);
+}
