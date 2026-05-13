@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html lang="en" style="background:#06060f">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="theme-color" content="#06060f"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>MTS Equity Scanner</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{background:#06060f!important;color:#fff!important;font-family:'Courier New',monospace;min-height:100vh;}
+    .app{max-width:480px;margin:0 auto;padding:12px 8px;background:#06060f;min-height:100vh;}
+    .header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a2a50;padding-bottom:10px;margin-bottom:12px;}
+    .tabs{display:flex;gap:5px;margin-bottom:10px;}
+    .tab{flex:1;padding:10px 2px;border-radius:6px;font-family:'Courier New',monospace;font-weight:bold;font-size:12px;cursor:pointer;border:1px solid #333366;background:#1a1a3a;color:#bbbbdd;}
+    .tab.active{background:#00ccff!important;color:#000!important;border:none!important;}
+    .scan-btn{padding:10px 16px;border-radius:6px;border:none;background:#00ff88;color:#000;font-family:'Courier New',monospace;font-weight:bold;font-size:14px;cursor:pointer;}
+    .scan-btn:disabled{background:#1a1a3a;color:#aaa;cursor:not-allowed;}
+    .info{font-size:10px;color:#bbbbcc;text-align:center;margin-bottom:8px;}
+    .table-wrap{border:1px solid #2a2a50;border-radius:8px;overflow:hidden;}
+    .table-hdr{display:grid;grid-template-columns:20px 56px 22px 1fr 1fr 72px 50px 38px;gap:4px;padding:7px 8px;background:#0a0a20;border-bottom:1px solid #333366;}
+    .hdr-cell{font-size:10px;color:#8888aa;font-weight:bold;text-align:center;letter-spacing:0.3px;}
+    .table-row{display:grid;grid-template-columns:20px 56px 22px 1fr 1fr 72px 50px 38px;gap:4px;padding:10px 8px;border-bottom:1px solid #1a1a30;align-items:center;}
+    .table-row:last-child{border-bottom:none;}
+    .cell{font-size:14px;text-align:center;white-space:nowrap;overflow:hidden;}
+    .checkbox{width:16px;height:16px;border:1.5px solid #555577;border-radius:3px;cursor:pointer;margin:0 auto;}
+    .hit-bar-bg{background:#1a1a3a;border-radius:2px;height:3px;overflow:hidden;margin-top:3px;}
+    .hit-bar-fill{height:100%;border-radius:2px;}
+    .legend{margin-top:10px;padding:8px 10px;background:#0a0a1a;border:1px solid #1a1a30;border-radius:6px;}
+    .legend-title{font-size:9px;color:#666688;margin-bottom:5px;}
+    .legend-items{display:flex;gap:12px;flex-wrap:wrap;}
+    .legend-item{display:flex;align-items:center;gap:4px;}
+    .legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+    .legend-label{font-size:10px;color:#9999bb;}
+    .empty-state{text-align:center;padding:30px;color:#bbbbcc;font-size:13px;line-height:1.8;}
+    .footer{margin-top:12px;font-size:9px;color:#555577;text-align:center;letter-spacing:1px;}
+    .error{font-size:11px;color:#ff8866;background:#1a0a0a;border:1px solid #ff4422;border-radius:6px;padding:10px;margin-bottom:12px;text-align:center;display:none;}
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div>
+      <div style="font-size:10px;color:#bbbbdd;letter-spacing:3px;margin-bottom:2px">MTS · EQUITY SCANNER</div>
+      <div style="font-size:18px;font-weight:bold;color:#00ccff">⬡ MOMENTUM SCAN</div>
+    </div>
+    <div style="text-align:right">
+      <div id="statusBadge" style="font-size:12px;font-weight:bold;color:#00ff88">● LIVE</div>
+      <div id="clockEl" style="font-size:11px;color:#bbbbdd">--:--:--</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="uSP" onclick="switchUniverse('SP500')">S&amp;P 500</button>
+    <button class="tab" id="uDW" onclick="switchUniverse('DOW30')">DOW 30</button>
+    <button class="tab" id="uRU" onclick="switchUniverse('RUT2K')">RUT 2K</button>
+    <button class="scan-btn" id="scanBtn" onclick="triggerScan()">⟳</button>
+  </div>
+
+  <div id="progressSection" style="display:none;margin-bottom:12px">
+    <div style="background:#1a1a3a;border-radius:4px;height:6px;overflow:hidden;margin-bottom:6px">
+      <div id="progressFill" style="height:100%;background:#00ccff;border-radius:4px;width:0%;transition:width 0.3s"></div>
+    </div>
+    <div id="scanStatus" style="font-size:11px;color:#bbbbdd;text-align:center">Scanning...</div>
+  </div>
+
+  <div class="info" id="infoBar"></div>
+  <div class="error" id="errorBar"></div>
+  <div id="results"></div>
+
+  <div class="legend" id="legend" style="display:none">
+    <div class="legend-title">HIT% — How far price has traveled toward target today (matches MMG dashboard)</div>
+    <div class="legend-items">
+      <div class="legend-item"><div class="legend-dot" style="background:#00ff88"></div><div class="legend-label">&lt;25% Early</div></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00ccff"></div><div class="legend-label">25-50% Good</div></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffcc00"></div><div class="legend-label">50-75% Mid</div></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff8844"></div><div class="legend-label">&gt;75% Late</div></div>
+    </div>
+  </div>
+
+  <div class="footer">MTS · EQUITY SCANNER · POLYGON.IO · NOT FINANCIAL ADVICE</div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG - API KEY EMBEDDED
+// ============================================================
+var API_KEY = "HjLVXQHGFcYFnJFQf2oq1ODPMVvwLuJ9";
+
+// ============================================================
+// UNIVERSES
+// ============================================================
+var SP500=[{t:"AAPL"},{t:"MSFT"},{t:"NVDA"},{t:"GOOGL"},{t:"AMZN"},{t:"META"},{t:"TSLA"},{t:"JPM"},{t:"V"},{t:"WMT"},{t:"GS"},{t:"MS"},{t:"AMD"},{t:"NFLX"},{t:"CRWD"},{t:"DDOG"},{t:"AVGO"},{t:"COST"},{t:"UNH"},{t:"MA"},{t:"ADBE"},{t:"BKNG"},{t:"ISRG"},{t:"SPGI"},{t:"LMT"},{t:"CAT"},{t:"RTX"},{t:"BAC"},{t:"XOM"},{t:"CVX"}];
+var DOW30=[{t:"AAPL"},{t:"MSFT"},{t:"JPM"},{t:"V"},{t:"WMT"},{t:"GS"},{t:"CAT"},{t:"BA"},{t:"HD"},{t:"MCD"},{t:"HON"},{t:"CVX"},{t:"IBM"},{t:"MMM"},{t:"MRK"},{t:"DIS"},{t:"KO"},{t:"VZ"},{t:"INTC"},{t:"SHW"}];
+var RUT2K=[{t:"COIN"},{t:"HOOD"},{t:"AFRM"},{t:"UPST"},{t:"SOFI"},{t:"RIVN"},{t:"LCID"},{t:"PLUG"},{t:"SMCI"},{t:"CHWY"},{t:"BBIO"},{t:"TMDX"},{t:"ACVA"},{t:"PRCT"},{t:"RKT"},{t:"JOBY"},{t:"OPEN"},{t:"BLNK"},{t:"FCEL"},{t:"SNDX"}];
+var UNIVS={SP500:SP500,DOW30:DOW30,RUT2K:RUT2K};
+
+// ============================================================
+// STATE
+// ============================================================
+var universe="SP500", results=[], completed=[], isScanning=false, scanTimer=null;
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+// ============================================================
+// LIVE POLYGON SCAN
+// ============================================================
+async function liveScan(stocks){
+  var scored=[];
+  var now=new Date();
+  var today=now.toISOString().split("T")[0];
+  var from3=new Date(Date.now()-3*86400000).toISOString().split("T")[0];
+  var from60=new Date(Date.now()-60*86400000).toISOString().split("T")[0];
+  var hr=now.getHours()+now.getMinutes()/60;
+  var sp=Math.max(0.01,Math.min(1,(hr-9.5)/6.5));
+
+  for(var i=0;i<stocks.length;i++){
+    var stock=stocks[i];
+    var pct=Math.round(((i+1)/stocks.length)*100);
+    document.getElementById("progressFill").style.width=pct+"%";
+    document.getElementById("scanStatus").textContent="Scanning "+stock.t+" ("+i+1+"/"+stocks.length+")";
+
+    try{
+      var[snapR,min15R,dailyR]=await Promise.all([
+        fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+stock.t+"?apiKey="+API_KEY).then(function(r){return r.json();}),
+        fetch("https://api.polygon.io/v2/aggs/ticker/"+stock.t+"/range/15/minute/"+from3+"/"+today+"?adjusted=true&sort=asc&limit=200&apiKey="+API_KEY).then(function(r){return r.json();}),
+        fetch("https://api.polygon.io/v2/aggs/ticker/"+stock.t+"/range/1/day/"+from60+"/"+today+"?adjusted=true&sort=desc&limit=60&apiKey="+API_KEY).then(function(r){return r.json();}),
+      ]);
+      await sleep(200);
+
+      var snap=snapR.ticker||null;
+      var bars15=min15R.results||[];
+      var barsD=dailyR.results||[];
+      if(!snap||bars15.length<5)continue;
+
+      var day=snap.day||{};
+      var prevDay=snap.prevDay||{};
+      var close=day.c||prevDay.c;
+      if(!close||close<=0)continue;
+
+      // Volume vs time of day
+      var vol=day.v||0;
+      var avgD=barsD.length>=5?barsD.slice(0,Math.min(20,barsD.length)).reduce(function(s,b){return s+b.v;},0)/Math.min(20,barsD.length):vol;
+      var expectedNow=avgD*sp;
+      var rv=expectedNow>0?vol/expectedNow:1.0;
+      if(rv<1.2)continue;
+
+      // HTF bias - Daily EMA
+      var dCloses=barsD.slice(0,20).map(function(b){return b.c;}).reverse();
+      var dEma=dCloses.length>=3?dCloses.reduce(function(s,v){return s+v;},0)/dCloses.length:close;
+      var dailyBull=close>dEma;
+
+      // 4H approximated from 15m bars (16 bars = ~4 hours)
+      var h4arr=[];
+      for(var j=0;j<bars15.length;j+=16)h4arr.push(bars15[j].c);
+      var h4ema=h4arr.length>=3?h4arr.slice(-Math.min(10,h4arr.length)).reduce(function(s,v){return s+v;},0)/Math.min(10,h4arr.length):close;
+      var h4Bull=close>h4ema;
+
+      var bias=(dailyBull?1:0)+(h4Bull?1:0)>=1?1:-1;
+
+      // ATR from daily
+      var atr=barsD.length>=2?barsD.slice(0,14).reduce(function(s,b){return s+(b.h-b.l);},0)/Math.min(14,barsD.length):(close*0.015);
+
+      // Next liquidity zone (1.618 ATR extension)
+      var lz=bias===1?close+atr*1.618:close-atr*1.618;
+
+      // Session high/low from today's 15m bars
+      var todayBars=bars15.slice(-Math.min(bars15.length,28));
+      var sh=Math.max.apply(null,todayBars.map(function(b){return b.h;}));
+      var sl=Math.min.apply(null,todayBars.map(function(b){return b.l;}));
+
+      // HIT% - how far price has traveled from session start toward station
+      var hit=null;
+      if(bias===1&&lz>sl)hit=Math.max(0,Math.min(100,((close-sl)/(lz-sl))*100));
+      else if(bias===-1&&lz<sh)hit=Math.max(0,Math.min(100,((sh-close)/(sh-lz))*100));
+
+      // D2T - distance to target in dollars
+      var d2t=Math.abs(lz-close);
+      var d2tStr=d2t>=100?(bias===1?"+":"-")+"$"+d2t.toFixed(0)
+                :d2t>=10?(bias===1?"+":"-")+"$"+d2t.toFixed(1)
+                :(bias===1?"+":"-")+"$"+d2t.toFixed(2);
+
+      var score=(Math.min(rv,5)/5*0.5)+(dailyBull===h4Bull?0.3:0.1)+((hit||0)/100*0.2);
+
+      scored.push({
+        t:stock.t, bias:bias,
+        price:close.toFixed(2),
+        target:lz.toFixed(2),
+        d2tStr:d2tStr,
+        d2tColor:bias===1?"#00ff88":"#ff4466",
+        hit:hit!==null?Math.round(hit):null,
+        rv:rv.toFixed(1),
+        score:score
+      });
+    }catch(e){}
+  }
+  return scored.sort(function(a,b){return b.score-a.score;}).slice(0,20);
+}
+
+// ============================================================
+// SCAN ORCHESTRATOR
+// ============================================================
+async function doScan(){
+  if(isScanning)return;
+  isScanning=true;
+  results=[];
+  completed=[];
+  updateControls();
+  document.getElementById("results").innerHTML="";
+  document.getElementById("legend").style.display="none";
+  document.getElementById("errorBar").style.display="none";
+  document.getElementById("progressSection").style.display="block";
+
+  try{
+    results=await liveScan(UNIVS[universe]);
+  }catch(e){
+    document.getElementById("errorBar").textContent="Scan error. Check connection and try again.";
+    document.getElementById("errorBar").style.display="block";
+  }
+
+  document.getElementById("progressSection").style.display="none";
+  isScanning=false;
+  updateControls();
+  renderResults();
+}
+
+function triggerScan(){if(!isScanning)doScan();}
+
+function startAutoScan(){
+  clearInterval(scanTimer);
+  doScan();
+  scanTimer=setInterval(function(){if(!isScanning)doScan();},5*60*1000);
+}
+
+function switchUniverse(u){
+  universe=u;
+  ["SP500","DOW30","RUT2K"].forEach(function(k,i){
+    var ids=["uSP","uDW","uRU"];
+    var el=document.getElementById(ids[i]);
+    if(k===u)el.classList.add("active"); else el.classList.remove("active");
+  });
+  startAutoScan();
+}
+
+function markTraded(t){
+  completed.push(t);
+  renderResults();
+}
+
+function updateControls(){
+  var btn=document.getElementById("scanBtn");
+  var badge=document.getElementById("statusBadge");
+  if(btn){btn.disabled=isScanning;}
+  if(badge){
+    badge.textContent=isScanning?"⟳ SCANNING":"● LIVE";
+    badge.style.color=isScanning?"#ffcc00":"#00ff88";
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function hitColor(v){
+  if(v===null||isNaN(v))return"#aaaacc";
+  return v>=75?"#ff8844":v>=50?"#ffcc00":v>=25?"#00ccff":"#00ff88";
+}
+function volColor(v){
+  var n=parseFloat(v);
+  return n>=2.5?"#00ff88":n>=1.8?"#ffcc00":"#cccccc";
+}
+
+function renderResults(){
+  var el=document.getElementById("results");
+  var vis=results.filter(function(r){return completed.indexOf(r.t)===-1;});
+  var ul=universe==="SP500"?"S&P 500":universe==="DOW30"?"DOW 30":"RUT 2K";
+  document.getElementById("infoBar").textContent=ul+" · "+vis.length+" SETUPS · "+new Date().toLocaleTimeString()+" · AUTO 5M";
+
+  if(vis.length===0){
+    el.innerHTML='<div class="empty-state">NO VOLUME SPIKES DETECTED<br>Hit ⟳ to refresh.</div>';
+    document.getElementById("legend").style.display="none";
+    return;
+  }
+
+  var COLS="20px 56px 22px 1fr 1fr 72px 50px 38px";
+  var html='<div class="table-wrap">'
+    +'<div class="table-hdr" style="grid-template-columns:'+COLS+'">'
+    +['','TICK','▲▼','PRICE','TARGET','D2T-$$','HIT%','VOL'].map(function(h){return'<div class="hdr-cell">'+h+'</div>';}).join('')
+    +'</div>';
+
+  vis.forEach(function(item,idx){
+    var isN=item.bias===1;
+    var dc=isN?"#00ff88":"#ff4466";
+    var hc=hitColor(item.hit);
+    var hitNum=item.hit!==null?item.hit:0;
+
+    html+='<div class="table-row" style="grid-template-columns:'+COLS+';background:'+(idx%2===0?"#0e0e22":"#0b0b1e")+';border-left:3px solid '+dc+'">'
+      +'<div class="checkbox" onclick="markTraded(\''+item.t+'\')"></div>'
+      +'<div style="font-size:14px;font-weight:bold;color:#fff;white-space:nowrap">'+item.t+'</div>'
+      +'<div style="font-size:16px;font-weight:bold;color:'+dc+';text-align:center">'+(isN?"▲":"▼")+'</div>'
+      +'<div class="cell" style="color:#fff">$'+item.price+'</div>'
+      +'<div class="cell" style="color:'+dc+';font-weight:bold">$'+item.target+'</div>'
+      +'<div class="cell" style="color:'+dc+';font-weight:bold">'+item.d2tStr+'</div>'
+      +'<div style="text-align:center">'
+        +'<div style="font-size:14px;font-weight:bold;color:'+hc+';line-height:1">'+(item.hit!==null?item.hit+"%":"—")+'</div>'
+        +'<div class="hit-bar-bg"><div class="hit-bar-fill" style="width:'+hitNum+'%;background:'+hc+'"></div></div>'
+      +'</div>'
+      +'<div class="cell" style="color:'+volColor(item.rv)+'">'+item.rv+'x</div>'
+    +'</div>';
+  });
+
+  html+='</div>';
+  el.innerHTML=html;
+  document.getElementById("legend").style.display="block";
+}
+
+// ============================================================
+// CLOCK
+// ============================================================
+setInterval(function(){
+  var el=document.getElementById("clockEl");
+  if(el)el.textContent=new Date().toLocaleTimeString();
+},1000);
+
+// ============================================================
+// BOOT
+// ============================================================
+startAutoScan();
+</script>
+
+</body>
+</html>
