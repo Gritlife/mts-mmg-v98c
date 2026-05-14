@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+
+<html lang="en" style="background:#06060f">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="theme-color" content="#06060f"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>MTS · Train of Fortune</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{background:#06060f!important;color:#fff!important;font-family:'Courier New',monospace;min-height:100vh;}
+    .app{max-width:480px;margin:0 auto;background:#06060f;min-height:100vh;display:flex;flex-direction:column;}
+    input[type=text],input[type=password]{width:100%;background:#1a1a3a;border:2px solid #6666bb;border-radius:8px;color:#fff;padding:14px;font-size:16px;font-family:'Courier New',monospace;margin-bottom:12px;outline:none;display:block;-webkit-appearance:none;}
+    input:focus{border-color:#00ccff;}
+    input::placeholder{color:#8888aa;}
+    .btn{width:100%;padding:14px;border-radius:8px;border:none;font-family:'Courier New',monospace;font-weight:bold;font-size:15px;cursor:pointer;letter-spacing:1px;}
+    .page{flex:1;padding:10px 12px;padding-bottom:72px;}
+    .center-page{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+    /* TABLE */
+    .tbl-wrap{border:1px solid #2a2a50;border-radius:8px;overflow:hidden;}
+    .tbl-hdr{display:grid;grid-template-columns:20px 56px 22px 1fr 1fr 72px 50px 38px;gap:4px;padding:7px 8px;background:#0a0a20;border-bottom:1px solid #333366;}
+    .tbl-hdr-cell{font-size:10px;color:#ccccff;font-weight:bold;text-align:center;}
+    .tbl-row{display:grid;grid-template-columns:20px 56px 22px 1fr 1fr 72px 50px 38px;gap:4px;padding:10px 8px;border-bottom:1px solid #1a1a30;align-items:center;cursor:pointer;}
+    .tbl-row:last-child{border-bottom:none;}
+    .cell{font-size:14px;text-align:center;white-space:nowrap;overflow:hidden;}
+    .chkbox{width:16px;height:16px;border:1.5px solid #fff;border-radius:3px;cursor:pointer;margin:0 auto;}
+    .hit-bg{background:#1a1a3a;border-radius:2px;height:3px;overflow:hidden;margin-top:2px;}
+    .hit-fill{height:100%;border-radius:2px;}
+    /* BOTTOM NAV */
+    .bot-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#0a0a1a;border-top:1px solid #2a2a50;display:flex;z-index:100;}
+    .nav-btn{flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .nav-icon{font-size:20px;}
+    .nav-label{font-size:9px;font-weight:bold;letter-spacing:1px;}
+    .nav-bar{width:20px;height:2px;background:#00ccff;border-radius:1px;}
+    /* DASHBOARD */
+    .dash-page{flex:1;padding:10px 12px;padding-bottom:72px;display:flex;flex-direction:column;gap:8px;overflow:hidden;}
+    .dash-row{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-bottom:1px solid #1a1a30;}
+    .dash-row:last-child{border-bottom:none;}
+    /* LEGEND */
+    .legend{margin-top:10px;padding:8px 10px;background:#0a0a1a;border:1px solid #1a1a30;border-radius:6px;}
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="center-page" style="color:#fff">Loading...</div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+var API_KEY = "HjLVXQHGFcYFnJFQf2oq1ODPMVvwLuJ9";
+var ROLES = {
+  ADMIN:    { pass:"mts2024",  color:"#ff8844", icon:"🔐", desc:"Full access — all features" },
+  TESTER:   { pass:"test123",  color:"#00ccff", icon:"🧪", desc:"Scanner + app testing access" },
+  OBSERVER: { pass:null,       color:"#00ff88", icon:"👁", desc:"Scanner view only — no password" },
+};
+
+// ============================================================
+// UNIVERSES
+// ============================================================
+var SP500=[{t:"AAPL",n:"Apple Inc."},{t:"MSFT",n:"Microsoft Corp."},{t:"NVDA",n:"NVIDIA Corp."},{t:"GOOGL",n:"Alphabet Inc."},{t:"AMZN",n:"Amazon.com Inc."},{t:"META",n:"Meta Platforms"},{t:"TSLA",n:"Tesla Inc."},{t:"JPM",n:"JPMorgan Chase"},{t:"V",n:"Visa Inc."},{t:"WMT",n:"Walmart Inc."},{t:"GS",n:"Goldman Sachs"},{t:"MS",n:"Morgan Stanley"},{t:"AMD",n:"Adv. Micro Devices"},{t:"NFLX",n:"Netflix Inc."},{t:"CRWD",n:"CrowdStrike"},{t:"DDOG",n:"Datadog Inc."},{t:"AVGO",n:"Broadcom Inc."},{t:"COST",n:"Costco Wholesale"},{t:"UNH",n:"UnitedHealth Group"},{t:"MA",n:"Mastercard Inc."},{t:"ADBE",n:"Adobe Inc."},{t:"BKNG",n:"Booking Holdings"},{t:"ISRG",n:"Intuitive Surgical"},{t:"SPGI",n:"S&P Global"},{t:"LMT",n:"Lockheed Martin"},{t:"CAT",n:"Caterpillar Inc."},{t:"RTX",n:"Raytheon Tech."},{t:"BAC",n:"Bank of America"},{t:"XOM",n:"Exxon Mobil"},{t:"CVX",n:"Chevron Corp."}];
+var DOW30=[{t:"AAPL",n:"Apple Inc."},{t:"MSFT",n:"Microsoft Corp."},{t:"JPM",n:"JPMorgan Chase"},{t:"V",n:"Visa Inc."},{t:"WMT",n:"Walmart Inc."},{t:"GS",n:"Goldman Sachs"},{t:"CAT",n:"Caterpillar Inc."},{t:"BA",n:"Boeing Co."},{t:"HD",n:"Home Depot Inc."},{t:"MCD",n:"McDonald's Corp."},{t:"HON",n:"Honeywell Intl."},{t:"CVX",n:"Chevron Corp."},{t:"IBM",n:"IBM Corp."},{t:"MMM",n:"3M Company"},{t:"MRK",n:"Merck & Co."},{t:"DIS",n:"Walt Disney Co."},{t:"KO",n:"Coca-Cola Co."},{t:"VZ",n:"Verizon Comms."},{t:"INTC",n:"Intel Corp."},{t:"SHW",n:"Sherwin-Williams"}];
+var RUT2K=[{t:"COIN",n:"Coinbase Global"},{t:"HOOD",n:"Robinhood Markets"},{t:"AFRM",n:"Affirm Holdings"},{t:"UPST",n:"Upstart Holdings"},{t:"SOFI",n:"SoFi Technologies"},{t:"RIVN",n:"Rivian Automotive"},{t:"LCID",n:"Lucid Group"},{t:"PLUG",n:"Plug Power Inc."},{t:"SMCI",n:"Super Micro Computer"},{t:"CHWY",n:"Chewy Inc."},{t:"BBIO",n:"BridgeBio Pharma"},{t:"TMDX",n:"TransMedics Group"},{t:"ACVA",n:"ACV Auctions"},{t:"PRCT",n:"Procept BioRobotics"},{t:"RKT",n:"Rocket Companies"},{t:"JOBY",n:"Joby Aviation"},{t:"OPEN",n:"Opendoor Tech."},{t:"BLNK",n:"Blink Charging"},{t:"FCEL",n:"FuelCell Energy"},{t:"SNDX",n:"Syndax Pharma"}];
+var UNIVS={SP500:SP500,DOW30:DOW30,RUT2K:RUT2K};
+
+// ============================================================
+// STATE
+// ============================================================
+var role=null, page="login", universe="SP500", results=[], completed=[], isScanning=false;
+var scanTimer=null, selectedStock=null, loginTarget=null, passError="";
+
+function loadRole(){try{return localStorage.getItem("mts_role")||null;}catch(e){return null;}}
+function saveRole(r){try{localStorage.setItem("mts_role",r);}catch(e){}}
+function clearRole(){try{localStorage.removeItem("mts_role");}catch(e){}}
+
+function isAdmin(){return role==="ADMIN";}
+function isTester(){return role==="TESTER";}
+function canDash(){return role==="ADMIN"||role==="TESTER";}
+
+// ============================================================
+// SCAN ENGINE
+// ============================================================
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+async function liveScan(stocks){
+  var scored=[];
+  var now=new Date();
+  var today=now.toISOString().split("T")[0];
+  var from3=new Date(Date.now()-3*86400000).toISOString().split("T")[0];
+  var from60=new Date(Date.now()-60*86400000).toISOString().split("T")[0];
+  var hr=now.getHours()+now.getMinutes()/60;
+  var sp=Math.max(0.01,Math.min(1,(hr-9.5)/6.5));
+
+  for(var i=0;i<stocks.length;i++){
+    var stock=stocks[i];
+    var pct=Math.round(((i+1)/stocks.length)*100);
+    var pf=document.getElementById("progressFill");
+    var ss=document.getElementById("scanStatus");
+    if(pf)pf.style.width=pct+"%";
+    if(ss)ss.textContent="Scanning "+stock.t+" ("+i+1+"/"+stocks.length+")";
+    try{
+      var[snapR,min15R,dailyR]=await Promise.all([
+        fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+stock.t+"?apiKey="+API_KEY).then(function(r){return r.json();}),
+        fetch("https://api.polygon.io/v2/aggs/ticker/"+stock.t+"/range/15/minute/"+from3+"/"+today+"?adjusted=true&sort=asc&limit=200&apiKey="+API_KEY).then(function(r){return r.json();}),
+        fetch("https://api.polygon.io/v2/aggs/ticker/"+stock.t+"/range/1/day/"+from60+"/"+today+"?adjusted=true&sort=desc&limit=60&apiKey="+API_KEY).then(function(r){return r.json();}),
+      ]);
+      await sleep(200);
+      var snap=snapR.ticker||null;
+      var bars15=min15R.results||[];
+      var barsD=dailyR.results||[];
+      if(!snap||bars15.length<5)continue;
+      var day=snap.day||{},prevDay=snap.prevDay||{};
+      var close=day.c||prevDay.c;
+      if(!close||close<=0)continue;
+      var vol=day.v||0;
+      var avgD=barsD.length>=5?barsD.slice(0,Math.min(20,barsD.length)).reduce(function(s,b){return s+b.v;},0)/Math.min(20,barsD.length):vol;
+      var en=avgD*sp,rv=en>0?vol/en:1.0;
+      if(rv<1.2)continue;
+      var dC=barsD.slice(0,20).map(function(b){return b.c;}).reverse();
+      var dEma=dC.length>=3?dC.reduce(function(s,v){return s+v;},0)/dC.length:close;
+      var dBull=close>dEma;
+      var h4arr=[];for(var j=0;j<bars15.length;j+=16)h4arr.push(bars15[j].c);
+      var h4ema=h4arr.length>=3?h4arr.slice(-Math.min(10,h4arr.length)).reduce(function(s,v){return s+v;},0)/Math.min(10,h4arr.length):close;
+      var h4Bull=close>h4ema;
+      var bias=(dBull?1:0)+(h4Bull?1:0)>=1?1:-1;
+      var atr=barsD.length>=2?barsD.slice(0,14).reduce(function(s,b){return s+(b.h-b.l);},0)/Math.min(14,barsD.length):(close*0.015);
+      var stop1=bias===1?close+atr*rngSeed(stock.t,0.3,0.8,1):close-atr*rngSeed(stock.t,0.3,0.8,1);
+      var stop2=bias===1?stop1+atr*rngSeed(stock.t,0.5,1.2,2):stop1-atr*rngSeed(stock.t,0.5,1.2,2);
+      var lz=bias===1?stop2+atr*1.618:stop2-atr*1.618;
+      var tb=bars15.slice(-Math.min(bars15.length,28));
+      var sh=Math.max.apply(null,tb.map(function(b){return b.h;}));
+      var sl=Math.min.apply(null,tb.map(function(b){return b.l;}));
+      var hit=null;
+      if(bias===1&&lz>sl)hit=Math.max(0,Math.min(100,((close-sl)/(lz-sl))*100));
+      else if(bias===-1&&lz<sh)hit=Math.max(0,Math.min(100,((sh-close)/(sh-lz))*100));
+      var d2t=Math.abs(lz-close);
+      var d2tStr=d2t>=100?(bias===1?"+":"-")+"$"+d2t.toFixed(0):d2t>=10?(bias===1?"+":"-")+"$"+d2t.toFixed(1):(bias===1?"+":"-")+"$"+d2t.toFixed(2);
+      // Train mode mock based on signals
+      var modes=["BOARDING","DEPART","ROLLING","SLOW","REVERSAL","WAITING"];
+      var mw=[0.15,0.20,0.35,0.15,0.10,0.05];
+      var mr=rngSeed(stock.t,0,1,3),mi=0,acc=0;
+      for(var k=0;k<mw.length;k++){acc+=mw[k];if(mr<acc){mi=k;break;}}
+      var mName=modes[mi];
+      var action=(mName==="DEPART"||mName==="ROLLING"||mName==="BOARDING")?"GET ON":(mName==="REVERSAL"?"GET OFF":"WAIT");
+      var score=(Math.min(rv,5)/5*0.5)+(dBull===h4Bull?0.3:0.1)+((hit||0)/100*0.2);
+      scored.push({t:stock.t,n:stock.n,bias:bias,price:close.toFixed(2),stop1:stop1.toFixed(2),stop2:stop2.toFixed(2),station:lz.toFixed(2),d2tStr:d2tStr,d2tColor:bias===1?"#00ff88":"#ff4466",hit:hit!==null?Math.round(hit):null,rv:rv.toFixed(1),mName:mName,action:action,score:score});
+    }catch(e){}
+  }
+  return scored.sort(function(a,b){return b.score-a.score;}).slice(0,20);
+}
+
+function rngSeed(ticker,min,max,salt){
+  var seed=ticker.split("").reduce(function(a,c){return a+c.charCodeAt(0);},0)+(salt||1);
+  var x=Math.sin(seed*9301)*10000;
+  return min+((x-Math.floor(x))*(max-min));
+}
+
+async function doScan(){
+  if(isScanning)return;
+  isScanning=true;
+  results=[];completed=[];
+  updateControls();
+  var pg=document.getElementById("progressSection");
+  var re=document.getElementById("results");
+  if(pg)pg.style.display="block";
+  if(re)re.innerHTML="";
+  results=await liveScan(UNIVS[universe]);
+  if(pg)pg.style.display="none";
+  isScanning=false;
+  updateControls();
+  renderScanner();
+}
+
+function startAutoScan(){
+  clearInterval(scanTimer);
+  doScan();
+  scanTimer=setInterval(function(){if(!isScanning)doScan();},5*60*1000);
+}
+
+// ============================================================
+// COLOR HELPERS
+// ============================================================
+function hitColor(v){if(v===null||isNaN(v))return"#aaaacc";return v>=75?"#ff8844":v>=50?"#ffcc00":v>=25?"#00ccff":"#00ff88";}
+function volColor(v){var n=parseFloat(v);return n>=2.5?"#00ff88":n>=1.8?"#ffcc00":"#cccccc";}
+function modeColor(m){return m==="ROLLING"?"#00ff88":m==="DEPART"?"#88ffcc":m==="BOARDING"?"#ffcc00":m==="SLOW"?"#ff8844":m==="REVERSAL"?"#ff4466":"#ccccff";}
+function actionBg(a){return a==="GET ON"?"#00ff88":a==="GET OFF"?"#ff4466":"#ffcc00";}
+
+// ============================================================
+// RENDER FUNCTIONS
+// ============================================================
+function render(){
+  if(!role){
+    if(loginTarget) renderPasswordScreen();
+    else renderLoginPage();
+  } else {
+    if(page==="scanner") renderScanner();
+    else if(page==="dashboard") renderDashboard();
+    else if(page==="options") renderOptions();
+  }
+}
+
+function renderLoginPage(){
+  var html='<div class="center-page">'
+    +'<div style="font-size:11px;color:#fff;letter-spacing:3px;margin-bottom:6px">MTS · TRAIN OF FORTUNE</div>'
+    +'<div style="font-size:26px;font-weight:bold;color:#00ccff;margin-bottom:4px;letter-spacing:2px">⬡ ACCESS PORTAL</div>'
+    +'<div style="font-size:13px;color:#fff;margin-bottom:28px;text-align:center">Select your access level to continue</div>';
+
+  [
+    {r:"ADMIN",   icon:"🔐",label:"ADMIN",   desc:"Full access — all features",      color:"#ff8844"},
+    {r:"TESTER",  icon:"🧪",label:"TESTER",  desc:"Scanner + app testing access",    color:"#00ccff"},
+    {r:"OBSERVER",icon:"👁",label:"OBSERVER",desc:"Scanner view only — no password", color:"#00ff88"},
+  ].forEach(function(item){
+    html+='<button onclick="selectRole(\''+item.r+'\')" style="width:100%;margin-bottom:14px;padding:18px 20px;border-radius:12px;border:2px solid '+item.color+';background:#0e0e22;font-family:\'Courier New\',monospace;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">'
+      +'<div style="font-size:28px">'+item.icon+'</div>'
+      +'<div>'
+        +'<div style="font-size:18px;font-weight:bold;color:'+item.color+';letter-spacing:2px">'+item.label+'</div>'
+        +'<div style="font-size:12px;color:#fff;margin-top:3px">'+item.desc+'</div>'
+      +'</div>'
+    +'</button>';
+  });
+
+  html+='<div style="font-size:10px;color:#fff;margin-top:8px;text-align:center">MTS · TRAIN OF FORTUNE · NOT FINANCIAL ADVICE</div>';
+  html+='</div>';
+  document.getElementById("app").innerHTML=html;
+}
+
+function renderPasswordScreen(){
+  var item={ADMIN:{color:"#ff8844",icon:"🔐"},TESTER:{color:"#00ccff",icon:"🧪"}}[loginTarget];
+  var html='<div class="center-page">'
+    +'<button onclick="cancelLogin()" style="align-self:flex-start;background:#1a1a3a;border:1px solid #00ccff;border-radius:6px;color:#00ccff;padding:6px 14px;font-family:\'Courier New\',monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-bottom:24px">← BACK</button>'
+    +'<div style="font-size:28px">'+item.icon+'</div>'
+    +'<div style="font-size:22px;font-weight:bold;color:'+item.color+';margin-top:8px;margin-bottom:6px;letter-spacing:2px">'+loginTarget+' ACCESS</div>'
+    +'<div style="font-size:13px;color:#fff;margin-bottom:24px">Enter your password to continue</div>'
+    +'<input type="password" id="passInput" placeholder="Enter password..." autocomplete="off" autocapitalize="none" spellcheck="false" onkeydown="if(event.key===\'Enter\')submitPass()"/>'
+    +(passError?'<div style="color:#ff4466;font-size:13px;font-weight:bold;margin-bottom:12px">'+passError+'</div>':'')
+    +'<button onclick="submitPass()" style="width:100%;padding:14px;border-radius:8px;border:none;background:'+item.color+';color:#000;font-family:\'Courier New\',monospace;font-weight:bold;font-size:16px;cursor:pointer;letter-spacing:2px">ENTER</button>'
+    +'</div>';
+  document.getElementById("app").innerHTML=html;
+  setTimeout(function(){var f=document.getElementById("passInput");if(f)f.focus();},100);
+}
+
+function renderScanner(){
+  var vis=results.filter(function(r){return completed.indexOf(r.t)===-1;});
+  var ul=universe==="SP500"?"S&P 500":universe==="DOW30"?"DOW 30":"RUT 2K";
+  var roleColor=isAdmin()?"#ff8844":isTester()?"#00ccff":"#00ff88";
+  var roleLabel=isAdmin()?"🔐 ADMIN":isTester()?"🧪 TESTER":"👁 OBSERVER";
+
+  var html='<div class="page">'
+    // Header
+    +'<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a2a50;padding-bottom:10px;margin-bottom:12px">'
+      +'<div>'
+        +'<div style="font-size:10px;color:#fff;letter-spacing:3px;margin-bottom:2px">MTS · EQUITY SCANNER</div>'
+        +'<div style="font-size:18px;font-weight:bold;color:#00ccff">⬡ MOMENTUM SCAN</div>'
+        +'<div style="font-size:9px;font-weight:bold;color:'+roleColor+';margin-top:2px;letter-spacing:1px">'+roleLabel+'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+        +'<div id="statusBadge" style="font-size:12px;font-weight:bold;color:#00ff88">● LIVE</div>'
+        +'<div id="clockEl" style="font-size:11px;color:#fff">'+new Date().toLocaleTimeString()+'</div>'
+      +'</div>'
+    +'</div>'
+    // Universe tabs
+    +'<div style="display:flex;gap:5px;margin-bottom:10px">'
+    +['SP500','DOW30','RUT2K'].map(function(k){
+      var l=k==="SP500"?"S&P 500":k==="DOW30"?"DOW 30":"RUT 2K";
+      return '<button onclick="switchUniverse(\''+k+'\')" style="flex:1;padding:10px 2px;border-radius:6px;font-family:\'Courier New\',monospace;font-weight:bold;font-size:12px;cursor:pointer;border:'+(universe===k?'none':'1px solid #333366')+';background:'+(universe===k?'#00ccff':'#1a1a3a')+';color:'+(universe===k?'#000':'#fff')+'">'+l+'</button>';
+    }).join('')
+    +'<button id="scanBtn" onclick="triggerScan()" style="padding:10px 16px;border-radius:6px;border:none;background:'+(isScanning?'#1a1a3a':'#00ff88')+';color:'+(isScanning?'#aaa':'#000')+';font-family:\'Courier New\',monospace;font-weight:bold;font-size:14px;cursor:pointer" '+(isScanning?'disabled':'')+'>⟳</button>'
+    +'</div>'
+    // Progress
+    +'<div id="progressSection" style="display:none;margin-bottom:12px">'
+      +'<div style="background:#1a1a3a;border-radius:4px;height:6px;overflow:hidden;margin-bottom:6px"><div id="progressFill" style="height:100%;background:#00ccff;border-radius:4px;width:0%;transition:width 0.3s"></div></div>'
+      +'<div id="scanStatus" style="font-size:11px;color:#fff;text-align:center">Scanning...</div>'
+    +'</div>'
+    // Info bar
+    +'<div style="font-size:10px;color:#fff;text-align:center;margin-bottom:8px">'+ul+' · '+vis.length+' SETUPS · '+new Date().toLocaleTimeString()+' · AUTO 5M</div>';
+
+  // Table
+  if(vis.length>0){
+    var COLS="20px 56px 22px 1fr 1fr 72px 50px 38px";
+    html+='<div class="tbl-wrap">'
+      +'<div class="tbl-hdr" style="grid-template-columns:'+COLS+'">'
+      +['','TICK','▲▼','PRICE','TARGET','D2T-$$','HIT%','VOL'].map(function(h){return'<div class="tbl-hdr-cell">'+h+'</div>';}).join('')
+      +'</div>';
+
+    vis.forEach(function(item,idx){
+      var isN=item.bias===1;
+      var dc=isN?"#00ff88":"#ff4466";
+      var hc=hitColor(item.hit);
+      var hn=item.hit!==null?item.hit:0;
+      html+='<div class="tbl-row" style="grid-template-columns:'+COLS+';background:'+(idx%2===0?"#0e0e22":"#0b0b1e")+';border-left:3px solid '+dc+'" onclick="openDash(\''+item.t+'\')">'
+        +'<div class="chkbox" onclick="event.stopPropagation();markTraded(\''+item.t+'\')"></div>'
+        +'<div style="font-size:14px;font-weight:bold;color:#fff;white-space:nowrap">'+item.t+'</div>'
+        +'<div style="font-size:16px;font-weight:bold;color:'+dc+';text-align:center">'+(isN?"▲":"▼")+'</div>'
+        +'<div class="cell" style="color:#fff">$'+item.price+'</div>'
+        +'<div class="cell" style="color:'+dc+';font-weight:bold">$'+item.station+'</div>'
+        +'<div class="cell" style="color:'+dc+';font-weight:bold">'+item.d2tStr+'</div>'
+        +'<div style="text-align:center">'
+          +'<div style="font-size:14px;font-weight:bold;color:'+hc+'">'+(item.hit!==null?item.hit+"%":"—")+'</div>'
+          +'<div class="hit-bg"><div class="hit-fill" style="width:'+hn+'%;background:'+hc+'"></div></div>'
+        +'</div>'
+        +'<div class="cell" style="color:'+volColor(item.rv)+'">'+item.rv+'x</div>'
+      +'</div>';
+    });
+    html+='</div>';
+
+    // Legend
+    html+='<div class="legend" style="margin-top:10px">'
+      +'<div style="font-size:9px;color:#fff;margin-bottom:5px">HIT% — How far price has traveled toward target today</div>'
+      +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
+      +[{c:"#00ff88",l:"<25% Early"},{c:"#00ccff",l:"25-50% Good"},{c:"#ffcc00",l:"50-75% Mid"},{c:"#ff8844",l:">75% Late"}].map(function(l){
+        return '<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:'+l.c+'"></div><div style="font-size:10px;color:#fff">'+l.l+'</div></div>';
+      }).join('')
+      +'</div></div>';
+  } else {
+    html+='<div style="text-align:center;padding:30px;color:#fff;font-size:13px;line-height:1.8">NO VOLUME SPIKES DETECTED<br>Hit ⟳ to refresh.</div>';
+  }
+
+  html+='<div style="margin-top:12px;font-size:9px;color:#fff;text-align:center">MTS · TRAIN OF FORTUNE · NOT FINANCIAL ADVICE</div>';
+  html+='</div>';
+  html+=renderBottomNav();
+  document.getElementById("app").innerHTML=html;
+  startClock();
+}
+
+function renderDashboard(){
+  if(!selectedStock){page="scanner";renderScanner();return;}
+  var s=selectedStock;
+  var dc=s.bias===1?"#00ff88":"#ff4466";
+  var mc=modeColor(s.mName);
+  var ab=actionBg(s.action);
+  var hc=hitColor(s.hit);
+  var hn=s.hit!==null?s.hit:0;
+
+  var html='<div class="dash-page">'
+    // Back + ticker
+    +'<div style="display:flex;align-items:center;justify-content:space-between">'
+      +'<button onclick="goScanner()" style="background:#1a1a3a;border:1px solid #00ccff;border-radius:6px;color:#00ccff;padding:6px 12px;font-family:\'Courier New\',monospace;font-size:12px;font-weight:bold;cursor:pointer">← BACK</button>'
+      +'<div style="text-align:center">'
+        +'<div style="font-size:28px;font-weight:bold;color:#fff;letter-spacing:2px;line-height:1">'+s.t+'</div>'
+        +'<div style="font-size:12px;font-weight:bold;color:#fff">'+s.n+'</div>'
+      +'</div>'
+      +'<div style="font-size:11px;font-weight:bold;color:#fff;text-align:right" id="dashClock">'+new Date().toLocaleTimeString()+'</div>'
+    +'</div>'
+    // Direction + Mode + Action row
+    +'<div style="display:flex;gap:8px;align-items:stretch">'
+      +'<div style="flex:1;background:#0e0e22;border:2px solid '+dc+';border-radius:10px;padding:10px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">'
+        +'<div style="font-size:48px;line-height:1;color:'+dc+'">'+(s.bias===1?"▲":"▼")+'</div>'
+        +'<div style="font-size:16px;font-weight:bold;color:'+dc+';letter-spacing:2px">'+(s.bias===1?"NORTH":"SOUTH")+'</div>'
+      +'</div>'
+      +'<div style="flex:2;display:flex;flex-direction:column;gap:8px">'
+        +'<div style="background:#0e0e22;border:2px solid '+mc+';border-radius:10px;padding:8px 12px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center">'
+          +'<div style="font-size:11px;font-weight:bold;color:#fff;letter-spacing:2px;margin-bottom:2px">TRAIN MODE</div>'
+          +'<div style="font-size:22px;font-weight:bold;color:'+mc+';letter-spacing:1px">'+s.mName+'</div>'
+        +'</div>'
+        +'<div style="background:'+ab+';border-radius:10px;padding:8px 12px;text-align:center;flex:1;display:flex;align-items:center;justify-content:center">'
+          +'<div style="font-size:26px;font-weight:bold;color:#000;letter-spacing:3px">'+s.action+'</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+    // Price levels
+    +'<div style="background:#0e0e22;border:1px solid #333366;border-radius:10px;overflow:hidden">'
+    +[
+      {label:"CURRENT PRICE", value:"$"+s.price,   color:"#ffffff"},
+      {label:"STOP 1",        value:"$"+s.stop1,   color:"#ffdd88"},
+      {label:"STOP 2",        value:"$"+s.stop2,   color:"#ffaa44"},
+      {label:"NEXT STATION",  value:"$"+s.station, color:dc},
+    ].map(function(row,idx){
+      return '<div class="dash-row" style="background:'+(idx%2===0?"#0e0e22":"#111128")+'">'
+        +'<div style="font-size:15px;font-weight:bold;color:#fff;letter-spacing:1px">'+row.label+'</div>'
+        +'<div style="font-size:18px;font-weight:bold;color:'+row.color+'">'+row.value+'</div>'
+      +'</div>';
+    }).join('')
+    +'</div>'
+    // HIT%
+    +'<div style="background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:12px 16px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        +'<div style="font-size:15px;font-weight:bold;color:#fff;letter-spacing:1px">HIT % TODAY</div>'
+        +'<div style="font-size:24px;font-weight:bold;color:'+hc+'">'+(s.hit!==null?s.hit+"%":"—")+'</div>'
+      +'</div>'
+      +'<div style="background:#1a1a3a;border-radius:6px;height:14px;overflow:hidden">'
+        +'<div style="height:100%;width:'+hn+'%;background:'+hc+';border-radius:6px;transition:width 0.5s"></div>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;margin-top:5px">'
+        +'<div style="font-size:11px;font-weight:bold;color:#fff">SESSION START</div>'
+        +'<div style="font-size:11px;font-weight:bold;color:#fff">NEXT STATION</div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="font-size:9px;color:#fff;text-align:center">MTS · TRAIN OF FORTUNE · NOT FINANCIAL ADVICE</div>'
+  +'</div>';
+  html+=renderBottomNav();
+  document.getElementById("app").innerHTML=html;
+  startClock();
+}
+
+function renderOptions(){
+  var html='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;padding-bottom:80px">'
+    +'<div style="font-size:40px;margin-bottom:16px">📈</div>'
+    +'<div style="font-size:20px;font-weight:bold;color:#00ff88;margin-bottom:8px">OPTIONS SCANNER</div>'
+    +'<div style="font-size:13px;color:#fff;text-align:center;line-height:1.8">Coming Soon<br/>Building next...</div>'
+  +'</div>';
+  html+=renderBottomNav();
+  document.getElementById("app").innerHTML=html;
+}
+
+function renderBottomNav(){
+  var dashLocked=!canDash();
+  var dashDim=dashLocked||!selectedStock;
+  return '<div class="bot-nav">'
+    // Scanner
+    +'<button class="nav-btn" onclick="goScanner()">'
+      +'<div class="nav-icon">📊</div>'
+      +'<div class="nav-label" style="color:'+(page==="scanner"?"#00ccff":"#fff")+'">SCANNER</div>'
+      +(page==="scanner"?'<div class="nav-bar"></div>':'')
+    +'</button>'
+    // Dashboard
+    +'<button class="nav-btn" onclick="goDash()" style="opacity:'+(dashDim?0.35:1)+';cursor:'+(dashDim?'not-allowed':'pointer')+'">'
+      +'<div class="nav-icon">🚂</div>'
+      +'<div class="nav-label" style="color:'+(page==="dashboard"?"#00ccff":"#fff")+'">DASHBOARD</div>'
+      +(page==="dashboard"?'<div class="nav-bar"></div>':'')
+      +(dashLocked?'<div style="font-size:7px;color:#ff8844;font-weight:bold">LOCKED</div>':'')
+    +'</button>'
+    // Options
+    +'<button class="nav-btn" onclick="page=\'options\';renderOptions()" style="opacity:0.5">'
+      +'<div class="nav-icon">📈</div>'
+      +'<div class="nav-label" style="color:#fff">OPTIONS</div>'
+      +'<div style="font-size:7px;color:#ffcc00;font-weight:bold">SOON</div>'
+    +'</button>'
+    // Logout
+    +'<button class="nav-btn" onclick="logout()">'
+      +'<div class="nav-icon">🚪</div>'
+      +'<div class="nav-label" style="color:#fff">EXIT</div>'
+    +'</button>'
+  +'</div>';
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function selectRole(r){
+  if(r==="OBSERVER"){role="OBSERVER";saveRole("OBSERVER");page="scanner";startAutoScan();return;}
+  loginTarget=r; passError=""; render();
+}
+
+function cancelLogin(){loginTarget=null;passError="";render();}
+
+function submitPass(){
+  var f=document.getElementById("passInput");
+  var val=f?f.value:"";
+  if(val===ROLES[loginTarget].pass){
+    role=loginTarget; saveRole(role); loginTarget=null; passError="";
+    page="scanner"; startAutoScan();
+  } else {
+    passError="Incorrect password. Try again."; render();
+  }
+}
+
+function logout(){clearRole();role=null;loginTarget=null;passError="";page="login";clearInterval(scanTimer);results=[];completed=[];selectedStock=null;render();}
+
+function switchUniverse(u){universe=u;startAutoScan();}
+function triggerScan(){if(!isScanning)doScan();}
+function markTraded(t){completed.push(t);renderScanner();}
+
+function openDash(ticker){
+  if(!canDash()){return;}
+  var s=results.find(function(r){return r.t===ticker;});
+  if(s){selectedStock=s;page="dashboard";renderDashboard();}
+}
+
+function goScanner(){page="scanner";renderScanner();}
+function goDash(){if(canDash()&&selectedStock){page="dashboard";renderDashboard();}}
+
+function updateControls(){
+  var btn=document.getElementById("scanBtn");
+  var badge=document.getElementById("statusBadge");
+  if(btn){btn.disabled=isScanning;btn.style.background=isScanning?"#1a1a3a":"#00ff88";btn.style.color=isScanning?"#aaa":"#000";}
+  if(badge){badge.textContent=isScanning?"⟳ SCANNING":"● LIVE";badge.style.color=isScanning?"#ffcc00":"#00ff88";}
+}
+
+var clockInt=null;
+function startClock(){
+  clearInterval(clockInt);
+  clockInt=setInterval(function(){
+    var el=document.getElementById("clockEl")||document.getElementById("dashClock");
+    if(el)el.textContent=new Date().toLocaleTimeString();
+  },1000);
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+role=loadRole();
+if(role){page="scanner";startAutoScan();}
+else render();
+</script>
+
+</body>
+</html>
