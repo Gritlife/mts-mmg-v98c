@@ -11,7 +11,12 @@
 html,body{background:#06060f;color:#fff;font-family:'Courier New',monospace;min-height:100vh;}
 .wrap{max-width:480px;margin:0 auto;padding:12px 8px;}.scanner-inner{padding-bottom:80px;}
 .btn{display:block;width:100%;padding:16px 20px;margin-bottom:12px;border-radius:12px;border:2px solid;background:#0e0e22;font-family:'Courier New',monospace;cursor:pointer;text-align:left;}
-.row{display:grid;grid-template-columns:20px 52px 20px 60px 72px 68px 46px 36px;gap:4px;padding:8px;align-items:center;border-bottom:1px solid #1a1a30;}
+.row{display:grid;grid-template-columns:18px 44px 18px 52px 62px 45px 40px 34px 48px;gap:3px;padding:8px 5px;align-items:center;border-bottom:1px solid #1a1a30;}
+.action-pill{display:inline-block;border-radius:4px;padding:2px 3px;font-size:8px;font-weight:bold;color:#000;line-height:1.1;}
+.mini-stat{background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:10px 12px;}
+.mini-stat-label{font-size:11px;font-weight:bold;color:#ccc;margin-bottom:6px;}
+.mini-stat-value{font-size:20px;font-weight:bold;}
+.api-warn{background:#1a1200;border:1px solid #ffcc00;border-radius:8px;color:#ffcc00;padding:8px;margin-bottom:10px;font-size:10px;text-align:center;}
 .row:last-child{border-bottom:none;}
 .hdr{background:#0a0a20;border-radius:8px 8px 0 0;}
 .cell{font-size:13px;text-align:center;white-space:nowrap;}
@@ -102,6 +107,7 @@ input::placeholder{color:#8888aa;}
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <button id="addWlBtn" onclick="showAddTicker()" style="display:none;background:#aa66ff;border:none;border-radius:6px;color:#000;width:32px;height:32px;font-size:20px;cursor:pointer;font-weight:bold;line-height:1">+</button>
+      <button onclick="editApiKey()" style="background:#1a1a3a;border:1px solid #ffcc00;border-radius:6px;color:#ffcc00;width:32px;height:32px;font-size:15px;cursor:pointer;font-weight:bold;line-height:1">🔑</button>
       <div style="text-align:right">
         <div id="liveBadge" style="font-size:11px;font-weight:bold;color:#00ff88">LIVE</div>
         <div id="clockEl" style="font-size:10px;color:#aaa"></div>
@@ -151,6 +157,8 @@ input::placeholder{color:#8888aa;}
     <div id="progressTxt" style="font-size:10px;color:#aaa;text-align:center">Scanning...</div>
   </div>
 
+  <div id="apiNotice" class="api-warn" style="display:none">Tap 🔑 to add Polygon API key on this device.</div>
+
   <!-- Info -->
 
   <div id="infoBar" style="font-size:10px;color:#aaa;text-align:center;margin-bottom:8px"></div>
@@ -165,8 +173,9 @@ input::placeholder{color:#8888aa;}
       <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">PRICE</div>
       <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">TARGET</div>
       <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">D2T</div>
-      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">HIT%</div>
-      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">VOL</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">TRIP</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">RVOL</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">ACTION</div>
     </div>
     <div id="tableBody"></div>
   </div>
@@ -180,7 +189,7 @@ input::placeholder{color:#8888aa;}
   <!-- Legend -->
 
   <div id="legend" style="margin-top:10px;padding:8px;background:#0a0a1a;border:1px solid #1a1a30;border-radius:6px;display:none">
-    <div style="font-size:9px;color:#aaa;margin-bottom:5px">HIT% - How far price traveled toward target today</div>
+    <div style="font-size:9px;color:#aaa;margin-bottom:5px">TRIP % - How far price traveled toward the next station today</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#00ff88"></div><div style="font-size:9px;color:#ccc">&lt;25% Early</div></div>
       <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#00ccff"></div><div style="font-size:9px;color:#ccc">25-50% Good</div></div>
@@ -194,9 +203,33 @@ input::placeholder{color:#8888aa;}
 </div>
 
 <script>
-var API="HjLVXQHGFcYFnJFQf2oq1ODPMVvwLuJ9";
+var API=localStorage.getItem("mts_polygon_api_key")||"";
 var PASS={ADMIN:"mts2024",TESTER:"test123"};
 var MAX_WL=20;
+
+
+function getApiKey(){
+  API=localStorage.getItem("mts_polygon_api_key")||API||"";
+  if(!API){
+    var k=prompt("Enter Polygon API key for this device. It will be saved only in this browser.");
+    if(k){API=k.trim();localStorage.setItem("mts_polygon_api_key",API);}
+  }
+  return API;
+}
+function editApiKey(){
+  var current=localStorage.getItem("mts_polygon_api_key")||"";
+  var k=prompt("Polygon API key for this browser:",current);
+  if(k!==null){
+    API=k.trim();
+    if(API)localStorage.setItem("mts_polygon_api_key",API);
+    else localStorage.removeItem("mts_polygon_api_key");
+    alert(API?"Polygon key saved on this device.":"Polygon key cleared.");
+  }
+}
+function apiKeyParam(){return encodeURIComponent(getApiKey()||"");}
+function colorForAction(a){return a==="GET ON"?"#00ff88":a==="GET OFF"?"#ff4466":"#ffcc00";}
+function textForAction(a){return a==="WAIT"?"#000":"#000";}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
 
 var SP500=["AAPL","MSFT","NVDA","GOOGL","AMZN","META","TSLA","JPM","V","WMT","GS","MS","AMD","NFLX","CRWD","DDOG","AVGO","COST","UNH","MA","ADBE","BKNG","ISRG","SPGI","LMT","CAT","RTX","BAC","XOM","CVX"];
 var DOW30=["AAPL","MSFT","JPM","V","WMT","GS","CAT","BA","HD","MCD","HON","CVX","IBM","MMM","MRK","DIS","KO","VZ","INTC","SHW"];
@@ -388,6 +421,7 @@ function showScanner(){
   }
 
   updateBotNav();
+  var apiNotice=document.getElementById("apiNotice"); if(apiNotice)apiNotice.style.display=(localStorage.getItem("mts_polygon_api_key")?"none":"block");
   setUniverse("SP500");
   startClock();
 }
@@ -507,12 +541,16 @@ function startScan(){
         var d2t=Math.abs(station-close);
         var d2tStr=d2t>=100?(bias===1?"+":"-")+"$"+d2t.toFixed(0):d2t>=10?(bias===1?"+":"-")+"$"+d2t.toFixed(1):(bias===1?"+":"-")+"$"+d2t.toFixed(2);
         var score=(Math.min(rv,5)/5*0.5)+((hit||0)/100*0.5);
-        scored.push({t:t,bias:bias,price:close.toFixed(2),station:station.toFixed(2),d2tStr:d2tStr,hit:hit!==null?Math.round(hit):null,rv:rv.toFixed(1),score:score});
+        var hRound=hit!==null?Math.round(hit):null;
+        var action="WAIT";
+        if(hRound!==null&&hRound>=85)action="GET OFF";
+        else if(rv>=1.8&&hRound!==null&&hRound>=15&&hRound<75)action="GET ON";
+        scored.push({t:t,bias:bias,price:close.toFixed(2),station:station.toFixed(2),d2tStr:d2tStr,hit:hRound,rv:rv.toFixed(1),action:action,score:score});
       }catch(e){}
       setTimeout(next,50);
     }
 
-    fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+t+"?apiKey="+API)
+    fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+t+"?apiKey="+apiKeyParam())
       .then(function(r){return r.json();})
       .then(function(d){snapData=d.ticker||null;snapDone=true;tryProcess();})
       .catch(function(){snapData=null;snapDone=true;tryProcess();});
@@ -564,6 +602,7 @@ function renderTable(){
         +'<div class="bar-bg"><div class="bar-fill" style="width:'+(item.hit||0)+'%;background:'+hcol+'"></div></div>'
       +'</div>'
       +'<div class="cell" style="color:'+vc(item.rv)+'">'+item.rv+'x</div>'
+      +'<div class="cell"><span class="action-pill" style="background:'+colorForAction(item.action)+';color:'+textForAction(item.action)+'">'+(item.action==='GET ON'?'ON':item.action==='GET OFF'?'OFF':'WAIT')+'</span></div>'
     +'</div>';
   });
   document.getElementById("tableBody").innerHTML=html;
@@ -745,11 +784,18 @@ function runMMGDash(ticker,b15,b60,b240,bD,snap,cb){
 
     var action=mode>=2&&mode<=4?"GET ON":mode>=6?"GET OFF":"WAIT";
     var modeNames=["WAITING","BOARDING","DEPART","ROLLING","SLOW","REV 33%","REV 67%","REV 99%"];
+    var engineTemp=clamp(Math.abs(dir)*100,0,100);
+    var modeTrust=mode===4?90:mode===3?75:mode===2?55:mode===5?45:mode===6?35:mode===7?20:mode===8?5:25;
+    var arriveTrust=hit===null?50:hit;
+    var flowTrust=vwapOK?80:40;
+    var certainty=bias===0?0:clamp((engineTemp*0.40)+(modeTrust*0.25)+(arriveTrust*0.20)+(flowTrust*0.15),0,100);
 
     cb({
       bias:bias,close:closeN,
       s1:s1,s2:s2,sta:sta,
       hit:hit!==null?Math.round(hit):null,
+      certainty:Math.round(certainty),
+      engineTemp:Math.round(engineTemp),
       mName:modeNames[mode-1]||"WAITING",
       action:action,mode:mode
     });
@@ -807,6 +853,10 @@ function openDash(ticker,name){
         document.getElementById("dashStop2").textContent="—";
         document.getElementById("dashStation").textContent="—";
         document.getElementById("dashHit").textContent="—";
+        var certEl=document.getElementById("dashCert"); if(certEl)certEl.textContent="—";
+        var tempEl=document.getElementById("dashTemp"); if(tempEl)tempEl.textContent="—";
+        var certBar=document.getElementById("dashCertBar"); if(certBar)certBar.style.width="0%";
+        var tempBar=document.getElementById("dashTempBar"); if(tempBar)tempBar.style.width="0%";
         return;
       }
 
@@ -837,12 +887,24 @@ function openDash(ticker,name){
       document.getElementById("dashHit").style.color=hcol;
       document.getElementById("dashHitBar").style.width=(result.hit||0)+"%";
       document.getElementById("dashHitBar").style.background=hcol;
+      var cert=result.certainty!==undefined?result.certainty:null;
+      var temp=result.engineTemp!==undefined?result.engineTemp:null;
+      var ccol=cert===null?"#aaa":cert>=75?"#00ff88":cert>=50?"#00ccff":cert>=25?"#ffcc00":"#ff4466";
+      var tcol=temp===null?"#aaa":temp>=75?"#ff4466":temp>=50?"#ff8844":temp>=25?"#ffcc00":"#fff";
+      document.getElementById("dashCert").textContent=cert===null?"—":cert+"%";
+      document.getElementById("dashCert").style.color=ccol;
+      document.getElementById("dashCertBar").style.width=(cert||0)+"%";
+      document.getElementById("dashCertBar").style.background=ccol;
+      document.getElementById("dashTemp").textContent=temp===null?"—":temp+"%";
+      document.getElementById("dashTemp").style.color=tcol;
+      document.getElementById("dashTempBar").style.width=(temp||0)+"%";
+      document.getElementById("dashTempBar").style.background=tcol;
       // Draw chart after a short delay to let DOM settle
       setTimeout(function(){drawChart(ticker,result.bias);},200);
     });
   }
 
-  fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+ticker+"?apiKey="+API)
+  fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+ticker+"?apiKey="+apiKeyParam())
     .then(function(r){return r.json();}).then(function(d){snapData=d.ticker||null;snapDone=true;tryRender();}).catch(function(){snapDone=true;tryRender();});
   fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/15/minute/"+from3+"/"+today+"?adjusted=true&sort=asc&limit=200&apiKey="+API)
     .then(function(r){return r.json();}).then(function(d){b15Data=d.results||[];b15Done=true;tryRender();}).catch(function(){b15Data=[];b15Done=true;tryRender();});
@@ -852,6 +914,40 @@ function openDash(ticker,name){
     .then(function(r){return r.json();}).then(function(d){b240Data=d.results||[];b240Done=true;tryRender();}).catch(function(){b240Data=[];b240Done=true;tryRender();});
   fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/1/day/"+from60+"/"+today+"?adjusted=true&sort=desc&limit=60&apiKey="+API)
     .then(function(r){return r.json();}).then(function(d){bDData=d.results||[];bDDone=true;tryRender();}).catch(function(){bDData=[];bDDone=true;tryRender();});
+}
+
+
+function drawChart(ticker,bias){
+  var canvas=document.getElementById("miniChart");
+  if(!canvas)return;
+  var ctx=canvas.getContext("2d");
+  var rect=canvas.getBoundingClientRect();
+  canvas.width=Math.max(300,Math.floor(rect.width*2));
+  canvas.height=260;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle="#06060f";ctx.fillRect(0,0,canvas.width,canvas.height);
+  var today=new Date().toISOString().split("T")[0];
+  var from=new Date(Date.now()-2*86400000).toISOString().split("T")[0];
+  fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/15/minute/"+from+"/"+today+"?adjusted=true&sort=asc&limit=120&apiKey="+apiKeyParam())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var bars=(d.results||[]).slice(-40);
+      if(!bars.length){ctx.fillStyle="#888";ctx.font="22px Courier New";ctx.fillText("NO CHART DATA",30,130);return;}
+      var vals=bars.map(function(b){return b.c;});
+      var hi=Math.max.apply(null,vals),lo=Math.min.apply(null,vals);
+      var pad=(hi-lo)*0.12||1;hi+=pad;lo-=pad;
+      function x(i){return 18+(i/(bars.length-1))*(canvas.width-36);}
+      function y(v){return 16+((hi-v)/(hi-lo))*(canvas.height-32);}
+      ctx.strokeStyle="#1a1a3a";ctx.lineWidth=1;
+      for(var g=0;g<4;g++){var yy=16+g*(canvas.height-32)/3;ctx.beginPath();ctx.moveTo(12,yy);ctx.lineTo(canvas.width-12,yy);ctx.stroke();}
+      ctx.strokeStyle=bias===1?"#00ff88":"#ff4466";ctx.lineWidth=3;ctx.beginPath();
+      for(var i=0;i<bars.length;i++){if(i===0)ctx.moveTo(x(i),y(bars[i].c));else ctx.lineTo(x(i),y(bars[i].c));}
+      ctx.stroke();
+      var ema=calcEMA(bars,21); var vwap=calcVWAP(bars);
+      ctx.strokeStyle="#ffcc88";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(18,y(ema));ctx.lineTo(canvas.width-18,y(ema));ctx.stroke();
+      ctx.strokeStyle="#00ccff";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(18,y(vwap));ctx.lineTo(canvas.width-18,y(vwap));ctx.stroke();
+    })
+    .catch(function(){ctx.fillStyle="#888";ctx.font="22px Courier New";ctx.fillText("CHART ERROR",30,130);});
 }
 
 function goPage(p){
@@ -950,10 +1046,10 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
         <div id="dashStation" style="font-size:18px;font-weight:bold"></div>
       </div>
     </div>
-    <!-- HIT% -->
+    <!-- TRIP % -->
     <div style="background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:12px 16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:14px;font-weight:bold;color:#fff">HIT % TODAY</div>
+        <div style="font-size:14px;font-weight:bold;color:#fff">TRIP % TODAY</div>
         <div id="dashHit" style="font-size:22px;font-weight:bold"></div>
       </div>
       <div style="background:#1a1a3a;border-radius:6px;height:12px;overflow:hidden">
@@ -962,6 +1058,19 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
       <div style="display:flex;justify-content:space-between;margin-top:5px">
         <div style="font-size:10px;font-weight:bold;color:#fff">SESSION START</div>
         <div style="font-size:10px;font-weight:bold;color:#fff">NEXT STATION</div>
+      </div>
+    </div>
+    <!-- Certainty + Engine Temp -->
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px">
+      <div class="mini-stat" style="flex:1">
+        <div class="mini-stat-label">CERTAINTY %</div>
+        <div id="dashCert" class="mini-stat-value">—</div>
+        <div style="background:#1a1a3a;border-radius:5px;height:8px;overflow:hidden;margin-top:6px"><div id="dashCertBar" style="height:100%;width:0%;border-radius:5px"></div></div>
+      </div>
+      <div class="mini-stat" style="flex:1">
+        <div class="mini-stat-label">ENGINE TEMP</div>
+        <div id="dashTemp" class="mini-stat-value">—</div>
+        <div style="background:#1a1a3a;border-radius:5px;height:8px;overflow:hidden;margin-top:6px"><div id="dashTempBar" style="height:100%;width:0%;border-radius:5px"></div></div>
       </div>
     </div>
     <!-- MINI CHART -->
