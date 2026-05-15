@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#06060f"/>
+<title>MTS - Train of Fortune</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:#06060f;color:#fff;font-family:'Courier New',monospace;min-height:100vh;}
+.wrap{max-width:480px;margin:0 auto;padding:12px 8px;}.scanner-inner{padding-bottom:80px;}
+.btn{display:block;width:100%;padding:16px 20px;margin-bottom:12px;border-radius:12px;border:2px solid;background:#0e0e22;font-family:'Courier New',monospace;cursor:pointer;text-align:left;}
+.row{display:grid;grid-template-columns:20px 52px 20px 60px 72px 68px 46px 36px;gap:4px;padding:8px;align-items:center;border-bottom:1px solid #1a1a30;}
+.row:last-child{border-bottom:none;}
+.hdr{background:#0a0a20;border-radius:8px 8px 0 0;}
+.cell{font-size:13px;text-align:center;white-space:nowrap;}
+.bar-bg{background:#1a1a3a;border-radius:2px;height:3px;margin-top:2px;}
+.bar-fill{height:100%;border-radius:2px;}
+.chk{width:14px;height:14px;border:1.5px solid #fff;border-radius:3px;cursor:pointer;margin:0 auto;display:block;}
+input[type=password],input[type=text]{width:100%;background:#1a1a3a;border:2px solid #6666bb;border-radius:8px;color:#fff;padding:12px;font-size:15px;font-family:'Courier New',monospace;margin-bottom:10px;outline:none;-webkit-appearance:none;}
+input:focus{border-color:#00ccff;}
+input::placeholder{color:#8888aa;}
+.tab-btn{flex:1;padding:9px 2px;border-radius:6px;font-family:'Courier New',monospace;font-weight:bold;font-size:11px;cursor:pointer;}
+.tab-active{background:#00ccff;color:#000;border:none;}
+.tab-inactive{background:#1a1a3a;color:#ccc;border:1px solid #333366;}
+.wl-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #1a1a30;background:#0e0e22;}
+.wl-item:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+
+<div id="pgLogin" class="wrap">
+  <div style="text-align:center;padding:40px 0 30px">
+    <div style="font-size:10px;color:#aaa;letter-spacing:3px;margin-bottom:8px">MTS - TRAIN OF FORTUNE</div>
+    <div style="font-size:24px;font-weight:bold;color:#00ccff;margin-bottom:6px">ACCESS PORTAL</div>
+    <div style="font-size:13px;color:#ccc">Select your access level</div>
+  </div>
+  <button class="btn" style="border-color:#ff8844;" onclick="doLogin('ADMIN')">
+    <div style="font-size:17px;font-weight:bold;color:#ff8844;">🔐 ADMIN</div>
+    <div style="font-size:12px;color:#ccc;margin-top:3px">Full access - all features</div>
+  </button>
+  <button class="btn" style="border-color:#00ccff;" onclick="doLogin('TESTER')">
+    <div style="font-size:17px;font-weight:bold;color:#00ccff;">🧪 TESTER</div>
+    <div style="font-size:12px;color:#ccc;margin-top:3px">Scanner + watchlist</div>
+  </button>
+  <button class="btn" style="border-color:#00ff88;" onclick="doLogin('OBSERVER')">
+    <div style="font-size:17px;font-weight:bold;color:#00ff88;">👁 OBSERVER</div>
+    <div style="font-size:12px;color:#ccc;margin-top:3px">Scanner view only - no password</div>
+  </button>
+  <button class="btn" style="border-color:#aa66ff;" onclick="doLogin('MEMBER')">
+    <div style="font-size:17px;font-weight:bold;color:#aa66ff;">🎫 MEMBER</div>
+    <div style="font-size:12px;color:#ccc;margin-top:3px">Registration opening soon</div>
+  </button>
+  <div style="font-size:10px;color:#888;text-align:center;margin-top:12px">MTS - TRAIN OF FORTUNE - NOT FINANCIAL ADVICE</div>
+</div>
+
+<!-- PASSWORD PAGE -->
+
+<div id="pgPass" class="wrap" style="display:none">
+  <div style="padding:40px 0 20px">
+    <button onclick="showLogin()" style="background:#1a1a3a;border:1px solid #00ccff;border-radius:6px;color:#00ccff;padding:6px 14px;font-family:'Courier New',monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-bottom:24px;display:block">BACK</button>
+    <div id="passIcon" style="font-size:32px;text-align:center;margin-bottom:8px"></div>
+    <div id="passTitle" style="font-size:20px;font-weight:bold;text-align:center;margin-bottom:6px"></div>
+    <div style="font-size:13px;color:#ccc;text-align:center;margin-bottom:20px">Enter your password</div>
+    <input type="password" id="passInput" placeholder="Enter password..." autocomplete="off" autocapitalize="none" spellcheck="false"/>
+    <div id="passError" style="color:#ff4466;font-size:13px;font-weight:bold;margin-bottom:10px;display:none">Incorrect password. Try again.</div>
+    <button id="passBtn" onclick="checkPass()" style="width:100%;padding:14px;border-radius:8px;border:none;font-family:'Courier New',monospace;font-weight:bold;font-size:15px;cursor:pointer">ENTER</button>
+  </div>
+</div>
+
+<!-- MEMBER COMING SOON PAGE -->
+
+<div id="pgMember" class="wrap" style="display:none">
+  <div style="padding:60px 0;text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">🎫</div>
+    <div style="font-size:22px;font-weight:bold;color:#aa66ff;margin-bottom:10px">MEMBER ACCESS</div>
+    <div style="font-size:14px;color:#ccc;line-height:1.8;margin-bottom:30px">
+      Registration is opening soon.<br>
+      Train of Fortune Members will get<br>
+      personal watchlists, signals, and more.
+    </div>
+    <div style="background:#0e0e22;border:2px solid #aa66ff;border-radius:12px;padding:16px;margin-bottom:24px">
+      <div style="font-size:12px;color:#aa66ff;font-weight:bold;margin-bottom:6px">TO GET EARLY ACCESS</div>
+      <div style="font-size:14px;color:#fff">Text: 615-944-1058</div>
+    </div>
+    <button onclick="showLogin()" style="background:#1a1a3a;border:1px solid #00ccff;border-radius:6px;color:#00ccff;padding:10px 24px;font-family:'Courier New',monospace;font-size:13px;font-weight:bold;cursor:pointer">BACK TO LOGIN</button>
+  </div>
+</div>
+
+<!-- SCANNER PAGE -->
+
+<div id="pgScanner" class="wrap" style="display:none">
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a2a50;padding-bottom:10px;margin-bottom:12px">
+    <div>
+      <div style="font-size:9px;color:#aaa;letter-spacing:3px">MTS - EQUITY SCANNER</div>
+      <div style="font-size:17px;font-weight:bold;color:#00ccff">MOMENTUM SCAN</div>
+      <div id="roleLabel" style="font-size:9px;font-weight:bold;margin-top:2px"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button id="addWlBtn" onclick="showAddTicker()" style="display:none;background:#aa66ff;border:none;border-radius:6px;color:#000;width:32px;height:32px;font-size:20px;cursor:pointer;font-weight:bold;line-height:1">+</button>
+      <div style="text-align:right">
+        <div id="liveBadge" style="font-size:11px;font-weight:bold;color:#00ff88">LIVE</div>
+        <div id="clockEl" style="font-size:10px;color:#aaa"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Ticker Popup -->
+
+  <div id="addTickerPopup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:999;align-items:center;justify-content:center">
+    <div style="background:#0e0e22;border:2px solid #aa66ff;border-radius:12px;padding:20px;width:90%;max-width:380px;margin:0 auto">
+      <div style="font-size:14px;font-weight:bold;color:#aa66ff;margin-bottom:12px;text-align:center">ADD STOCK TO WATCHLIST</div>
+      <input type="text" id="wlInput" placeholder="Enter ticker e.g. TSLA" autocomplete="off" autocapitalize="characters" spellcheck="false" style="margin-bottom:8px;font-size:16px;text-transform:uppercase"/>
+      <div id="wlError" style="color:#ff4466;font-size:12px;margin-bottom:8px;display:none"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="hideAddTicker()" style="flex:1;padding:12px;border-radius:8px;border:1px solid #555;background:transparent;color:#fff;font-family:'Courier New',monospace;font-weight:bold;font-size:13px;cursor:pointer">CANCEL</button>
+        <button onclick="addToWatchlist()" style="flex:1;padding:12px;border-radius:8px;border:none;background:#aa66ff;color:#000;font-family:'Courier New',monospace;font-weight:bold;font-size:13px;cursor:pointer">ADD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universe tabs -->
+
+  <div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">
+    <button id="tabSP" onclick="setUniverse('SP500')" class="tab-btn tab-active">S&amp;P 500</button>
+    <button id="tabDW" onclick="setUniverse('DOW30')" class="tab-btn tab-inactive">DOW 30</button>
+    <button id="tabRU" onclick="setUniverse('RUT2K')" class="tab-btn tab-inactive">RUT 2K</button>
+    <button id="tabWL" onclick="setUniverse('WATCHLIST')" class="tab-btn tab-inactive">⭐ LIST</button>
+    <button id="scanBtn" onclick="triggerScan()" style="padding:9px 12px;border-radius:6px;border:none;background:#00ff88;color:#000;font-family:'Courier New',monospace;font-weight:bold;font-size:13px;cursor:pointer">↺</button>
+  </div>
+
+  <!-- Watchlist swipe list (only shows when WATCHLIST tab active) -->
+
+  <div id="wlManager" style="display:none;margin-bottom:12px">
+    <div id="wlList" style="border:1px solid #2a2a50;border-radius:8px;overflow:hidden"></div>
+    <div id="wlEmpty" style="text-align:center;padding:24px;color:#aaa;font-size:13px;line-height:1.8;display:none">
+      No stocks yet.<br>Tap + to add your first stock.
+    </div>
+  </div>
+
+  <!-- Progress -->
+
+  <div id="progressWrap" style="display:none;margin-bottom:10px">
+    <div style="background:#1a1a3a;border-radius:4px;height:5px;overflow:hidden;margin-bottom:5px">
+      <div id="progressBar" style="height:100%;background:#00ccff;border-radius:4px;width:0%"></div>
+    </div>
+    <div id="progressTxt" style="font-size:10px;color:#aaa;text-align:center">Scanning...</div>
+  </div>
+
+  <!-- Info -->
+
+  <div id="infoBar" style="font-size:10px;color:#aaa;text-align:center;margin-bottom:8px"></div>
+
+  <!-- Table -->
+
+  <div id="tableWrap" style="border:1px solid #2a2a50;border-radius:8px;overflow:hidden;display:none">
+    <div class="row hdr">
+      <div></div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">TICK</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold"></div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">PRICE</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">TARGET</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">D2T</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">HIT%</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">VOL</div>
+    </div>
+    <div id="tableBody"></div>
+  </div>
+
+  <!-- Empty -->
+
+  <div id="emptyMsg" style="text-align:center;padding:30px;color:#aaa;font-size:13px;line-height:1.8;display:none">
+    NO SETUPS FOUND<br>Hit ↺ to refresh.
+  </div>
+
+  <!-- Legend -->
+
+  <div id="legend" style="margin-top:10px;padding:8px;background:#0a0a1a;border:1px solid #1a1a30;border-radius:6px;display:none">
+    <div style="font-size:9px;color:#aaa;margin-bottom:5px">HIT% - How far price traveled toward target today</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#00ff88"></div><div style="font-size:9px;color:#ccc">&lt;25% Early</div></div>
+      <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#00ccff"></div><div style="font-size:9px;color:#ccc">25-50% Good</div></div>
+      <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#ffcc00"></div><div style="font-size:9px;color:#ccc">50-75% Mid</div></div>
+      <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#ff8844"></div><div style="font-size:9px;color:#ccc">&gt;75% Late</div></div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;font-size:9px;color:#555;text-align:center">MTS - TRAIN OF FORTUNE - NOT FINANCIAL ADVICE</div>
+<div style="margin-bottom:80px"></div>
+</div>
+
+<script>
+var API="HjLVXQHGFcYFnJFQf2oq1ODPMVvwLuJ9";
+var PASS={ADMIN:"mts2024",TESTER:"test123"};
+var MAX_WL=20;
+
+var SP500=["AAPL","MSFT","NVDA","GOOGL","AMZN","META","TSLA","JPM","V","WMT","GS","MS","AMD","NFLX","CRWD","DDOG","AVGO","COST","UNH","MA","ADBE","BKNG","ISRG","SPGI","LMT","CAT","RTX","BAC","XOM","CVX"];
+var DOW30=["AAPL","MSFT","JPM","V","WMT","GS","CAT","BA","HD","MCD","HON","CVX","IBM","MMM","MRK","DIS","KO","VZ","INTC","SHW"];
+var RUT2K=["COIN","HOOD","AFRM","UPST","SOFI","RIVN","LCID","PLUG","SMCI","CHWY","BBIO","TMDX","ACVA","PRCT","RKT","JOBY","OPEN","BLNK","FCEL","SNDX"];
+var UNIVS={SP500:SP500,DOW30:DOW30,RUT2K:RUT2K};
+
+var role=null,universe="SP500",scanning=false,completed=[],results=[],scanTimer=null,loginTarget=null;
+
+// WATCHLIST STORAGE
+function wlKey(){return "mts_wl_"+(role||"guest");}
+function loadWL(){try{var d=localStorage.getItem(wlKey());return d?JSON.parse(d):[];}catch(e){return[];}}
+function saveWL(list){try{localStorage.setItem(wlKey(),JSON.stringify(list));}catch(e){}}
+function getWatchlist(){
+  if(role==="ADMIN"){
+    // Admin sees combined watchlist from all users (no duplicates)
+    var all=[];
+    var keys=["mts_wl_ADMIN","mts_wl_TESTER"];
+    try{
+      for(var i=0;i<keys.length;i++){
+        var d=localStorage.getItem(keys[i]);
+        if(d){
+          var arr=JSON.parse(d);
+          for(var j=0;j<arr.length;j++){
+            if(all.indexOf(arr[j])===-1)all.push(arr[j]);
+          }
+        }
+      }
+    }catch(e){}
+    return all;
+  }
+  return loadWL();
+}
+
+function showAddTicker(){
+  var list=loadWL();
+  var errEl=document.getElementById("wlError");
+  if(errEl)errEl.style.display="none";
+  var inp=document.getElementById("wlInput");
+  if(inp)inp.value="";
+  var popup=document.getElementById("addTickerPopup");
+  if(popup){popup.style.display="flex";}
+  setTimeout(function(){var f=document.getElementById("wlInput");if(f)f.focus();},200);
+}
+function hideAddTicker(){
+  var popup=document.getElementById("addTickerPopup");
+  if(popup)popup.style.display="none";
+}
+
+function addToWatchlist(){
+  var inp=document.getElementById("wlInput");
+  var ticker=(inp.value||"").trim().toUpperCase().replace(/[^A-Z]/g,"");
+  var errEl=document.getElementById("wlError");
+  errEl.style.display="none";
+
+  if(!ticker){errEl.textContent="Please enter a ticker symbol.";errEl.style.display="block";return;}
+  if(ticker.length>5){errEl.textContent="Ticker too long. Max 5 characters.";errEl.style.display="block";return;}
+
+  var list=loadWL();
+  if(list.length>=MAX_WL){errEl.textContent="Watchlist full. Max "+MAX_WL+" stocks.";errEl.style.display="block";return;}
+  if(list.indexOf(ticker)!==-1){errEl.textContent=ticker+" is already in your watchlist.";errEl.style.display="block";return;}
+
+  list.push(ticker);
+  saveWL(list);
+  inp.value="";
+  hideAddTicker();
+  renderWLManager();
+
+  // Auto scan if watchlist tab active
+  if(universe==="WATCHLIST")startScan();
+}
+
+function removeFromWatchlist(ticker){
+  var list=loadWL();
+  var idx=list.indexOf(ticker);
+  if(idx!==-1){list.splice(idx,1);saveWL(list);}
+  renderWLManager();
+  if(universe==="WATCHLIST")startScan();
+}
+
+function renderWLManager(){
+  var list=loadWL();
+  var wlList=document.getElementById("wlList");
+  var wlEmpty=document.getElementById("wlEmpty");
+
+  if(list.length===0){
+    wlList.innerHTML="";
+    wlList.style.display="none";
+    wlEmpty.style.display="block";
+    return;
+  }
+
+  wlEmpty.style.display="none";
+  wlList.style.display="block";
+
+  var html="";
+  list.forEach(function(t){
+    html+='<div class="wl-item">'
+      +'<span style="font-size:14px;font-weight:bold;color:#fff">'+t+'</span>'
+      +'<button onclick="removeFromWatchlist(\''+t+'\')" style="background:transparent;border:1px solid #ff4466;border-radius:4px;color:#ff4466;padding:4px 10px;font-family:\'Courier New\',monospace;font-size:11px;cursor:pointer">REMOVE</button>'
+    +'</div>';
+  });
+  wlList.innerHTML=html;
+
+  // Show count
+  var countEl=document.getElementById("wlCount");
+  if(countEl)countEl.textContent=list.length+"/"+MAX_WL+" stocks";
+}
+
+// LOGIN
+function show(id){
+  var ids=["pgLogin","pgPass","pgMember","pgScanner","pgDash","pgManual","botNav"];
+  for(var i=0;i<ids.length;i++){
+    var el=document.getElementById(ids[i]);
+    if(!el)continue;
+    if(ids[i]==="botNav"){
+      el.style.display=(id==="pgScanner"||id==="pgDash"||id==="pgManual")?"flex":"none";
+    } else {
+      el.style.display=ids[i]===id?"block":"none";
+    }
+  }
+}
+
+function doLogin(r){
+  if(r==="MEMBER"){show("pgMember");return;}
+  if(r==="OBSERVER"){
+    role="OBSERVER";
+    try{localStorage.setItem("mts_role","OBSERVER");}catch(e){}
+    showScanner();
+    return;
+  }
+  loginTarget=r;
+  document.getElementById("passError").style.display="none";
+  document.getElementById("passInput").value="";
+  var cfg={ADMIN:{icon:"🔐",color:"#ff8844"},TESTER:{icon:"🧪",color:"#00ccff"}}[r];
+  document.getElementById("passIcon").textContent=cfg.icon;
+  document.getElementById("passTitle").textContent=r+" ACCESS";
+  document.getElementById("passTitle").style.color=cfg.color;
+  document.getElementById("passBtn").style.background=cfg.color;
+  document.getElementById("passBtn").style.color="#000";
+  show("pgPass");
+  setTimeout(function(){document.getElementById("passInput").focus();},200);
+}
+
+function checkPass(){
+  var val=document.getElementById("passInput").value;
+  if(val===PASS[loginTarget]){
+    role=loginTarget;
+    try{localStorage.setItem("mts_role",loginTarget);}catch(e){}
+    showScanner();
+  } else {
+    document.getElementById("passError").style.display="block";
+  }
+}
+
+function showLogin(){
+  loginTarget=null;
+  show("pgLogin");
+}
+
+function doLogout(){
+  role=null;
+  try{localStorage.removeItem("mts_role");}catch(e){}
+  clearInterval(scanTimer);
+  results=[];completed=[];
+  show("pgLogin");
+}
+
+function showScanner(){
+  show("pgScanner");
+  activePage="scanner";
+  var rc=role==="ADMIN"?"#ff8844":role==="TESTER"?"#00ccff":"#00ff88";
+  var rl=role==="ADMIN"?"🔐 ADMIN":role==="TESTER"?"🧪 TESTER":"👁 OBSERVER";
+  document.getElementById("roleLabel").textContent=rl;
+  document.getElementById("roleLabel").style.color=rc;
+
+  // Hide watchlist tab for OBSERVER
+  if(role==="OBSERVER"){
+    document.getElementById("tabWL").style.display="none";
+  }
+
+  // Show bottom nav
+  var nav=document.getElementById("botNav");
+  if(nav){nav.style.display="flex";}
+
+  // Dashboard locked label for observer
+  if(role==="OBSERVER"){
+    var lbl=document.getElementById("navDashLbl");
+    if(lbl)lbl.textContent="LOCKED";
+  }
+
+  updateBotNav();
+  setUniverse("SP500");
+  startClock();
+}
+
+function setUniverse(u){
+  universe=u;
+  var tabs={SP500:"tabSP",DOW30:"tabDW",RUT2K:"tabRU",WATCHLIST:"tabWL"};
+  for(var k in tabs){
+    var el=document.getElementById(tabs[k]);
+    if(!el)continue;
+    if(k===u){el.className="tab-btn tab-active";}
+    else{el.className="tab-btn tab-inactive";}
+  }
+
+  // Show/hide watchlist manager and + button
+  var wlMgr=document.getElementById("wlManager");
+  var addBtn=document.getElementById("addWlBtn");
+  if(u==="WATCHLIST"&&role!=="OBSERVER"){
+    wlMgr.style.display="block";
+    if(addBtn)addBtn.style.display="flex";
+    renderWLManager();
+  } else {
+    wlMgr.style.display="none";
+    if(addBtn)addBtn.style.display="none";
+  }
+
+  startScan();
+}
+
+function getTickers(){
+  if(universe==="WATCHLIST")return getWatchlist();
+  return UNIVS[universe]||[];
+}
+
+function triggerScan(){if(!scanning)startScan();}
+
+function hc(v){if(v===null)return"#aaa";return v>=75?"#ff8844":v>=50?"#ffcc00":v>=25?"#00ccff":"#00ff88";}
+function vc(v){var n=parseFloat(v);return n>=2.5?"#00ff88":n>=1.8?"#ffcc00":"#ccc";}
+
+function startScan(){
+  if(scanning)return;
+  var tickers=getTickers();
+
+  if(tickers.length===0){
+    document.getElementById("infoBar").textContent="Watchlist is empty. Add stocks above.";
+    document.getElementById("tableWrap").style.display="none";
+    document.getElementById("emptyMsg").style.display="none";
+    document.getElementById("legend").style.display="none";
+    return;
+  }
+
+  scanning=true;
+  results=[];completed=[];
+  document.getElementById("scanBtn").style.background="#1a1a3a";
+  document.getElementById("scanBtn").style.color="#aaa";
+  document.getElementById("liveBadge").textContent="SCANNING";
+  document.getElementById("liveBadge").style.color="#ffcc00";
+  document.getElementById("progressWrap").style.display="block";
+  document.getElementById("tableWrap").style.display="none";
+  document.getElementById("emptyMsg").style.display="none";
+  document.getElementById("legend").style.display="none";
+  document.getElementById("tableBody").innerHTML="";
+
+  var idx=0;
+  var scored=[];
+  var now=new Date();
+  var hr=now.getHours()+now.getMinutes()/60;
+  var sp=Math.max(0.01,Math.min(1,(hr-9.5)/6.5));
+  var today=now.toISOString().split("T")[0];
+  var fromD=new Date(Date.now()-60*86400000).toISOString().split("T")[0];
+
+  function next(){
+    if(idx>=tickers.length){
+      scored.sort(function(a,b){return b.score-a.score;});
+      results=scored.slice(0,20);
+      scanning=false;
+      document.getElementById("scanBtn").style.background="#00ff88";
+      document.getElementById("scanBtn").style.color="#000";
+      document.getElementById("liveBadge").textContent="LIVE";
+      document.getElementById("liveBadge").style.color="#00ff88";
+      document.getElementById("progressWrap").style.display="none";
+      renderTable();
+      return;
+    }
+
+    var t=tickers[idx];
+    var pct=Math.round(((idx+1)/tickers.length)*100);
+    document.getElementById("progressBar").style.width=pct+"%";
+    document.getElementById("progressTxt").textContent="Scanning "+t+" ("+idx+1+"/"+tickers.length+")";
+    idx++;
+
+    var snapDone=false,dailyDone=false,snapData=null,dailyData=null;
+
+    function tryProcess(){
+      if(!snapDone||!dailyDone)return;
+      try{
+        if(!snapData)return setTimeout(next,50);
+        var day=snapData.day||{},prev=snapData.prevDay||{};
+        var close=day.c||prev.c;
+        if(!close||close<=0)return setTimeout(next,50);
+        var vol=day.v||0;
+        var daily=dailyData||[];
+        var avgVol=daily.length>=5?daily.slice(0,Math.min(20,daily.length)).reduce(function(s,b){return s+b.v;},0)/Math.min(20,daily.length):vol;
+        var expNow=avgVol*sp;
+        var rv=expNow>0?vol/expNow:1.0;
+        // For watchlist stocks always show even if vol not spiking
+        if(universe!=="WATCHLIST"&&rv<1.1)return setTimeout(next,50);
+        var dC=daily.slice(0,20).map(function(b){return b.c;}).reverse();
+        var dEma=dC.length>=3?dC.reduce(function(s,v){return s+v;},0)/dC.length:close;
+        var bias=close>dEma?1:-1;
+        var atr=daily.length>=2?daily.slice(0,14).reduce(function(s,b){return s+(b.h-b.l);},0)/Math.min(14,daily.length):(close*0.015);
+        var station=bias===1?close+atr*1.618:close-atr*1.618;
+        var sh=day.h||close,sl=day.l||close;
+        var hit=null;
+        if(bias===1&&station>sl)hit=Math.max(0,Math.min(100,((close-sl)/(station-sl))*100));
+        else if(bias===-1&&station<sh)hit=Math.max(0,Math.min(100,((sh-close)/(sh-station))*100));
+        var d2t=Math.abs(station-close);
+        var d2tStr=d2t>=100?(bias===1?"+":"-")+"$"+d2t.toFixed(0):d2t>=10?(bias===1?"+":"-")+"$"+d2t.toFixed(1):(bias===1?"+":"-")+"$"+d2t.toFixed(2);
+        var score=(Math.min(rv,5)/5*0.5)+((hit||0)/100*0.5);
+        scored.push({t:t,bias:bias,price:close.toFixed(2),station:station.toFixed(2),d2tStr:d2tStr,hit:hit!==null?Math.round(hit):null,rv:rv.toFixed(1),score:score});
+      }catch(e){}
+      setTimeout(next,50);
+    }
+
+    fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+t+"?apiKey="+API)
+      .then(function(r){return r.json();})
+      .then(function(d){snapData=d.ticker||null;snapDone=true;tryProcess();})
+      .catch(function(){snapData=null;snapDone=true;tryProcess();});
+
+    fetch("https://api.polygon.io/v2/aggs/ticker/"+t+"/range/1/day/"+fromD+"/"+today+"?adjusted=true&sort=desc&limit=60&apiKey="+API)
+      .then(function(r){return r.json();})
+      .then(function(d){dailyData=d.results||[];dailyDone=true;tryProcess();})
+      .catch(function(){dailyData=[];dailyDone=true;tryProcess();});
+  }
+
+  next();
+  clearInterval(scanTimer);
+  scanTimer=setInterval(function(){if(!scanning)startScan();},5*60*1000);
+}
+
+var NAMES={AAPL:"Apple Inc.",MSFT:"Microsoft Corp.",NVDA:"NVIDIA Corp.",GOOGL:"Alphabet Inc.",AMZN:"Amazon.com Inc.",META:"Meta Platforms",TSLA:"Tesla Inc.",JPM:"JPMorgan Chase",V:"Visa Inc.",WMT:"Walmart Inc.",GS:"Goldman Sachs",MS:"Morgan Stanley",AMD:"Adv Micro Devices",NFLX:"Netflix Inc.",CRWD:"CrowdStrike",DDOG:"Datadog Inc.",AVGO:"Broadcom Inc.",COST:"Costco Wholesale",UNH:"UnitedHealth Group",MA:"Mastercard Inc.",ADBE:"Adobe Inc.",BKNG:"Booking Holdings",ISRG:"Intuitive Surgical",SPGI:"S&P Global",LMT:"Lockheed Martin",CAT:"Caterpillar Inc.",RTX:"Raytheon Tech",BAC:"Bank of America",XOM:"Exxon Mobil",CVX:"Chevron Corp.",BA:"Boeing Co.",HD:"Home Depot Inc.",MCD:"McDonalds Corp",HON:"Honeywell Intl",CVX:"Chevron Corp",IBM:"IBM Corp",MMM:"3M Company",MRK:"Merck and Co",DIS:"Walt Disney Co.",KO:"Coca-Cola Co.",VZ:"Verizon Comms",INTC:"Intel Corp",SHW:"Sherwin-Williams",COIN:"Coinbase Global",HOOD:"Robinhood Markets",AFRM:"Affirm Holdings",UPST:"Upstart Holdings",SOFI:"SoFi Technologies",RIVN:"Rivian Automotive",LCID:"Lucid Group",PLUG:"Plug Power",SMCI:"Super Micro",CHWY:"Chewy Inc.",BBIO:"BridgeBio Pharma",TMDX:"TransMedics",ACVA:"ACV Auctions",PRCT:"Procept Bio",RKT:"Rocket Companies",JOBY:"Joby Aviation",OPEN:"Opendoor Tech",BLNK:"Blink Charging",FCEL:"FuelCell Energy",SNDX:"Syndax Pharma"};
+
+function renderTable(){
+  var vis=results.filter(function(r){return completed.indexOf(r.t)===-1;});
+  var ul=universe==="SP500"?"S&P 500":universe==="DOW30"?"DOW 30":universe==="RUT2K"?"RUT 2K":"WATCHLIST";
+  document.getElementById("infoBar").textContent=ul+" - "+vis.length+" SETUPS - "+new Date().toLocaleTimeString();
+
+  if(vis.length===0){
+    document.getElementById("emptyMsg").style.display="block";
+    document.getElementById("tableWrap").style.display="none";
+    document.getElementById("legend").style.display="none";
+    return;
+  }
+
+  document.getElementById("emptyMsg").style.display="none";
+  document.getElementById("tableWrap").style.display="block";
+  document.getElementById("legend").style.display="block";
+
+  var html="";
+  vis.forEach(function(item,idx){
+    var isN=item.bias===1;
+    var dc=isN?"#00ff88":"#ff4466";
+    var hcol=hc(item.hit);
+    var bg=idx%2===0?"#0e0e22":"#0b0b1e";
+    html+='<div class="row" style="background:'+bg+';border-left:3px solid '+dc+';cursor:pointer" onclick="openDash(\''+item.t+'\',\''+( NAMES[item.t]||item.t)+'\')">'
+      +'<div onclick="event.stopPropagation();markDone(\''+item.t+'\')" class="chk"></div>'
+      +'<div class="cell" style="font-size:13px;font-weight:bold;color:#fff">'+item.t+'</div>'
+      +'<div class="cell" style="font-size:15px;font-weight:bold;color:'+dc+'">'+(isN?"▲":"▼")+'</div>'
+      +'<div class="cell" style="color:#fff">$'+item.price+'</div>'
+      +'<div class="cell" style="color:'+dc+';font-weight:bold">$'+item.station+'</div>'
+      +'<div class="cell" style="color:'+dc+';font-weight:bold">'+item.d2tStr+'</div>'
+      +'<div style="text-align:center">'
+        +'<div style="font-size:13px;font-weight:bold;color:'+hcol+'">'+(item.hit!==null?item.hit+"%":"—")+'</div>'
+        +'<div class="bar-bg"><div class="bar-fill" style="width:'+(item.hit||0)+'%;background:'+hcol+'"></div></div>'
+      +'</div>'
+      +'<div class="cell" style="color:'+vc(item.rv)+'">'+item.rv+'x</div>'
+    +'</div>';
+  });
+  document.getElementById("tableBody").innerHTML=html;
+}
+
+function markDone(t){
+  completed.push(t);
+  renderTable();
+}
+
+function startClock(){
+  setInterval(function(){
+    var el=document.getElementById("clockEl");
+    if(el)el.textContent=new Date().toLocaleTimeString();
+  },1000);
+}
+
+
+
+// ============================================================
+// MMG V9.8C ENGINE
+// ============================================================
+function calcEMA(bars,p){
+  if(!bars||bars.length<1)return 0;
+  var n=Math.min(p,bars.length),k=2/(n+1),e=0;
+  for(var i=0;i<n;i++)e+=bars[i].c;e/=n;
+  for(var i=n;i<bars.length;i++)e=bars[i].c*k+e*(1-k);
+  return e;
+}
+function calcVWAP(bars){
+  if(!bars||!bars.length)return 0;
+  var sv=0,spv=0;
+  for(var i=0;i<bars.length;i++){var h=(bars[i].h+bars[i].l+bars[i].c)/3;spv+=h*bars[i].v;sv+=bars[i].v;}
+  return sv>0?spv/sv:bars[bars.length-1].c;
+}
+function calcATR(bars,p){
+  if(!bars||bars.length<2)return bars&&bars[0]?bars[0].h-bars[0].l:1;
+  var n=Math.min(p||14,bars.length-1),s=0;
+  for(var i=0;i<n;i++){var pc=bars[i+1].c;s+=Math.max(bars[i].h-bars[i].l,Math.abs(bars[i].h-pc),Math.abs(bars[i].l-pc));}
+  return s/n||1;
+}
+function pivH(bars,pl){
+  pl=pl||5;var last=null;
+  for(var i=pl;i<bars.length-pl;i++){
+    var ok=true;
+    for(var j=i-pl;j<=i+pl;j++){if(j!==i&&bars[j].h>=bars[i].h){ok=false;break;}}
+    if(ok)last=bars[i].h;
+  }return last;
+}
+function pivL(bars,pl){
+  pl=pl||5;var last=null;
+  for(var i=pl;i<bars.length-pl;i++){
+    var ok=true;
+    for(var j=i-pl;j<=i+pl;j++){if(j!==i&&bars[j].l<=bars[i].l){ok=false;break;}}
+    if(ok)last=bars[i].l;
+  }return last;
+}
+function gU(bars){for(var i=1;i<bars.length;i++){if(bars[i].l>bars[i-1].h)return(bars[i].l+bars[i-1].h)/2;}return null;}
+function gD(bars){for(var i=1;i<bars.length;i++){if(bars[i].h<bars[i-1].l)return(bars[i].h+bars[i-1].l)/2;}return null;}
+function getLvls(bars,pl){return{res:pivH(bars,pl),sup:pivL(bars,pl),gu:gU(bars),gd:gD(bars)};}
+function nAbove(lv,p){var c=[];for(var k in lv){if(lv[k]!==null&&lv[k]>p)c.push(lv[k]);}return c.length?Math.min.apply(null,c):null;}
+function nBelow(lv,p){var c=[];for(var k in lv){if(lv[k]!==null&&lv[k]<p)c.push(lv[k]);}return c.length?Math.max.apply(null,c):null;}
+function tfVote(u,d,p){if(u!==null&&d===null)return 1;if(u===null&&d!==null)return -1;if(u!==null&&d!==null){if(Math.abs(u-p)<Math.abs(p-d))return 1;if(Math.abs(p-d)<Math.abs(u-p))return -1;}return 0;}
+function cluster(raw,atr){
+  var band=atr*0.25,cl=[];
+  for(var i=0;i<raw.length;i++){
+    var v=raw[i],m=false;
+    for(var j=0;j<cl.length;j++){if(Math.abs(v-cl[j])<=band){cl[j]=(cl[j]+v)/2;m=true;break;}}
+    if(!m)cl.push(v);
+  }return cl;
+}
+
+function runMMGDash(ticker,b15,b60,b240,bD,snap,cb){
+  try{
+    var day=snap&&snap.day?snap.day:{};
+    var prev=snap&&snap.prevDay?snap.prevDay:{};
+    var close=day.c||prev.c||(b15.length>0?b15[b15.length-1].c:0);
+    if(!close||close<=0)return cb(null);
+
+    var atr=calcATR(b15,14)||close*0.01;
+    var emaN=calcEMA(b15,21)||close;
+    var vwapN=calcVWAP(b15)||close;
+    var atrN=calcATR(b15,14)||atr;
+    var closeN=b15.length>0?b15[b15.length-1].c:close;
+
+    var l15=getLvls(b15,5);
+    var l60=getLvls(b60.length>=10?b60:b15,5);
+    var l240=getLvls(b240.length>=5?b240:b15,5);
+    var lD=getLvls(bD.length>=5?bD:b15,5);
+
+    var raw=[];
+    var allL=[l15,l60,l240,lD];
+    for(var i=0;i<allL.length;i++){
+      var lv=allL[i];
+      if(lv.res)raw.push(lv.res);if(lv.sup)raw.push(lv.sup);
+      if(lv.gu)raw.push(lv.gu);if(lv.gd)raw.push(lv.gd);
+    }
+    if(!raw.length)return cb(null);
+
+    var cl=cluster(raw,atr);
+    var hiL=Math.max.apply(null,cl),loL=Math.min.apply(null,cl);
+
+    var v15=tfVote(nAbove(l15,close),nBelow(l15,close),close);
+    var v60=tfVote(nAbove(l60,close),nBelow(l60,close),close);
+    var v240=tfVote(nAbove(l240,close),nBelow(l240,close),close);
+    var vD=tfVote(nAbove(lD,close),nBelow(lD,close),close);
+
+    var cntA=0,cntB=0,sumA=0,sumB=0;
+    for(var i=0;i<cl.length;i++){
+      if(cl[i]>close){cntA++;sumA+=cl[i]-close;}
+      else if(cl[i]<close){cntB++;sumB+=close-cl[i];}
+    }
+    var tot=cntA+cntB;
+    var pScore=tot>0?(cntA-cntB)/tot:0;
+    var avgA=cntA>0?sumA/cntA:null,avgB=cntB>0?sumB/cntB:null;
+    var gScore=0;
+    if(avgA!==null&&avgB===null)gScore=1;
+    else if(avgA===null&&avgB!==null)gScore=-1;
+    else if(avgA!==null&&avgB!==null){if(avgA<avgB)gScore=1;else if(avgB<avgA)gScore=-1;}
+    var vScore=(v15+v60+v240+vD)/4;
+
+    var bullFlow=closeN>emaN&&closeN>vwapN;
+    var bearFlow=closeN<emaN&&closeN<vwapN;
+    var bullRun=close>hiL&&bullFlow;
+    var bearRun=close<loL&&bearFlow;
+
+    var dir=(pScore*0.50)+(gScore*0.30)+(vScore*0.20);
+    if(bullRun)dir=Math.max(dir,0.85);
+    if(bearRun)dir=Math.min(dir,-0.85);
+    var bias=dir>0.10?1:dir<-0.10?-1:0;
+
+    var fwd=[],beh=[];
+    for(var i=0;i<cl.length;i++){
+      if(bias===1){if(cl[i]>close)fwd.push(cl[i]);else if(cl[i]<close)beh.push(cl[i]);}
+      else if(bias===-1){if(cl[i]<close)fwd.push(cl[i]);else if(cl[i]>close)beh.push(cl[i]);}
+    }
+    if(bias===1){fwd.sort(function(a,b){return a-b;});beh.sort(function(a,b){return b-a;});}
+    else{fwd.sort(function(a,b){return b-a;});beh.sort(function(a,b){return a-b;});}
+
+    var sp2=atr*0.25,s1=null,s2=null,sta=null,bPrice=null;
+    if(beh.length)bPrice=beh[0];
+    if(fwd.length)s1=fwd[0];
+    if(fwd.length>1&&s1!==null){for(var i=1;i<fwd.length;i++){if(Math.abs(fwd[i]-s1)>sp2){s2=fwd[i];break;}}}
+    if(fwd.length>2){
+      var ref=s2!==null?s2:s1;
+      if(ref){for(var i=1;i<fwd.length;i++){if(fwd[i]===s1||fwd[i]===s2)continue;if(Math.abs(fwd[i]-ref)>sp2){sta=fwd[i];break;}}}
+    }
+    if(bias===1){if(!bPrice)bPrice=hiL;if(!s1)s1=close+atr*0.5;if(!s2)s2=close+atr*1.0;if(!sta)sta=close+atr*1.618;}
+    if(bias===-1){if(!bPrice)bPrice=loL;if(!s1)s1=close-atr*0.5;if(!s2)s2=close-atr*1.0;if(!sta)sta=close-atr*1.618;}
+    if(!s1)return cb(null);
+
+    var sesH=Math.max.apply(null,b15.map(function(b){return b.h;}));
+    var sesL=Math.min.apply(null,b15.map(function(b){return b.l;}));
+    var hit=null;
+    if(bias===1&&sta&&sta>sesL)hit=Math.max(0,Math.min(100,((closeN-sesL)/(sta-sesL))*100));
+    else if(bias===-1&&sta&&sta<sesH)hit=Math.max(0,Math.min(100,((sesH-closeN)/(sesH-sta))*100));
+
+    var vwapOK=bias===1?closeN>vwapN:closeN<vwapN;
+    var prevC=b15.length>=2?b15[b15.length-2].c:closeN;
+    var nTgt=(s1&&Math.abs(closeN-s1)<=atrN*0.4)||(s2&&Math.abs(closeN-s2)<=atrN*0.4)||(sta&&Math.abs(closeN-sta)<=atrN*0.4);
+
+    var brdL=bias===1&&s1&&vwapOK&&closeN>s1+atrN*0.1&&prevC<=s1;
+    var brdS=bias===-1&&s1&&vwapOK&&closeN<s1-atrN*0.1&&prevC>=s1;
+    var boarding=brdL||brdS;
+    var depL=bias===1&&!boarding&&s1&&vwapOK&&closeN>s1&&closeN>prevC&&prevC>s1;
+    var depS=bias===-1&&!boarding&&s1&&vwapOK&&closeN<s1&&closeN<prevC&&prevC<s1;
+    var depart=depL||depS;
+    var rolL=bias===1&&!boarding&&!depart&&vwapOK&&closeN>emaN&&closeN>prevC;
+    var rolS=bias===-1&&!boarding&&!depart&&vwapOK&&closeN<emaN&&closeN<prevC;
+    var rolling=rolL||rolS;
+    var slow=bias!==0&&nTgt;
+    var rev33=bias===1?closeN<prevC:closeN>prevC;
+    var rev67=bias===1?closeN<emaN:closeN>emaN;
+    var rev99=bPrice&&(bias===1?closeN<bPrice:closeN>bPrice);
+
+    var mode=1;
+    if(rev99)mode=8;else if(rev67)mode=7;else if(rev33&&slow)mode=6;
+    else if(slow)mode=5;else if(rolling)mode=4;else if(depart)mode=3;else if(boarding)mode=2;
+
+    var action=mode>=2&&mode<=4?"GET ON":mode>=6?"GET OFF":"WAIT";
+    var modeNames=["WAITING","BOARDING","DEPART","ROLLING","SLOW","REV 33%","REV 67%","REV 99%"];
+
+    cb({
+      bias:bias,close:closeN,
+      s1:s1,s2:s2,sta:sta,
+      hit:hit!==null?Math.round(hit):null,
+      mName:modeNames[mode-1]||"WAITING",
+      action:action,mode:mode
+    });
+  }catch(e){cb(null);}
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+var currentDashTicker=null;
+var activePage="scanner";
+
+function openDash(ticker,name){
+  if(role==="OBSERVER")return;
+  currentDashTicker=ticker;
+  activePage="dashboard";
+  updateBotNav();
+
+  document.getElementById("pgScanner").style.display="none";
+  document.getElementById("pgDash").style.display="block";
+  document.getElementById("dashTicker").textContent=ticker;
+  document.getElementById("dashName").textContent=name||"";
+  document.getElementById("dashLoading").style.display="block";
+  document.getElementById("dashContent").style.display="none";
+
+  var today=new Date().toISOString().split("T")[0];
+  var from3=new Date(Date.now()-3*86400000).toISOString().split("T")[0];
+  var from10=new Date(Date.now()-10*86400000).toISOString().split("T")[0];
+  var from20=new Date(Date.now()-20*86400000).toISOString().split("T")[0];
+  var from60=new Date(Date.now()-60*86400000).toISOString().split("T")[0];
+
+  var snapDone=false,b15Done=false,b60Done=false,b240Done=false,bDDone=false;
+  var snapData=null,b15Data=null,b60Data=null,b240Data=null,bDData=null;
+
+  function tryRender(){
+    if(!snapDone||!b15Done||!b60Done||!b240Done||!bDDone)return;
+    runMMGDash(ticker,b15Data,b60Data,b240Data,bDData,snapData,function(result){
+      document.getElementById("dashLoading").style.display="none";
+      if(!result){
+        document.getElementById("dashContent").style.display="block";
+        // Show basic data even if MMG not conclusive
+        var day=snapData&&snapData.day?snapData.day:{};
+        var prev=snapData&&snapData.prevDay?snapData.prevDay:{};
+        var close=day.c||prev.c||0;
+        document.getElementById("dashPrice").textContent=close?"$"+close.toFixed(2):"—";
+        document.getElementById("dashArrow").textContent="—";
+        document.getElementById("dashDirLabel").textContent="BALANCE";
+        document.getElementById("dashDirBox").style.border="2px solid #888";
+        document.getElementById("dashMode").textContent="WAITING";
+        document.getElementById("dashMode").style.color="#888";
+        document.getElementById("dashModeBox").style.border="2px solid #888";
+        document.getElementById("dashAction").textContent="WAIT";
+        document.getElementById("dashActionBox").style.background="#ffcc00";
+        document.getElementById("dashStop1").textContent="—";
+        document.getElementById("dashStop2").textContent="—";
+        document.getElementById("dashStation").textContent="—";
+        document.getElementById("dashHit").textContent="—";
+        return;
+      }
+
+      document.getElementById("dashContent").style.display="block";
+      var dc=result.bias===1?"#00ff88":"#ff4466";
+      var ab=result.action==="GET ON"?"#00ff88":result.action==="GET OFF"?"#ff4466":"#ffcc00";
+      var hcol=result.hit!==null?(result.hit>=75?"#ff8844":result.hit>=50?"#ffcc00":result.hit>=25?"#00ccff":"#00ff88"):"#aaa";
+      var mc=result.mName==="ROLLING"?"#00ff88":result.mName==="DEPART"?"#88ffcc":result.mName==="BOARDING"?"#ffcc00":result.mName==="SLOW"?"#ff8844":result.mName.indexOf("REV")!==-1?"#ff4466":"#aaa";
+
+      document.getElementById("dashArrow").textContent=result.bias===1?"▲":"▼";
+      document.getElementById("dashArrow").style.color=dc;
+      document.getElementById("dashDirLabel").textContent=result.bias===1?"NORTH":"SOUTH";
+      document.getElementById("dashDirLabel").style.color=dc;
+      document.getElementById("dashDirBox").style.border="2px solid "+dc;
+      document.getElementById("dashMode").textContent=result.mName;
+      document.getElementById("dashMode").style.color=mc;
+      document.getElementById("dashModeBox").style.border="2px solid "+mc;
+      document.getElementById("dashAction").textContent=result.action;
+      document.getElementById("dashActionBox").style.background=ab;
+      document.getElementById("dashPrice").textContent="$"+result.close.toFixed(2);
+      document.getElementById("dashStop1").textContent=result.s1?"$"+result.s1.toFixed(2):"—";
+      document.getElementById("dashStop2").textContent=result.s2?"$"+result.s2.toFixed(2):"—";
+      document.getElementById("dashStation").textContent=result.sta?"$"+result.sta.toFixed(2):"—";
+      document.getElementById("dashStation").style.color=dc;
+      document.getElementById("dashStationRow").style.background=result.bias===1?"#001a00":"#1a0000";
+      var hitTxt=result.hit!==null?result.hit+"%":"—";
+      document.getElementById("dashHit").textContent=hitTxt;
+      document.getElementById("dashHit").style.color=hcol;
+      document.getElementById("dashHitBar").style.width=(result.hit||0)+"%";
+      document.getElementById("dashHitBar").style.background=hcol;
+      // Draw chart after a short delay to let DOM settle
+      setTimeout(function(){drawChart(ticker,result.bias);},200);
+    });
+  }
+
+  fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+ticker+"?apiKey="+API)
+    .then(function(r){return r.json();}).then(function(d){snapData=d.ticker||null;snapDone=true;tryRender();}).catch(function(){snapDone=true;tryRender();});
+  fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/15/minute/"+from3+"/"+today+"?adjusted=true&sort=asc&limit=200&apiKey="+API)
+    .then(function(r){return r.json();}).then(function(d){b15Data=d.results||[];b15Done=true;tryRender();}).catch(function(){b15Data=[];b15Done=true;tryRender();});
+  fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/60/minute/"+from10+"/"+today+"?adjusted=true&sort=asc&limit=100&apiKey="+API)
+    .then(function(r){return r.json();}).then(function(d){b60Data=d.results||[];b60Done=true;tryRender();}).catch(function(){b60Data=[];b60Done=true;tryRender();});
+  fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/240/minute/"+from20+"/"+today+"?adjusted=true&sort=asc&limit=50&apiKey="+API)
+    .then(function(r){return r.json();}).then(function(d){b240Data=d.results||[];b240Done=true;tryRender();}).catch(function(){b240Data=[];b240Done=true;tryRender();});
+  fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/1/day/"+from60+"/"+today+"?adjusted=true&sort=desc&limit=60&apiKey="+API)
+    .then(function(r){return r.json();}).then(function(d){bDData=d.results||[];bDDone=true;tryRender();}).catch(function(){bDData=[];bDDone=true;tryRender();});
+}
+
+function goPage(p){
+  if(p==="dashboard"&&!currentDashTicker)return;
+  if(p==="dashboard"&&role==="OBSERVER")return;
+  activePage=p;
+  updateBotNav();
+  if(p==="scanner"){show("pgScanner");}
+  else if(p==="dashboard"){show("pgDash");}
+  else if(p==="manual"){show("pgManual");}
+}
+
+function updateBotNav(){
+  var pages=["scanner","dashboard","manual"];
+  var ids=["navScannerLbl","navDashLbl","navManualLbl"];
+  for(var i=0;i<pages.length;i++){
+    var el=document.getElementById(ids[i]);
+    if(!el)continue;
+    el.style.color=pages[i]===activePage?"#00ccff":"#fff";
+    // Fix text - dashboard label
+    if(pages[i]==="dashboard"){
+      if(role==="OBSERVER"){el.textContent="LOCKED";}
+      else{el.textContent="DASHBOARD";}
+    }
+  }
+  // Dim dashboard if no stock selected or observer
+  var navDash=document.getElementById("navDash");
+  if(navDash){
+    navDash.style.opacity=(!currentDashTicker||role==="OBSERVER")?"0.35":"1";
+  }
+}
+
+// BOOT
+try{
+  var saved=localStorage.getItem("mts_role");
+  if(saved){role=saved;showScanner();}
+}catch(e){}
+
+document.getElementById("passInput").addEventListener("keydown",function(e){
+  if(e.key==="Enter")checkPass();
+});
+var wlInp=document.getElementById("wlInput");
+if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToWatchlist();});}
+</script>
+
+<!-- DASHBOARD PAGE -->
+
+<div id="pgDash" class="wrap" style="display:none;padding-bottom:72px;min-height:100vh">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <button onclick="showScanner()" style="background:#1a1a3a;border:1px solid #00ccff;border-radius:6px;color:#00ccff;padding:6px 12px;font-family:'Courier New',monospace;font-size:12px;font-weight:bold;cursor:pointer">BACK</button>
+    <div style="text-align:center">
+      <div id="dashTicker" style="font-size:26px;font-weight:bold;color:#fff"></div>
+      <div id="dashName" style="font-size:11px;color:#ccc"></div>
+    </div>
+    <div id="dashClock" style="font-size:10px;color:#aaa;text-align:right"></div>
+  </div>
+  <!-- Loading state -->
+  <div id="dashLoading" style="text-align:center;padding:40px;color:#00ccff">
+    <div style="font-size:24px;margin-bottom:8px">⟳</div>
+    <div style="font-size:12px;color:#fff">Running MMG V9.8C...</div>
+  </div>
+  <!-- Content -->
+  <div id="dashContent" style="display:none">
+    <!-- Direction + Mode + Action -->
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div id="dashDirBox" style="flex:1;background:#0e0e22;border-radius:10px;padding:10px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+        <div id="dashArrow" style="font-size:44px;line-height:1"></div>
+        <div id="dashDirLabel" style="font-size:15px;font-weight:bold"></div>
+      </div>
+      <div style="flex:2;display:flex;flex-direction:column;gap:8px">
+        <div id="dashModeBox" style="background:#0e0e22;border-radius:10px;padding:8px 12px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center">
+          <div style="font-size:10px;font-weight:bold;color:#fff;margin-bottom:2px">TRAIN MODE</div>
+          <div id="dashMode" style="font-size:20px;font-weight:bold"></div>
+        </div>
+        <div id="dashActionBox" style="border-radius:10px;padding:8px 12px;text-align:center;flex:1;display:flex;align-items:center;justify-content:center">
+          <div id="dashAction" style="font-size:24px;font-weight:bold;color:#000"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Price levels -->
+    <div style="background:#0e0e22;border:1px solid #333366;border-radius:10px;overflow:hidden;margin-bottom:10px">
+      <div id="dashPriceRow" style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-bottom:1px solid #1a1a30">
+        <div style="font-size:14px;font-weight:bold;color:#fff">CURRENT PRICE</div>
+        <div id="dashPrice" style="font-size:18px;font-weight:bold;color:#fff"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-bottom:1px solid #1a1a30;background:#111128">
+        <div style="font-size:14px;font-weight:bold;color:#fff">STOP 1</div>
+        <div id="dashStop1" style="font-size:16px;font-weight:bold;color:#ffdd88"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-bottom:1px solid #1a1a30">
+        <div style="font-size:14px;font-weight:bold;color:#fff">STOP 2</div>
+        <div id="dashStop2" style="font-size:16px;font-weight:bold;color:#ffaa44"></div>
+      </div>
+      <div id="dashStationRow" style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:#111128">
+        <div style="font-size:14px;font-weight:bold;color:#fff">NEXT STATION</div>
+        <div id="dashStation" style="font-size:18px;font-weight:bold"></div>
+      </div>
+    </div>
+    <!-- HIT% -->
+    <div style="background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:12px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:bold;color:#fff">HIT % TODAY</div>
+        <div id="dashHit" style="font-size:22px;font-weight:bold"></div>
+      </div>
+      <div style="background:#1a1a3a;border-radius:6px;height:12px;overflow:hidden">
+        <div id="dashHitBar" style="height:100%;border-radius:6px;width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px">
+        <div style="font-size:10px;font-weight:bold;color:#fff">SESSION START</div>
+        <div style="font-size:10px;font-weight:bold;color:#fff">NEXT STATION</div>
+      </div>
+    </div>
+    <!-- MINI CHART -->
+    <div style="background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:12px;margin-top:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:bold;color:#fff">PRICE ACTION - 15M</div>
+        <div style="display:flex;gap:10px">
+          <span style="font-size:9px;font-weight:bold;color:#00ccff">- VWAP</span>
+          <span style="font-size:9px;font-weight:bold;color:#ffcc88">- EMA21</span>
+          <span id="chartPriceLbl" style="font-size:9px;font-weight:bold;color:#00ff88">- PRICE</span>
+        </div>
+      </div>
+      <canvas id="miniChart" style="width:100%;height:130px;display:block"></canvas>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <div style="font-size:9px;color:#aaa">OPEN</div>
+        <div style="font-size:9px;color:#aaa">NOW</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+
+<div id="botNav" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#0a0a1a;border-top:1px solid #2a2a50;display:none;z-index:100">
+  <button onclick="goPage('scanner')" id="navScanner" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
+    <span style="font-size:20px">📊</span>
+    <span id="navScannerLbl" style="font-size:9px;font-weight:bold;color:#00ccff">SCANNER</span>
+    <span style="width:20px;height:2px;background:#00ccff;border-radius:1px;display:block"></span>
+  </button>
+  <button onclick="goPage('dashboard')" id="navDash" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace;opacity:0.4">
+    <span style="font-size:20px">🚂</span>
+    <span id="navDashLbl" style="font-size:9px;font-weight:bold;color:#fff">DASHBOARD</span>
+  </button>
+  <button onclick="goPage('manual')" id="navManual" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
+    <span style="font-size:20px">📖</span>
+    <span id="navManualLbl" style="font-size:9px;font-weight:bold;color:#fff">MANUAL</span>
+  </button>
+  <button onclick="doLogout()" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
+    <span style="font-size:20px">🚪</span>
+    <span style="font-size:9px;font-weight:bold;color:#fff">EXIT</span>
+  </button>
+</div>
+
+<!-- MANUAL PAGE -->
+
+<div id="pgManual" style="display:none;max-width:480px;margin:0 auto;padding:12px 8px;padding-bottom:80px;overflow-y:auto">
+  <div style="text-align:center;border-bottom:1px solid #2a2a50;padding-bottom:12px;margin-bottom:16px">
+    <div style="font-size:10px;color:#aaa;letter-spacing:3px;margin-bottom:4px">MTS - TRAIN OF FORTUNE</div>
+    <div style="font-size:20px;font-weight:bold;color:#ffcc00">PASSENGER MANUAL</div>
+    <div style="font-size:12px;color:#ccc;margin-top:4px">Your simple start guide</div>
+  </div>
+
+  <!-- Section 1 - Direction -->
+
+  <div style="background:#0e0e22;border:2px solid #00ccff;border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:bold;color:#00ccff;margin-bottom:10px">1. DIRECTION - WHERE IS THE TRAIN GOING?</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1;background:#0a0a20;border-radius:8px;padding:10px;text-align:center;border:1px solid #00ff88">
+        <div style="font-size:22px;color:#00ff88">&#9650;</div>
+        <div style="font-size:13px;font-weight:bold;color:#00ff88">NORTH</div>
+        <div style="font-size:11px;color:#ccc;margin-top:2px">Train going UP</div>
+      </div>
+      <div style="flex:1;background:#0a0a20;border-radius:8px;padding:10px;text-align:center;border:1px solid #ff4466">
+        <div style="font-size:22px;color:#ff4466">&#9660;</div>
+        <div style="font-size:13px;font-weight:bold;color:#ff4466">SOUTH</div>
+        <div style="font-size:11px;color:#ccc;margin-top:2px">Train going DOWN</div>
+      </div>
+      <div style="flex:1;background:#0a0a20;border-radius:8px;padding:10px;text-align:center;border:1px solid #888">
+        <div style="font-size:22px;color:#888">-</div>
+        <div style="font-size:13px;font-weight:bold;color:#888">BALANCE</div>
+        <div style="font-size:11px;color:#ccc;margin-top:2px">No clear direction</div>
+      </div>
+    </div>
+    <div style="font-size:12px;font-weight:bold;color:#fff;margin-bottom:8px">TRAIN MODE - WHAT IS THE TRAIN DOING?</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0a0a20;border-radius:6px;margin-bottom:5px;border-left:3px solid #ffcc00">
+      <div><div style="font-size:13px;font-weight:bold;color:#ffcc00">BOARDING</div><div style="font-size:11px;color:#ccc">Early move - train just started</div></div>
+      <div style="font-size:10px;font-weight:bold;color:#ffcc00">High Risk</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0a0a20;border-radius:6px;margin-bottom:5px;border-left:3px solid #88ffcc">
+      <div><div style="font-size:13px;font-weight:bold;color:#88ffcc">DEPART</div><div style="font-size:11px;color:#ccc">Confirming move - gaining speed</div></div>
+      <div style="font-size:10px;font-weight:bold;color:#88ffcc">Med Risk</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0a0a20;border-radius:6px;margin-bottom:5px;border-left:3px solid #00ff88">
+      <div><div style="font-size:13px;font-weight:bold;color:#00ff88">ROLLING</div><div style="font-size:11px;color:#ccc">Strong trend - best zone to ride</div></div>
+      <div style="font-size:10px;font-weight:bold;color:#00ff88">Low Risk</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0a0a20;border-radius:6px;margin-bottom:5px;border-left:3px solid #ff8844">
+      <div><div style="font-size:13px;font-weight:bold;color:#ff8844">SLOW</div><div style="font-size:11px;color:#ccc">Losing momentum - near station</div></div>
+      <div style="font-size:10px;font-weight:bold;color:#ff8844">Caution</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0a0a20;border-radius:6px;margin-bottom:5px;border-left:3px solid #ff4466">
+      <div><div style="font-size:13px;font-weight:bold;color:#ff4466">REVERSAL</div><div style="font-size:11px;color:#ccc">Possible direction change</div></div>
+      <div style="font-size:10px;font-weight:bold;color:#ff4466">Exit Now</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0a0a20;border-radius:6px;border-left:3px solid #888">
+      <div><div style="font-size:13px;font-weight:bold;color:#888">WAITING</div><div style="font-size:11px;color:#ccc">No clear move yet</div></div>
+      <div style="font-size:10px;font-weight:bold;color:#888">Stay Out</div>
+    </div>
+  </div>
+
+  <!-- Section 2 - How to Ride -->
+
+  <div style="background:#0e0e22;border:2px solid #00ff88;border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:bold;color:#00ff88;margin-bottom:10px">2. HOW TO RIDE THE TRAIN</div>
+    <div style="background:#001a00;border:2px solid #00ff88;border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="font-size:16px;font-weight:bold;color:#00ff88;margin-bottom:6px">&#x1F682; GET ON</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Action = GET ON</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Direction is NORTH or SOUTH</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Train Mode is DEPART or ROLLING</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Trend is your friend</div>
+      <div style="font-size:11px;color:#00ff88;font-weight:bold;margin-top:8px;padding:6px;background:rgba(0,255,136,0.1);border-radius:4px;text-align:center">ENTER THE TRADE. RIDE WITH THE TREND.</div>
+    </div>
+    <div style="background:#1a1500;border:2px solid #ffcc00;border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="font-size:16px;font-weight:bold;color:#ffcc00;margin-bottom:6px">&#x23F3; WAIT</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Signals are mixed or unclear</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Direction is BALANCE</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Train Mode is BOARDING or SLOW</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; No strong edge</div>
+      <div style="font-size:11px;color:#ffcc00;font-weight:bold;margin-top:8px;padding:6px;background:rgba(255,204,0,0.1);border-radius:4px;text-align:center">STAY OUT. PATIENCE IS AN ADVANTAGE.</div>
+    </div>
+    <div style="background:#1a0000;border:2px solid #ff4466;border-radius:8px;padding:12px">
+      <div style="font-size:16px;font-weight:bold;color:#ff4466;margin-bottom:6px">&#x1F6D1; GET OFF</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Action = GET OFF</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Train Mode shows REVERSAL</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Direction changes against trade</div>
+      <div style="font-size:12px;color:#fff;padding:3px 0">&#10003; Momentum is fading</div>
+      <div style="font-size:11px;color:#ff4466;font-weight:bold;margin-top:8px;padding:6px;background:rgba(255,68,102,0.1);border-radius:4px;text-align:center">EXIT THE TRADE. PROTECT YOUR CAPITAL.</div>
+    </div>
+  </div>
+
+  <!-- Section 3 - Smart Rules -->
+
+  <div style="background:#0e0e22;border:2px solid #ffcc00;border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:bold;color:#ffcc00;margin-bottom:10px">3. SMART PASSENGER RULES</div>
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px;background:#0a0a20;border-radius:8px;margin-bottom:8px">
+      <span style="font-size:20px">&#x2705;</span>
+      <div><div style="font-size:12px;font-weight:bold;color:#ffcc00">FOLLOW THE SIGNAL NOT YOUR EMOTIONS</div><div style="font-size:11px;color:#ccc;margin-top:3px">Let the system make the call.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px;background:#0a0a20;border-radius:8px;margin-bottom:8px">
+      <span style="font-size:20px">&#x26A0;&#xFE0F;</span>
+      <div><div style="font-size:12px;font-weight:bold;color:#ffcc00">DO NOT CHASE. DO NOT GUESS.</div><div style="font-size:11px;color:#ccc;margin-top:3px">If it is not clear it is not your trade.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px;background:#0a0a20;border-radius:8px;margin-bottom:8px">
+      <span style="font-size:20px">&#x1F6E1;</span>
+      <div><div style="font-size:12px;font-weight:bold;color:#ffcc00">DISCIPLINE BEATS PREDICTION</div><div style="font-size:11px;color:#ccc;margin-top:3px">The best traders follow the rules.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px;background:#0a0a20;border-radius:8px;margin-bottom:8px">
+      <span style="font-size:20px">&#x1F3AF;</span>
+      <div><div style="font-size:12px;font-weight:bold;color:#ffcc00">YOU ONLY NEED ONE GOOD TRAIN</div><div style="font-size:11px;color:#ccc;margin-top:3px">Trade the right one not all of them.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px;background:#0a0a20;border-radius:8px">
+      <span style="font-size:20px">&#x1F4A1;</span>
+      <div><div style="font-size:12px;font-weight:bold;color:#ffcc00">YOU DO NOT CONTROL THE NETWORK</div><div style="font-size:11px;color:#ccc;margin-top:3px">You only choose when to get on and off.</div></div>
+    </div>
+  </div>
+
+  <!-- Core Principle -->
+
+  <div style="background:#0e0e22;border:2px solid #00ccff;border-radius:10px;padding:14px;margin-bottom:14px;text-align:center">
+    <div style="font-size:11px;color:#ccc;margin-bottom:8px">CORE PRINCIPLE</div>
+    <div style="font-size:18px;font-weight:bold;color:#00ccff;line-height:1.6">GET ON. WAIT. GET OFF.</div>
+    <div style="font-size:12px;color:#ccc;margin-top:6px">Simple to understand. Powerful to use.</div>
+  </div>
+
+  <div style="font-size:9px;color:#555;text-align:center;margin-bottom:8px">MTS - TRAIN OF FORTUNE - NOT FINANCIAL ADVICE</div>
+</div>
+
+</body>
+</html>
