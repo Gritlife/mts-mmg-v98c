@@ -263,14 +263,14 @@ function runBacktest(){
   allTrades=[];
   setProgress("Fetching historical data...",5);
 
-  var from60=dateStr(addDays(new Date(startDate),-30));
+  var from60=dateStr(addDays(new Date(startDate),-60));
   var to=endDate;
 
   Promise.all([
     fetchBars(ticker,1,"day",from60,to,300),
-    fetchBars(ticker,60,"minute",from60,to,1000),
-    fetchBars(ticker,240,"minute",from60,to,500),
-    fetchBars(ticker,15,"minute",startDate,to,2000)
+    fetchBars(ticker,60,"minute",from60,to,2000),
+    fetchBars(ticker,240,"minute",from60,to,1000),
+    fetchBars(ticker,15,"minute",startDate,to,5000)
   ]).then(function(all){
     var bD=all[0],b60=all[1],b240=all[2],b15all=all[3];
 
@@ -314,14 +314,14 @@ function runBacktest(){
 
       var entryDone=false;
 
-      for(var bi=20;bi<dayBars.length;bi++){
+      for(var bi=10;bi<dayBars.length;bi++){
         var barTs=dayBars[bi].t;
         var barDate=new Date(barTs);
-        // Only scan 9:30AM - 3:00PM Eastern (14:30-20:00 UTC)
+        // Only scan 9:30AM - 3:30PM Eastern (14:30-20:30 UTC)
         var utcH=barDate.getUTCHours();
         var utcM=barDate.getUTCMinutes();
         var utcMins=utcH*60+utcM;
-        if(utcMins<570||utcMins>=1200)continue; // 9:30=570, 20:00=1200
+        if(utcMins<870||utcMins>=1230)continue; // 9:30ET=870UTC, 3:30PM ET=1230UTC
 
         if(entryDone)break;
 
@@ -337,7 +337,12 @@ function runBacktest(){
         // Got a signal - simulate forward
         entryDone=true;
         var entry=result.close;
-        var stopLvl=result.bPrice||(result.bias===1?entry-result.atr*0.5:entry+result.atr*0.5);
+        // Stop: use bPrice if available and makes sense, otherwise ATR-based
+        var atrStop=result.bias===1?entry-result.atr*1.0:entry+result.atr*1.0;
+        var stopLvl=result.bPrice?result.bPrice:atrStop;
+        // Make sure stop isn't too close (min 0.5 ATR away)
+        if(result.bias===1&&stopLvl>entry-result.atr*0.3)stopLvl=entry-result.atr*0.3;
+        if(result.bias===-1&&stopLvl<entry+result.atr*0.3)stopLvl=entry+result.atr*0.3;
         var target=result.sta;
         var outcome="EOD";
         var exitPrice=dayBars[dayBars.length-1].c;
