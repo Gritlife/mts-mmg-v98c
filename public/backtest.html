@@ -293,12 +293,13 @@ function runBacktest(){
 
     var tradingDays=Object.keys(dayMap).sort();
     var total=tradingDays.length;
+    setProgress("Found "+b15all.length+" bars across "+total+" trading days. Running MMG...",28);
     var trades=[];
 
     function processDay(di){
       if(di>=tradingDays.length){
         allTrades=trades;
-        setProgress("Complete! "+trades.length+" trades found.",100);
+        setProgress("Complete! "+trades.length+" GET ON signals found across "+tradingDays.length+" trading days ("+(Math.round(trades.length/tradingDays.length*100))+"% signal rate).",100);
         setTimeout(function(){
           document.getElementById("progressWrap").style.display="none";
           resetBtn();
@@ -314,7 +315,7 @@ function runBacktest(){
 
       var entryDone=false;
 
-      for(var bi=10;bi<dayBars.length;bi++){
+      for(var bi=5;bi<dayBars.length;bi++){
         var barTs=dayBars[bi].t;
         var barDate=new Date(barTs);
         // Only scan 9:30AM - 3:30PM Eastern (14:30-20:30 UTC)
@@ -332,7 +333,8 @@ function runBacktest(){
 
         var result=runMMG(b15slice,b60slice,b240slice,bDslice);
         if(!result)continue;
-        if(result.action!=="GET ON")continue;
+        if(result.bias===0)continue; // Skip BALANCE
+        if(result.action!=="GET ON")continue; // Only trade GET ON signals
 
         // Got a signal - simulate forward
         entryDone=true;
@@ -373,15 +375,15 @@ function runBacktest(){
           bias:result.bias,
           mode:result.mName,
           entry:entry,
-          stop:stopLvl,
-          target:target,
-          exitPrice:exitPrice,
+          stop:parseFloat(stopLvl.toFixed(2)),
+          target:target?parseFloat(target.toFixed(2)):null,
+          exitPrice:parseFloat(exitPrice.toFixed(2)),
           outcome:outcome,
           pnl:pnl.toFixed(2),
           pnlPct:pnlPct.toFixed(2),
           rr:rr
         });
-        break;
+        break; // One trade per day
       }
 
       setTimeout(function(){processDay(di+1);},10);
