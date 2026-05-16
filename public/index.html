@@ -49,19 +49,19 @@ input::placeholder{color:#8888aa;}
     <div style="font-size:13px;color:#ccc">Select your access level</div>
   </div>
   <button class="btn" style="border-color:#ff8844;" onclick="doLogin('ADMIN')">
-    <div style="font-size:17px;font-weight:bold;color:#ff8844;">🔐 ADMIN</div>
+    <div style="font-size:17px;font-weight:bold;color:#ff8844;">ð ADMIN</div>
     <div style="font-size:12px;color:#ccc;margin-top:3px">Full access - all features</div>
   </button>
   <button class="btn" style="border-color:#00ccff;" onclick="doLogin('TESTER')">
-    <div style="font-size:17px;font-weight:bold;color:#00ccff;">🧪 TESTER</div>
+    <div style="font-size:17px;font-weight:bold;color:#00ccff;">ð§ª TESTER</div>
     <div style="font-size:12px;color:#ccc;margin-top:3px">Scanner + watchlist</div>
   </button>
   <button class="btn" style="border-color:#00ff88;" onclick="doLogin('OBSERVER')">
-    <div style="font-size:17px;font-weight:bold;color:#00ff88;">👁 OBSERVER</div>
+    <div style="font-size:17px;font-weight:bold;color:#00ff88;">ð OBSERVER</div>
     <div style="font-size:12px;color:#ccc;margin-top:3px">Scanner view only - no password</div>
   </button>
   <button class="btn" style="border-color:#aa66ff;" onclick="doLogin('MEMBER')">
-    <div style="font-size:17px;font-weight:bold;color:#aa66ff;">🎫 MEMBER</div>
+    <div style="font-size:17px;font-weight:bold;color:#aa66ff;">ð« MEMBER</div>
     <div style="font-size:12px;color:#ccc;margin-top:3px">Registration opening soon</div>
   </button>
   <div style="font-size:10px;color:#888;text-align:center;margin-top:12px">MTS - TRAIN OF FORTUNE - NOT FINANCIAL ADVICE</div>
@@ -85,7 +85,7 @@ input::placeholder{color:#8888aa;}
 
 <div id="pgMember" class="wrap" style="display:none">
   <div style="padding:60px 0;text-align:center">
-    <div style="font-size:48px;margin-bottom:16px">🎫</div>
+    <div style="font-size:48px;margin-bottom:16px">ð«</div>
     <div style="font-size:22px;font-weight:bold;color:#aa66ff;margin-bottom:10px">MEMBER ACCESS</div>
     <div style="font-size:14px;color:#ccc;line-height:1.8;margin-bottom:30px">
       Registration is opening soon.<br>
@@ -113,7 +113,7 @@ input::placeholder{color:#8888aa;}
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <button id="addWlBtn" onclick="showAddTicker()" style="display:none;background:#aa66ff;border:none;border-radius:6px;color:#000;width:32px;height:32px;font-size:20px;cursor:pointer;font-weight:bold;line-height:1">+</button>
-      <button onclick="editApiKey()" style="background:#1a1a3a;border:1px solid #ffcc00;border-radius:6px;color:#ffcc00;width:32px;height:32px;font-size:15px;cursor:pointer;font-weight:bold;line-height:1">🔑</button>
+      <button onclick="editApiKey()" style="background:#1a1a3a;border:1px solid #ffcc00;border-radius:6px;color:#ffcc00;width:32px;height:32px;font-size:15px;cursor:pointer;font-weight:bold;line-height:1">ð</button>
       <div style="text-align:right">
         <div id="liveBadge" style="font-size:11px;font-weight:bold;color:#00ff88">LIVE</div>
         <div id="clockEl" style="font-size:10px;color:#aaa"></div>
@@ -164,8 +164,8 @@ input::placeholder{color:#8888aa;}
     <button id="tabDW" onclick="setUniverse('DOW30')" class="tab-btn tab-inactive">DOW</button>
     <button id="tabRU" onclick="setUniverse('RUT2K')" class="tab-btn tab-inactive">RUT 2K</button>
     <button id="tabOTC" onclick="setUniverse('OTC')" class="tab-btn tab-inactive">OTC</button>
-    <button id="tabWL" onclick="setUniverse('WATCHLIST')" class="tab-btn tab-inactive">⭐ LIST</button>
-    <button id="scanBtn" onclick="triggerScan()" style="padding:9px 12px;border-radius:6px;border:none;background:#00ff88;color:#000;font-family:'Courier New',monospace;font-weight:bold;font-size:13px;cursor:pointer">↺</button>
+    <button id="tabWL" onclick="setUniverse('WATCHLIST')" class="tab-btn tab-inactive">â­ LIST</button>
+    <button id="scanBtn" onclick="triggerScan()" style="padding:9px 12px;border-radius:6px;border:none;background:#00ff88;color:#000;font-family:'Courier New',monospace;font-weight:bold;font-size:13px;cursor:pointer">âº</button>
   </div>
 
   <!-- Watchlist swipe list (only shows when WATCHLIST tab active) -->
@@ -186,7 +186,7 @@ input::placeholder{color:#8888aa;}
     <div id="progressTxt" style="font-size:10px;color:#aaa;text-align:center">Scanning...</div>
   </div>
 
-  <div id="apiNotice" class="api-warn" style="display:none">Tap 🔑 to add Polygon API key on this device.</div>
+  <div id="apiNotice" class="api-warn" style="display:none">Tap ð to add Polygon API key on this device.</div>
 
   <!-- Info -->
 
@@ -260,10 +260,15 @@ function colorForAction(a){return a==="GET ON"?"#00ff88":a==="GET OFF"?"#ff4466"
 function textForAction(a){return a==="WAIT"?"#000":"#000";}
 function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
 
-var SP500=["AAPL","MSFT","NVDA","GOOGL","AMZN","META","TSLA","JPM","V","WMT","GS","MS","AMD","NFLX","CRWD","DDOG","AVGO","COST","UNH","MA","ADBE","BKNG","ISRG","SPGI","LMT","CAT","RTX","BAC","XOM","CVX"];
-var DOW30=["AAPL","MSFT","JPM","V","WMT","GS","CAT","BA","HD","MCD","HON","CVX","IBM","MMM","MRK","DIS","KO","VZ","INTC","SHW"];
-var RUT2K=["COIN","HOOD","AFRM","UPST","SOFI","RIVN","LCID","PLUG","SMCI","CHWY","BBIO","TMDX","ACVA","PRCT","RKT","JOBY","OPEN","BLNK","FCEL","SNDX"];
-var UNIVS={SP500:SP500,DOW30:DOW30,RUT2K:RUT2K};
+// UNIVERSES â Pegasus V0.3
+// SP500 = top-weight/liquid proxy list for now. Later replace with backend-managed index weights.
+var SP500=["NVDA","AAPL","MSFT","AMZN","GOOGL","META","AVGO","TSLA","JPM","LLY","V","NFLX","MA","XOM","COST","WMT","ORCL","HD","PG","JNJ","ABBV","BAC","PLTR","KO","PM","CRM","UNH","AMD","CVX","WFC","MS","GS","NOW","IBM","LIN","ABT","GE","MCD","ISRG","MRK","TMO","DIS","AXP","CAT","RTX","PEP","QCOM","INTU","BKNG","SPGI"];
+var NASDAQ100=["NVDA","AAPL","MSFT","AMZN","GOOGL","META","AVGO","TSLA","COST","NFLX","AMD","ADBE","PEP","QCOM","INTU","AMAT","ISRG","BKNG","TXN","HON","PANW","CRWD","SBUX","GILD","ADP","VRTX","MU","LRCX","MELI","KLAC","SNPS","CDNS","MAR","ABNB","PYPL","CSCO","INTC","MRVL","FTNT","REGN","ADSK","ROP","WDAY","NXPI","MNST","CHTR","TEAM","KDP","AEP","PAYX"];
+var NASDAQTOP=["NVDA","AAPL","MSFT","AMZN","GOOGL","META","AVGO","TSLA","AMD","NFLX","PLTR","MU","MSTR","APP","ARM","SMCI","CRWD","PANW","ZS","NET","DDOG","MDB","SNOW","COIN","HOOD","AFRM","UPST","SOFI","RIVN","LCID","IONQ","QBTS","RGTI","ASTS","ACHR","SOUN","RKLB","MARA","RIOT","CLSK","CELH","CHWY","ROKU","SHOP","PDD","NIO","XPEV","LI","BABA","JD"];
+var DOW30=["AAPL","MSFT","AMZN","JPM","V","WMT","GS","CAT","BA","HD","MCD","HON","CVX","IBM","MMM","MRK","DIS","KO","VZ","INTC","SHW","AXP","AMGN","CRM","CSCO","JNJ","NKE","PG","TRV","UNH"];
+var RUT2K=["COIN","HOOD","AFRM","UPST","SOFI","RIVN","LCID","PLUG","SMCI","CHWY","BBIO","TMDX","ACVA","PRCT","RKT","JOBY","OPEN","BLNK","FCEL","SNDX","IONQ","QBTS","RGTI","ASTS","ACHR","SOUN","RKLB","MARA","RIOT","CLSK"];
+var OTC=["FNMA","FMCC","NTDOY","RHHBY","BAYRY","SFTBY","TCEHY","BYDDY"];
+var UNIVS={SP500:SP500,NASDAQ100:NASDAQ100,NASDAQTOP:NASDAQTOP,DOW30:DOW30,RUT2K:RUT2K,OTC:OTC};
 
 var role=null,universe="SP500",scanning=false,completed=[],results=[],scanTimer=null,loginTarget=null;
 
@@ -272,24 +277,27 @@ function wlKey(){return "mts_wl_"+(role||"guest");}
 function loadWL(){try{var d=localStorage.getItem(wlKey());return d?JSON.parse(d):[];}catch(e){return[];}}
 function saveWL(list){try{localStorage.setItem(wlKey(),JSON.stringify(list));}catch(e){}}
 function getWatchlist(){
-  if(role==="ADMIN"){
-    // Admin sees combined watchlist from all users (no duplicates)
-    var all=[];
-    var keys=["mts_wl_ADMIN","mts_wl_TESTER"];
-    try{
-      for(var i=0;i<keys.length;i++){
-        var d=localStorage.getItem(keys[i]);
-        if(d){
-          var arr=JSON.parse(d);
-          for(var j=0;j<arr.length;j++){
-            if(all.indexOf(arr[j])===-1)all.push(arr[j]);
-          }
+  // Robust Watchlist Universe: collect saved tickers from all MTS watchlist keys.
+  // This prevents the scanner from saying "No universe symbols loaded" while the visual list exists.
+  var all=[];
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var key=localStorage.key(i);
+      if(key&&key.indexOf("mts_wl_")===0){
+        var arr=JSON.parse(localStorage.getItem(key)||"[]");
+        for(var j=0;j<arr.length;j++){
+          var t=(arr[j]||"").toUpperCase();
+          if(t&&all.indexOf(t)===-1)all.push(t);
         }
       }
-    }catch(e){}
-    return all;
+    }
+  }catch(e){}
+  // If no stored list exists, keep a small default testing basket so Dashboard can be opened after-hours.
+  if(all.length===0 && (role==="ADMIN"||role==="TESTER")){
+    all=["NVDA","TSLA","GOOG","META","AMZN","MSFT","AAPL"];
+    try{localStorage.setItem(wlKey(),JSON.stringify(all));}catch(e){}
   }
-  return loadWL();
+  return all;
 }
 
 function showAddTicker(){
@@ -331,15 +339,27 @@ function addToWatchlist(){
 }
 
 function removeFromWatchlist(ticker){
-  var list=loadWL();
-  var idx=list.indexOf(ticker);
-  if(idx!==-1){list.splice(idx,1);saveWL(list);}
+  ticker=(ticker||"").toUpperCase();
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var key=localStorage.key(i);
+      if(key&&key.indexOf("mts_wl_")===0){
+        var arr=JSON.parse(localStorage.getItem(key)||"[]");
+        var idx=arr.indexOf(ticker);
+        if(idx!==-1){arr.splice(idx,1);localStorage.setItem(key,JSON.stringify(arr));}
+      }
+    }
+  }catch(e){
+    var list=loadWL();
+    var idx=list.indexOf(ticker);
+    if(idx!==-1){list.splice(idx,1);saveWL(list);}
+  }
   renderWLManager();
   if(universe==="WATCHLIST")startScan();
 }
 
 function renderWLManager(){
-  var list=loadWL();
+  var list=getWatchlist();
   var wlList=document.getElementById("wlList");
   var wlEmpty=document.getElementById("wlEmpty");
 
@@ -355,9 +375,9 @@ function renderWLManager(){
 
   var html="";
   list.forEach(function(t){
-    html+='<div class="wl-item">'
+    html+='<div class="wl-item" style="cursor:pointer" onclick="openDash(\''+t+'\',\''+(NAMES[t]||t)+'\')">'
       +'<span style="font-size:14px;font-weight:bold;color:#fff">'+t+'</span>'
-      +'<button onclick="removeFromWatchlist(\''+t+'\')" style="background:transparent;border:1px solid #ff4466;border-radius:4px;color:#ff4466;padding:4px 10px;font-family:\'Courier New\',monospace;font-size:11px;cursor:pointer">REMOVE</button>'
+      +'<button onclick="event.stopPropagation();removeFromWatchlist(\''+t+'\')" style="background:transparent;border:1px solid #ff4466;border-radius:4px;color:#ff4466;padding:4px 10px;font-family:&quot;Courier New&quot;,monospace;font-size:11px;cursor:pointer">REMOVE</button>'
     +'</div>';
   });
   wlList.innerHTML=html;
@@ -392,7 +412,7 @@ function doLogin(r){
   loginTarget=r;
   document.getElementById("passError").style.display="none";
   document.getElementById("passInput").value="";
-  var cfg={ADMIN:{icon:"🔐",color:"#ff8844"},TESTER:{icon:"🧪",color:"#00ccff"}}[r];
+  var cfg={ADMIN:{icon:"ð",color:"#ff8844"},TESTER:{icon:"ð§ª",color:"#00ccff"}}[r];
   document.getElementById("passIcon").textContent=cfg.icon;
   document.getElementById("passTitle").textContent=r+" ACCESS";
   document.getElementById("passTitle").style.color=cfg.color;
@@ -430,7 +450,7 @@ function showScanner(){
   show("pgScanner");
   activePage="scanner";
   var rc=role==="ADMIN"?"#ff8844":role==="TESTER"?"#00ccff":"#00ff88";
-  var rl=role==="ADMIN"?"🔐 ADMIN":role==="TESTER"?"🧪 TESTER":"👁 OBSERVER";
+  var rl=role==="ADMIN"?"ð ADMIN":role==="TESTER"?"ð§ª TESTER":"ð OBSERVER";
   document.getElementById("roleLabel").textContent=rl;
   document.getElementById("roleLabel").style.color=rc;
 
@@ -581,10 +601,18 @@ function startScan(){
     function tryProcess(){
       if(!snapDone||!dailyDone)return;
       try{
-        if(!snapData)return setTimeout(next,50);
+        if(!snapData){
+          if(runMode==="WATCH"){
+            scored.push({t:t,bias:0,price:"--",station:"--",d2tStr:"--",hit:null,rv:"0.0",action:"WAIT",score:0});
+          }
+          return setTimeout(next,50);
+        }
         var day=snapData.day||{},prev=snapData.prevDay||{};
         var close=day.c||prev.c;
-        if(!close||close<=0)return setTimeout(next,50);
+        if(!close||close<=0){
+          if(runMode==="WATCH")scored.push({t:t,bias:0,price:"--",station:"--",d2tStr:"--",hit:null,rv:"0.0",action:"WAIT",score:0});
+          return setTimeout(next,50);
+        }
         var vol=day.v||0;
         var daily=dailyData||[];
         var avgVol=daily.length>=5?daily.slice(0,Math.min(20,daily.length)).reduce(function(s,b){return s+b.v;},0)/Math.min(20,daily.length):vol;
@@ -658,12 +686,12 @@ function renderTable(){
     html+='<div class="row" style="background:'+bg+';border-left:3px solid '+dc+';cursor:pointer" onclick="openDash(\''+item.t+'\',\''+( NAMES[item.t]||item.t)+'\')">'
       +'<div onclick="event.stopPropagation();markDone(\''+item.t+'\')" class="chk"></div>'
       +'<div class="cell" style="font-size:13px;font-weight:bold;color:#fff">'+item.t+'</div>'
-      +'<div class="cell" style="font-size:15px;font-weight:bold;color:'+dc+'">'+(isN?"▲":"▼")+'</div>'
-      +'<div class="cell" style="color:#fff">$'+item.price+'</div>'
-      +'<div class="cell" style="color:'+dc+';font-weight:bold">$'+item.station+'</div>'
+      +'<div class="cell" style="font-size:15px;font-weight:bold;color:'+dc+'">'+(isN?"â²":"â¼")+'</div>'
+      +'<div class="cell" style="color:#fff">'+(item.price==='--'?'--':'$'+item.price)+'</div>'
+      +'<div class="cell" style="color:'+dc+';font-weight:bold">'+(item.station==='--'?'--':'$'+item.station)+'</div>'
       +'<div class="cell" style="color:'+dc+';font-weight:bold">'+item.d2tStr+'</div>'
       +'<div style="text-align:center">'
-        +'<div style="font-size:13px;font-weight:bold;color:'+hcol+'">'+(item.hit!==null?item.hit+"%":"—")+'</div>'
+        +'<div style="font-size:13px;font-weight:bold;color:'+hcol+'">'+(item.hit!==null?item.hit+"%":"â")+'</div>'
         +'<div class="bar-bg"><div class="bar-fill" style="width:'+(item.hit||0)+'%;background:'+hcol+'"></div></div>'
       +'</div>'
       +'<div class="cell" style="color:'+vc(item.rv)+'">'+item.rv+'x</div>'
@@ -905,8 +933,8 @@ function openDash(ticker,name){
         var day=snapData&&snapData.day?snapData.day:{};
         var prev=snapData&&snapData.prevDay?snapData.prevDay:{};
         var close=day.c||prev.c||0;
-        document.getElementById("dashPrice").textContent=close?"$"+close.toFixed(2):"—";
-        document.getElementById("dashArrow").textContent="—";
+        document.getElementById("dashPrice").textContent=close?"$"+close.toFixed(2):"â";
+        document.getElementById("dashArrow").textContent="â";
         document.getElementById("dashDirLabel").textContent="BALANCE";
         document.getElementById("dashDirBox").style.border="2px solid #888";
         document.getElementById("dashMode").textContent="WAITING";
@@ -914,12 +942,12 @@ function openDash(ticker,name){
         document.getElementById("dashModeBox").style.border="2px solid #888";
         document.getElementById("dashAction").textContent="WAIT";
         document.getElementById("dashActionBox").style.background="#ffcc00";
-        document.getElementById("dashStop1").textContent="—";
-        document.getElementById("dashStop2").textContent="—";
-        document.getElementById("dashStation").textContent="—";
-        document.getElementById("dashHit").textContent="—";
-        var certEl=document.getElementById("dashCert"); if(certEl)certEl.textContent="—";
-        var tempEl=document.getElementById("dashTemp"); if(tempEl)tempEl.textContent="—";
+        document.getElementById("dashStop1").textContent="â";
+        document.getElementById("dashStop2").textContent="â";
+        document.getElementById("dashStation").textContent="â";
+        document.getElementById("dashHit").textContent="â";
+        var certEl=document.getElementById("dashCert"); if(certEl)certEl.textContent="â";
+        var tempEl=document.getElementById("dashTemp"); if(tempEl)tempEl.textContent="â";
         var certBar=document.getElementById("dashCertBar"); if(certBar)certBar.style.width="0%";
         var tempBar=document.getElementById("dashTempBar"); if(tempBar)tempBar.style.width="0%";
         return;
@@ -931,7 +959,7 @@ function openDash(ticker,name){
       var hcol=result.hit!==null?(result.hit>=75?"#ff8844":result.hit>=50?"#ffcc00":result.hit>=25?"#00ccff":"#00ff88"):"#aaa";
       var mc=result.mName==="ROLLING"?"#00ff88":result.mName==="DEPART"?"#88ffcc":result.mName==="BOARDING"?"#ffcc00":result.mName==="SLOW"?"#ff8844":result.mName.indexOf("REV")!==-1?"#ff4466":"#aaa";
 
-      document.getElementById("dashArrow").textContent=result.bias===1?"▲":"▼";
+      document.getElementById("dashArrow").textContent=result.bias===1?"â²":"â¼";
       document.getElementById("dashArrow").style.color=dc;
       document.getElementById("dashDirLabel").textContent=result.bias===1?"NORTH":"SOUTH";
       document.getElementById("dashDirLabel").style.color=dc;
@@ -942,12 +970,12 @@ function openDash(ticker,name){
       document.getElementById("dashAction").textContent=result.action;
       document.getElementById("dashActionBox").style.background=ab;
       document.getElementById("dashPrice").textContent="$"+result.close.toFixed(2);
-      document.getElementById("dashStop1").textContent=result.s1?"$"+result.s1.toFixed(2):"—";
-      document.getElementById("dashStop2").textContent=result.s2?"$"+result.s2.toFixed(2):"—";
-      document.getElementById("dashStation").textContent=result.sta?"$"+result.sta.toFixed(2):"—";
+      document.getElementById("dashStop1").textContent=result.s1?"$"+result.s1.toFixed(2):"â";
+      document.getElementById("dashStop2").textContent=result.s2?"$"+result.s2.toFixed(2):"â";
+      document.getElementById("dashStation").textContent=result.sta?"$"+result.sta.toFixed(2):"â";
       document.getElementById("dashStation").style.color=dc;
       document.getElementById("dashStationRow").style.background=result.bias===1?"#001a00":"#1a0000";
-      var hitTxt=result.hit!==null?result.hit+"%":"—";
+      var hitTxt=result.hit!==null?result.hit+"%":"â";
       document.getElementById("dashHit").textContent=hitTxt;
       document.getElementById("dashHit").style.color=hcol;
       document.getElementById("dashHitBar").style.width=(result.hit||0)+"%";
@@ -956,11 +984,11 @@ function openDash(ticker,name){
       var temp=result.engineTemp!==undefined?result.engineTemp:null;
       var ccol=cert===null?"#aaa":cert>=75?"#00ff88":cert>=50?"#00ccff":cert>=25?"#ffcc00":"#ff4466";
       var tcol=temp===null?"#aaa":temp>=75?"#ff4466":temp>=50?"#ff8844":temp>=25?"#ffcc00":"#fff";
-      document.getElementById("dashCert").textContent=cert===null?"—":cert+"%";
+      document.getElementById("dashCert").textContent=cert===null?"â":cert+"%";
       document.getElementById("dashCert").style.color=ccol;
       document.getElementById("dashCertBar").style.width=(cert||0)+"%";
       document.getElementById("dashCertBar").style.background=ccol;
-      document.getElementById("dashTemp").textContent=temp===null?"—":temp+"%";
+      document.getElementById("dashTemp").textContent=temp===null?"â":temp+"%";
       document.getElementById("dashTemp").style.color=tcol;
       document.getElementById("dashTempBar").style.width=(temp||0)+"%";
       document.getElementById("dashTempBar").style.background=tcol;
@@ -1071,7 +1099,7 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
   </div>
   <!-- Loading state -->
   <div id="dashLoading" style="text-align:center;padding:40px;color:#00ccff">
-    <div style="font-size:24px;margin-bottom:8px">⟳</div>
+    <div style="font-size:24px;margin-bottom:8px">â³</div>
     <div style="font-size:12px;color:#fff">Running MMG V9.8C...</div>
   </div>
   <!-- Content -->
@@ -1129,12 +1157,12 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
     <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px">
       <div class="mini-stat" style="flex:1">
         <div class="mini-stat-label">CERTAINTY %</div>
-        <div id="dashCert" class="mini-stat-value">—</div>
+        <div id="dashCert" class="mini-stat-value">â</div>
         <div style="background:#1a1a3a;border-radius:5px;height:8px;overflow:hidden;margin-top:6px"><div id="dashCertBar" style="height:100%;width:0%;border-radius:5px"></div></div>
       </div>
       <div class="mini-stat" style="flex:1">
         <div class="mini-stat-label">ENGINE TEMP</div>
-        <div id="dashTemp" class="mini-stat-value">—</div>
+        <div id="dashTemp" class="mini-stat-value">â</div>
         <div style="background:#1a1a3a;border-radius:5px;height:8px;overflow:hidden;margin-top:6px"><div id="dashTempBar" style="height:100%;width:0%;border-radius:5px"></div></div>
       </div>
     </div>
@@ -1161,20 +1189,20 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
 
 <div id="botNav" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#0a0a1a;border-top:1px solid #2a2a50;display:none;z-index:100">
   <button onclick="goPage('scanner')" id="navScanner" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
-    <span style="font-size:20px">📊</span>
+    <span style="font-size:20px">ð</span>
     <span id="navScannerLbl" style="font-size:9px;font-weight:bold;color:#00ccff">SCANNER</span>
     <span style="width:20px;height:2px;background:#00ccff;border-radius:1px;display:block"></span>
   </button>
   <button onclick="goPage('dashboard')" id="navDash" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace;opacity:0.4">
-    <span style="font-size:20px">🚂</span>
+    <span style="font-size:20px">ð</span>
     <span id="navDashLbl" style="font-size:9px;font-weight:bold;color:#fff">DASHBOARD</span>
   </button>
   <button onclick="goPage('manual')" id="navManual" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
-    <span style="font-size:20px">📖</span>
+    <span style="font-size:20px">ð</span>
     <span id="navManualLbl" style="font-size:9px;font-weight:bold;color:#fff">MANUAL</span>
   </button>
   <button onclick="doLogout()" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
-    <span style="font-size:20px">🚪</span>
+    <span style="font-size:20px">ðª</span>
     <span style="font-size:9px;font-weight:bold;color:#fff">EXIT</span>
   </button>
 </div>
