@@ -5,7 +5,10 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <meta name="theme-color" content="#06060f"/>
-<title>MMG V9.8C Backtester - MTS</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<title>MMG V9.8C Backtester v3 - MTS</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{background:#06060f;color:#fff;font-family:'Courier New',monospace;min-height:100vh;}
@@ -26,7 +29,7 @@ input::placeholder{color:#8888aa;}
   <div style="text-align:center;border-bottom:1px solid #2a2a50;padding-bottom:12px;margin-bottom:16px">
     <div style="font-size:10px;color:#aaa;letter-spacing:3px;margin-bottom:4px">MTS - TRAIN OF FORTUNE</div>
     <div style="font-size:20px;font-weight:bold;color:#00ccff">MMG V9.8C BACKTESTER</div>
-    <div style="font-size:11px;color:#aaa;margin-top:4px">Test the engine against historical data</div>
+    <div style="font-size:11px;color:#ffcc00;margin-top:4px">v3 - Fixed market hours filter</div>
   </div>
 
   <!-- Controls -->
@@ -46,7 +49,7 @@ input::placeholder{color:#8888aa;}
         <input type="date" id="endDate" value="2025-04-30"/>
       </div>
     </div>
-    <button class="btn" id="runBtn" onclick="runBacktest()" style="background:#00ccff;color:#000">RUN BACKTEST</button>
+    <button class="btn" id="runBtn" onclick="runBacktest()" style="background:#00ccff;color:#000">RUN BACKTEST v3</button>
   </div>
 
   <!-- Progress -->
