@@ -11,7 +11,12 @@
 html,body{background:#06060f;color:#fff;font-family:'Courier New',monospace;min-height:100vh;}
 .wrap{max-width:480px;margin:0 auto;padding:12px 8px;}.scanner-inner{padding-bottom:80px;}
 .btn{display:block;width:100%;padding:16px 20px;margin-bottom:12px;border-radius:12px;border:2px solid;background:#0e0e22;font-family:'Courier New',monospace;cursor:pointer;text-align:left;}
-.row{display:grid;grid-template-columns:20px 52px 20px 60px 72px 68px 46px 36px;gap:4px;padding:8px;align-items:center;border-bottom:1px solid #1a1a30;}
+.row{display:grid;grid-template-columns:18px 44px 18px 52px 62px 45px 40px 34px 48px;gap:3px;padding:8px 5px;align-items:center;border-bottom:1px solid #1a1a30;}
+.action-pill{display:inline-block;border-radius:4px;padding:2px 3px;font-size:8px;font-weight:bold;color:#000;line-height:1.1;}
+.mini-stat{background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:10px 12px;}
+.mini-stat-label{font-size:11px;font-weight:bold;color:#ccc;margin-bottom:6px;}
+.mini-stat-value{font-size:20px;font-weight:bold;}
+.api-warn{background:#1a1200;border:1px solid #ffcc00;border-radius:8px;color:#ffcc00;padding:8px;margin-bottom:10px;font-size:10px;text-align:center;}
 .row:last-child{border-bottom:none;}
 .hdr{background:#0a0a20;border-radius:8px 8px 0 0;}
 .cell{font-size:13px;text-align:center;white-space:nowrap;}
@@ -24,6 +29,11 @@ input::placeholder{color:#8888aa;}
 .tab-btn{flex:1;padding:9px 2px;border-radius:6px;font-family:'Courier New',monospace;font-weight:bold;font-size:11px;cursor:pointer;}
 .tab-active{background:#00ccff;color:#000;border:none;}
 .tab-inactive{background:#1a1a3a;color:#ccc;border:1px solid #333366;}
+.section-label{font-size:9px;color:#888;letter-spacing:2px;margin:8px 0 5px;font-weight:bold;}
+.mode-btn{padding:7px 6px;border-radius:6px;font-family:'Courier New',monospace;font-weight:bold;font-size:10px;cursor:pointer;white-space:nowrap;}
+.mode-active{background:#ffcc00;color:#000;border:none;}
+.mode-inactive{background:#1a1a3a;color:#ccc;border:1px solid #333366;}
+.status-pill{font-size:9px;font-weight:bold;border-radius:5px;padding:3px 6px;background:#111128;border:1px solid #333366;display:inline-block;margin-top:3px;}
 .wl-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #1a1a30;background:#0e0e22;}
 .wl-item:last-child{border-bottom:none;}
 </style>
@@ -39,19 +49,19 @@ input::placeholder{color:#8888aa;}
     <div style="font-size:13px;color:#ccc">Select your access level</div>
   </div>
   <button class="btn" style="border-color:#ff8844;" onclick="doLogin('ADMIN')">
-    <div style="font-size:17px;font-weight:bold;color:#ff8844;">🔐 ADMIN</div>
+    <div style="font-size:17px;font-weight:bold;color:#ff8844;">ð ADMIN</div>
     <div style="font-size:12px;color:#ccc;margin-top:3px">Full access - all features</div>
   </button>
   <button class="btn" style="border-color:#00ccff;" onclick="doLogin('TESTER')">
-    <div style="font-size:17px;font-weight:bold;color:#00ccff;">🧪 TESTER</div>
+    <div style="font-size:17px;font-weight:bold;color:#00ccff;">ð§ª TESTER</div>
     <div style="font-size:12px;color:#ccc;margin-top:3px">Scanner + watchlist</div>
   </button>
   <button class="btn" style="border-color:#00ff88;" onclick="doLogin('OBSERVER')">
-    <div style="font-size:17px;font-weight:bold;color:#00ff88;">👁 OBSERVER</div>
+    <div style="font-size:17px;font-weight:bold;color:#00ff88;">ð OBSERVER</div>
     <div style="font-size:12px;color:#ccc;margin-top:3px">Scanner view only - no password</div>
   </button>
   <button class="btn" style="border-color:#aa66ff;" onclick="doLogin('MEMBER')">
-    <div style="font-size:17px;font-weight:bold;color:#aa66ff;">🎫 MEMBER</div>
+    <div style="font-size:17px;font-weight:bold;color:#aa66ff;">ð« MEMBER</div>
     <div style="font-size:12px;color:#ccc;margin-top:3px">Registration opening soon</div>
   </button>
   <div style="font-size:10px;color:#888;text-align:center;margin-top:12px">MTS - TRAIN OF FORTUNE - NOT FINANCIAL ADVICE</div>
@@ -75,7 +85,7 @@ input::placeholder{color:#8888aa;}
 
 <div id="pgMember" class="wrap" style="display:none">
   <div style="padding:60px 0;text-align:center">
-    <div style="font-size:48px;margin-bottom:16px">🎫</div>
+    <div style="font-size:48px;margin-bottom:16px">ð«</div>
     <div style="font-size:22px;font-weight:bold;color:#aa66ff;margin-bottom:10px">MEMBER ACCESS</div>
     <div style="font-size:14px;color:#ccc;line-height:1.8;margin-bottom:30px">
       Registration is opening soon.<br>
@@ -96,12 +106,14 @@ input::placeholder{color:#8888aa;}
   <!-- Header -->
   <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a2a50;padding-bottom:10px;margin-bottom:12px">
     <div>
-      <div style="font-size:9px;color:#aaa;letter-spacing:3px">MTS - EQUITY SCANNER</div>
-      <div style="font-size:17px;font-weight:bold;color:#00ccff">MOMENTUM SCAN</div>
+      <div style="font-size:9px;color:#aaa;letter-spacing:3px">MTS - PEGASUS</div>
+      <div style="font-size:17px;font-weight:bold;color:#00ccff">PEGASUS</div>
+      <div style="font-size:9px;color:#ffcc00;font-weight:bold;margin-top:2px">SCANNER COMMAND CENTER</div>
       <div id="roleLabel" style="font-size:9px;font-weight:bold;margin-top:2px"></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <button id="addWlBtn" onclick="showAddTicker()" style="display:none;background:#aa66ff;border:none;border-radius:6px;color:#000;width:32px;height:32px;font-size:20px;cursor:pointer;font-weight:bold;line-height:1">+</button>
+      <button onclick="editApiKey()" style="background:#1a1a3a;border:1px solid #ffcc00;border-radius:6px;color:#ffcc00;width:32px;height:32px;font-size:15px;cursor:pointer;font-weight:bold;line-height:1">ð</button>
       <div style="text-align:right">
         <div id="liveBadge" style="font-size:11px;font-weight:bold;color:#00ff88">LIVE</div>
         <div id="clockEl" style="font-size:10px;color:#aaa"></div>
@@ -123,14 +135,37 @@ input::placeholder{color:#8888aa;}
     </div>
   </div>
 
+  <!-- Pegasus scanner type selector -->
+
+  <div class="section-label">SCANNER TYPE</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">
+    <button id="stMOM" onclick="setScannerType('MOMENTUM')" class="mode-btn mode-active">MOMENTUM</button>
+    <button id="stEARN" onclick="setScannerType('EARNINGS')" class="mode-btn mode-inactive">EARNINGS</button>
+    <button id="stFED" onclick="setScannerType('FED')" class="mode-btn mode-inactive">FED DAY</button>
+    <button id="stMACRO" onclick="setScannerType('MACRO')" class="mode-btn mode-inactive">CPI/PPI</button>
+    <button id="stBREAK" onclick="setScannerType('BREAKOUT')" class="mode-btn mode-inactive">BREAKOUT</button>
+    <button id="stVOL" onclick="setScannerType('HIGHVOL')" class="mode-btn mode-inactive">HIGH VOL</button>
+  </div>
+
+  <!-- Live scan vs watch mode -->
+
+  <div style="display:flex;gap:4px;margin-bottom:8px">
+    <button id="modeLive" onclick="setScanMode('LIVE')" class="tab-btn tab-active">LIVE SCAN</button>
+    <button id="modeWatch" onclick="setScanMode('WATCH')" class="tab-btn tab-inactive">WATCH MODE</button>
+  </div>
+
   <!-- Universe tabs -->
 
+  <div class="section-label">UNIVERSE</div>
   <div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">
-    <button id="tabSP" onclick="setUniverse('SP500')" class="tab-btn tab-active">S&amp;P 500</button>
-    <button id="tabDW" onclick="setUniverse('DOW30')" class="tab-btn tab-inactive">DOW 30</button>
+    <button id="tabSP" onclick="setUniverse('SP500')" class="tab-btn tab-active">S&amp;P 75%</button>
+    <button id="tabQQQ" onclick="setUniverse('NASDAQ100')" class="tab-btn tab-inactive">QQQ</button>
+    <button id="tabNDQ" onclick="setUniverse('NASDAQTOP')" class="tab-btn tab-inactive">NDQ TOP</button>
+    <button id="tabDW" onclick="setUniverse('DOW30')" class="tab-btn tab-inactive">DOW</button>
     <button id="tabRU" onclick="setUniverse('RUT2K')" class="tab-btn tab-inactive">RUT 2K</button>
-    <button id="tabWL" onclick="setUniverse('WATCHLIST')" class="tab-btn tab-inactive">⭐ LIST</button>
-    <button id="scanBtn" onclick="triggerScan()" style="padding:9px 12px;border-radius:6px;border:none;background:#00ff88;color:#000;font-family:'Courier New',monospace;font-weight:bold;font-size:13px;cursor:pointer">↺</button>
+    <button id="tabOTC" onclick="setUniverse('OTC')" class="tab-btn tab-inactive">OTC</button>
+    <button id="tabWL" onclick="setUniverse('WATCHLIST')" class="tab-btn tab-inactive">â­ LIST</button>
+    <button id="scanBtn" onclick="triggerScan()" style="padding:9px 12px;border-radius:6px;border:none;background:#00ff88;color:#000;font-family:'Courier New',monospace;font-weight:bold;font-size:13px;cursor:pointer">âº</button>
   </div>
 
   <!-- Watchlist swipe list (only shows when WATCHLIST tab active) -->
@@ -151,6 +186,8 @@ input::placeholder{color:#8888aa;}
     <div id="progressTxt" style="font-size:10px;color:#aaa;text-align:center">Scanning...</div>
   </div>
 
+  <div id="apiNotice" class="api-warn" style="display:none">Tap ð to add Polygon API key on this device.</div>
+
   <!-- Info -->
 
   <div id="infoBar" style="font-size:10px;color:#aaa;text-align:center;margin-bottom:8px"></div>
@@ -165,8 +202,9 @@ input::placeholder{color:#8888aa;}
       <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">PRICE</div>
       <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">TARGET</div>
       <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">D2T</div>
-      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">HIT%</div>
-      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">VOL</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">TRIP</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">RVOL</div>
+      <div class="cell" style="font-size:9px;color:#ccf;font-weight:bold">ACTION</div>
     </div>
     <div id="tableBody"></div>
   </div>
@@ -174,13 +212,13 @@ input::placeholder{color:#8888aa;}
   <!-- Empty -->
 
   <div id="emptyMsg" style="text-align:center;padding:30px;color:#aaa;font-size:13px;line-height:1.8;display:none">
-    NO SETUPS FOUND<br>Hit ↺ to refresh.
+    NO ACTIVE TRAINS FOUND<br>Switch to WATCH MODE or choose WATCHLIST.
   </div>
 
   <!-- Legend -->
 
   <div id="legend" style="margin-top:10px;padding:8px;background:#0a0a1a;border:1px solid #1a1a30;border-radius:6px;display:none">
-    <div style="font-size:9px;color:#aaa;margin-bottom:5px">HIT% - How far price traveled toward target today</div>
+    <div style="font-size:9px;color:#aaa;margin-bottom:5px">TRIP % - How far price traveled toward the next station today</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#00ff88"></div><div style="font-size:9px;color:#ccc">&lt;25% Early</div></div>
       <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:2px;background:#00ccff"></div><div style="font-size:9px;color:#ccc">25-50% Good</div></div>
@@ -194,14 +232,43 @@ input::placeholder{color:#8888aa;}
 </div>
 
 <script>
-var API="HjLVXQHGFcYFnJFQf2oq1ODPMVvwLuJ9";
+var API=localStorage.getItem("mts_polygon_api_key")||"";
 var PASS={ADMIN:"mts2024",TESTER:"test123"};
 var MAX_WL=20;
 
-var SP500=["AAPL","MSFT","NVDA","GOOGL","AMZN","META","TSLA","JPM","V","WMT","GS","MS","AMD","NFLX","CRWD","DDOG","AVGO","COST","UNH","MA","ADBE","BKNG","ISRG","SPGI","LMT","CAT","RTX","BAC","XOM","CVX"];
-var DOW30=["AAPL","MSFT","JPM","V","WMT","GS","CAT","BA","HD","MCD","HON","CVX","IBM","MMM","MRK","DIS","KO","VZ","INTC","SHW"];
-var RUT2K=["COIN","HOOD","AFRM","UPST","SOFI","RIVN","LCID","PLUG","SMCI","CHWY","BBIO","TMDX","ACVA","PRCT","RKT","JOBY","OPEN","BLNK","FCEL","SNDX"];
-var UNIVS={SP500:SP500,DOW30:DOW30,RUT2K:RUT2K};
+
+function getApiKey(){
+  API=localStorage.getItem("mts_polygon_api_key")||API||"";
+  if(!API){
+    var k=prompt("Enter Polygon API key for this device. It will be saved only in this browser.");
+    if(k){API=k.trim();localStorage.setItem("mts_polygon_api_key",API);}
+  }
+  return API;
+}
+function editApiKey(){
+  var current=localStorage.getItem("mts_polygon_api_key")||"";
+  var k=prompt("Polygon API key for this browser:",current);
+  if(k!==null){
+    API=k.trim();
+    if(API)localStorage.setItem("mts_polygon_api_key",API);
+    else localStorage.removeItem("mts_polygon_api_key");
+    alert(API?"Polygon key saved on this device.":"Polygon key cleared.");
+  }
+}
+function apiKeyParam(){return encodeURIComponent(getApiKey()||"");}
+function colorForAction(a){return a==="GET ON"?"#00ff88":a==="GET OFF"?"#ff4466":"#ffcc00";}
+function textForAction(a){return a==="WAIT"?"#000":"#000";}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+
+// UNIVERSES â Pegasus V0.3
+// SP500 = top-weight/liquid proxy list for now. Later replace with backend-managed index weights.
+var SP500=["NVDA","AAPL","MSFT","AMZN","GOOGL","META","AVGO","TSLA","JPM","LLY","V","NFLX","MA","XOM","COST","WMT","ORCL","HD","PG","JNJ","ABBV","BAC","PLTR","KO","PM","CRM","UNH","AMD","CVX","WFC","MS","GS","NOW","IBM","LIN","ABT","GE","MCD","ISRG","MRK","TMO","DIS","AXP","CAT","RTX","PEP","QCOM","INTU","BKNG","SPGI"];
+var NASDAQ100=["NVDA","AAPL","MSFT","AMZN","GOOGL","META","AVGO","TSLA","COST","NFLX","AMD","ADBE","PEP","QCOM","INTU","AMAT","ISRG","BKNG","TXN","HON","PANW","CRWD","SBUX","GILD","ADP","VRTX","MU","LRCX","MELI","KLAC","SNPS","CDNS","MAR","ABNB","PYPL","CSCO","INTC","MRVL","FTNT","REGN","ADSK","ROP","WDAY","NXPI","MNST","CHTR","TEAM","KDP","AEP","PAYX"];
+var NASDAQTOP=["NVDA","AAPL","MSFT","AMZN","GOOGL","META","AVGO","TSLA","AMD","NFLX","PLTR","MU","MSTR","APP","ARM","SMCI","CRWD","PANW","ZS","NET","DDOG","MDB","SNOW","COIN","HOOD","AFRM","UPST","SOFI","RIVN","LCID","IONQ","QBTS","RGTI","ASTS","ACHR","SOUN","RKLB","MARA","RIOT","CLSK","CELH","CHWY","ROKU","SHOP","PDD","NIO","XPEV","LI","BABA","JD"];
+var DOW30=["AAPL","MSFT","AMZN","JPM","V","WMT","GS","CAT","BA","HD","MCD","HON","CVX","IBM","MMM","MRK","DIS","KO","VZ","INTC","SHW","AXP","AMGN","CRM","CSCO","JNJ","NKE","PG","TRV","UNH"];
+var RUT2K=["COIN","HOOD","AFRM","UPST","SOFI","RIVN","LCID","PLUG","SMCI","CHWY","BBIO","TMDX","ACVA","PRCT","RKT","JOBY","OPEN","BLNK","FCEL","SNDX","IONQ","QBTS","RGTI","ASTS","ACHR","SOUN","RKLB","MARA","RIOT","CLSK"];
+var OTC=["FNMA","FMCC","NTDOY","RHHBY","BAYRY","SFTBY","TCEHY","BYDDY"];
+var UNIVS={SP500:SP500,NASDAQ100:NASDAQ100,NASDAQTOP:NASDAQTOP,DOW30:DOW30,RUT2K:RUT2K,OTC:OTC};
 
 var role=null,universe="SP500",scanning=false,completed=[],results=[],scanTimer=null,loginTarget=null;
 
@@ -210,24 +277,27 @@ function wlKey(){return "mts_wl_"+(role||"guest");}
 function loadWL(){try{var d=localStorage.getItem(wlKey());return d?JSON.parse(d):[];}catch(e){return[];}}
 function saveWL(list){try{localStorage.setItem(wlKey(),JSON.stringify(list));}catch(e){}}
 function getWatchlist(){
-  if(role==="ADMIN"){
-    // Admin sees combined watchlist from all users (no duplicates)
-    var all=[];
-    var keys=["mts_wl_ADMIN","mts_wl_TESTER"];
-    try{
-      for(var i=0;i<keys.length;i++){
-        var d=localStorage.getItem(keys[i]);
-        if(d){
-          var arr=JSON.parse(d);
-          for(var j=0;j<arr.length;j++){
-            if(all.indexOf(arr[j])===-1)all.push(arr[j]);
-          }
+  // Robust Watchlist Universe: collect saved tickers from all MTS watchlist keys.
+  // This prevents the scanner from saying "No universe symbols loaded" while the visual list exists.
+  var all=[];
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var key=localStorage.key(i);
+      if(key&&key.indexOf("mts_wl_")===0){
+        var arr=JSON.parse(localStorage.getItem(key)||"[]");
+        for(var j=0;j<arr.length;j++){
+          var t=(arr[j]||"").toUpperCase();
+          if(t&&all.indexOf(t)===-1)all.push(t);
         }
       }
-    }catch(e){}
-    return all;
+    }
+  }catch(e){}
+  // If no stored list exists, keep a small default testing basket so Dashboard can be opened after-hours.
+  if(all.length===0 && (role==="ADMIN"||role==="TESTER")){
+    all=["NVDA","TSLA","GOOG","META","AMZN","MSFT","AAPL"];
+    try{localStorage.setItem(wlKey(),JSON.stringify(all));}catch(e){}
   }
-  return loadWL();
+  return all;
 }
 
 function showAddTicker(){
@@ -269,15 +339,27 @@ function addToWatchlist(){
 }
 
 function removeFromWatchlist(ticker){
-  var list=loadWL();
-  var idx=list.indexOf(ticker);
-  if(idx!==-1){list.splice(idx,1);saveWL(list);}
+  ticker=(ticker||"").toUpperCase();
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var key=localStorage.key(i);
+      if(key&&key.indexOf("mts_wl_")===0){
+        var arr=JSON.parse(localStorage.getItem(key)||"[]");
+        var idx=arr.indexOf(ticker);
+        if(idx!==-1){arr.splice(idx,1);localStorage.setItem(key,JSON.stringify(arr));}
+      }
+    }
+  }catch(e){
+    var list=loadWL();
+    var idx=list.indexOf(ticker);
+    if(idx!==-1){list.splice(idx,1);saveWL(list);}
+  }
   renderWLManager();
   if(universe==="WATCHLIST")startScan();
 }
 
 function renderWLManager(){
-  var list=loadWL();
+  var list=getWatchlist();
   var wlList=document.getElementById("wlList");
   var wlEmpty=document.getElementById("wlEmpty");
 
@@ -293,9 +375,9 @@ function renderWLManager(){
 
   var html="";
   list.forEach(function(t){
-    html+='<div class="wl-item">'
+    html+='<div class="wl-item" style="cursor:pointer" onclick="openDash(\''+t+'\',\''+(NAMES[t]||t)+'\')">'
       +'<span style="font-size:14px;font-weight:bold;color:#fff">'+t+'</span>'
-      +'<button onclick="removeFromWatchlist(\''+t+'\')" style="background:transparent;border:1px solid #ff4466;border-radius:4px;color:#ff4466;padding:4px 10px;font-family:\'Courier New\',monospace;font-size:11px;cursor:pointer">REMOVE</button>'
+      +'<button onclick="event.stopPropagation();removeFromWatchlist(\''+t+'\')" style="background:transparent;border:1px solid #ff4466;border-radius:4px;color:#ff4466;padding:4px 10px;font-family:&quot;Courier New&quot;,monospace;font-size:11px;cursor:pointer">REMOVE</button>'
     +'</div>';
   });
   wlList.innerHTML=html;
@@ -330,7 +412,7 @@ function doLogin(r){
   loginTarget=r;
   document.getElementById("passError").style.display="none";
   document.getElementById("passInput").value="";
-  var cfg={ADMIN:{icon:"🔐",color:"#ff8844"},TESTER:{icon:"🧪",color:"#00ccff"}}[r];
+  var cfg={ADMIN:{icon:"ð",color:"#ff8844"},TESTER:{icon:"ð§ª",color:"#00ccff"}}[r];
   document.getElementById("passIcon").textContent=cfg.icon;
   document.getElementById("passTitle").textContent=r+" ACCESS";
   document.getElementById("passTitle").style.color=cfg.color;
@@ -368,7 +450,7 @@ function showScanner(){
   show("pgScanner");
   activePage="scanner";
   var rc=role==="ADMIN"?"#ff8844":role==="TESTER"?"#00ccff":"#00ff88";
-  var rl=role==="ADMIN"?"🔐 ADMIN":role==="TESTER"?"🧪 TESTER":"👁 OBSERVER";
+  var rl=role==="ADMIN"?"ð ADMIN":role==="TESTER"?"ð§ª TESTER":"ð OBSERVER";
   document.getElementById("roleLabel").textContent=rl;
   document.getElementById("roleLabel").style.color=rc;
 
@@ -388,13 +470,45 @@ function showScanner(){
   }
 
   updateBotNav();
+  var apiNotice=document.getElementById("apiNotice"); if(apiNotice)apiNotice.style.display=(localStorage.getItem("mts_polygon_api_key")?"none":"block");
   setUniverse("SP500");
   startClock();
 }
 
+
+function setScannerType(t){
+  scannerType=t;
+  var map={MOMENTUM:"stMOM",EARNINGS:"stEARN",FED:"stFED",MACRO:"stMACRO",BREAKOUT:"stBREAK",HIGHVOL:"stVOL"};
+  for(var k in map){var el=document.getElementById(map[k]);if(!el)continue;el.className=(k===t)?"mode-btn mode-active":"mode-btn mode-inactive";}
+  startScan();
+}
+function setScanMode(m,silent){
+  scanMode=m;
+  var live=document.getElementById("modeLive"),watch=document.getElementById("modeWatch");
+  if(live)live.className=m==="LIVE"?"tab-btn tab-active":"tab-btn tab-inactive";
+  if(watch)watch.className=m==="WATCH"?"tab-btn tab-active":"tab-btn tab-inactive";
+  if(!silent)startScan();
+}
+function scannerTypeLabel(){
+  var map={MOMENTUM:"Momentum",EARNINGS:"Earnings",FED:"Fed Day",MACRO:"CPI/PPI",BREAKOUT:"Breakout",HIGHVOL:"High Volatility"};
+  return map[scannerType]||"Momentum";
+}
+function universeLabel(){
+  var map={SP500:"S&P 500 Top 75%",NASDAQ100:"Nasdaq 100 / QQQ",NASDAQTOP:"Nasdaq Composite Top 10%",DOW30:"Dow 30",RUT2K:"Russell 2000",OTC:"OTC / ADR Test",WATCHLIST:"Watchlist"};
+  return map[universe]||universe;
+}
+function marketStatusLabel(){
+  var d=new Date();
+  var mins=d.getHours()*60+d.getMinutes();
+  // Approx local browser time. Later move to backend exchange-time status.
+  if(mins>=570&&mins<960)return "LIVE";        // 9:30-4:00
+  if(mins>=240&&mins<570)return "PRE MARKET";  // 4:00-9:30
+  if(mins>=960&&mins<1200)return "POST MARKET";// 4:00-8:00
+  return "MARKET CLOSED - LAST DATA";
+}
 function setUniverse(u){
   universe=u;
-  var tabs={SP500:"tabSP",DOW30:"tabDW",RUT2K:"tabRU",WATCHLIST:"tabWL"};
+  var tabs={SP500:"tabSP",NASDAQ100:"tabQQQ",NASDAQTOP:"tabNDQ",DOW30:"tabDW",RUT2K:"tabRU",OTC:"tabOTC",WATCHLIST:"tabWL"};
   for(var k in tabs){
     var el=document.getElementById(tabs[k]);
     if(!el)continue;
@@ -402,16 +516,18 @@ function setUniverse(u){
     else{el.className="tab-btn tab-inactive";}
   }
 
-  // Show/hide watchlist manager and + button
+  // Watchlist is now a full Pegasus universe and should always show in Watch Mode.
   var wlMgr=document.getElementById("wlManager");
   var addBtn=document.getElementById("addWlBtn");
   if(u==="WATCHLIST"&&role!=="OBSERVER"){
     wlMgr.style.display="block";
     if(addBtn)addBtn.style.display="flex";
+    setScanMode("WATCH",true);
     renderWLManager();
   } else {
     wlMgr.style.display="none";
     if(addBtn)addBtn.style.display="none";
+    if(scanMode==="WATCH"&&u!=="WATCHLIST")setScanMode("LIVE",true);
   }
 
   startScan();
@@ -430,9 +546,10 @@ function vc(v){var n=parseFloat(v);return n>=2.5?"#00ff88":n>=1.8?"#ffcc00":"#cc
 function startScan(){
   if(scanning)return;
   var tickers=getTickers();
+  var runMode=(universe==="WATCHLIST")?"WATCH":scanMode;
 
   if(tickers.length===0){
-    document.getElementById("infoBar").textContent="Watchlist is empty. Add stocks above.";
+    document.getElementById("infoBar").textContent=universe==="WATCHLIST"?"Watchlist is empty. Add stocks above.":"No universe symbols loaded.";
     document.getElementById("tableWrap").style.display="none";
     document.getElementById("emptyMsg").style.display="none";
     document.getElementById("legend").style.display="none";
@@ -466,8 +583,8 @@ function startScan(){
       scanning=false;
       document.getElementById("scanBtn").style.background="#00ff88";
       document.getElementById("scanBtn").style.color="#000";
-      document.getElementById("liveBadge").textContent="LIVE";
-      document.getElementById("liveBadge").style.color="#00ff88";
+      document.getElementById("liveBadge").textContent=marketStatusLabel();
+      document.getElementById("liveBadge").style.color=marketStatusLabel()==="LIVE"?"#00ff88":"#ffcc00";
       document.getElementById("progressWrap").style.display="none";
       renderTable();
       return;
@@ -484,17 +601,25 @@ function startScan(){
     function tryProcess(){
       if(!snapDone||!dailyDone)return;
       try{
-        if(!snapData)return setTimeout(next,50);
+        if(!snapData){
+          if(runMode==="WATCH"){
+            scored.push({t:t,bias:0,price:"--",station:"--",d2tStr:"--",hit:null,rv:"0.0",action:"WAIT",score:0});
+          }
+          return setTimeout(next,50);
+        }
         var day=snapData.day||{},prev=snapData.prevDay||{};
         var close=day.c||prev.c;
-        if(!close||close<=0)return setTimeout(next,50);
+        if(!close||close<=0){
+          if(runMode==="WATCH")scored.push({t:t,bias:0,price:"--",station:"--",d2tStr:"--",hit:null,rv:"0.0",action:"WAIT",score:0});
+          return setTimeout(next,50);
+        }
         var vol=day.v||0;
         var daily=dailyData||[];
         var avgVol=daily.length>=5?daily.slice(0,Math.min(20,daily.length)).reduce(function(s,b){return s+b.v;},0)/Math.min(20,daily.length):vol;
         var expNow=avgVol*sp;
         var rv=expNow>0?vol/expNow:1.0;
         // For watchlist stocks always show even if vol not spiking
-        if(universe!=="WATCHLIST"&&rv<1.1)return setTimeout(next,50);
+        if(runMode!=="WATCH"&&rv<1.1)return setTimeout(next,50);
         var dC=daily.slice(0,20).map(function(b){return b.c;}).reverse();
         var dEma=dC.length>=3?dC.reduce(function(s,v){return s+v;},0)/dC.length:close;
         var bias=close>dEma?1:-1;
@@ -507,17 +632,22 @@ function startScan(){
         var d2t=Math.abs(station-close);
         var d2tStr=d2t>=100?(bias===1?"+":"-")+"$"+d2t.toFixed(0):d2t>=10?(bias===1?"+":"-")+"$"+d2t.toFixed(1):(bias===1?"+":"-")+"$"+d2t.toFixed(2);
         var score=(Math.min(rv,5)/5*0.5)+((hit||0)/100*0.5);
-        scored.push({t:t,bias:bias,price:close.toFixed(2),station:station.toFixed(2),d2tStr:d2tStr,hit:hit!==null?Math.round(hit):null,rv:rv.toFixed(1),score:score});
+        var hRound=hit!==null?Math.round(hit):null;
+        var action="WAIT";
+        if(hRound!==null&&hRound>=85)action="GET OFF";
+        else if(rv>=1.8&&hRound!==null&&hRound>=15&&hRound<75)action="GET ON";
+        if(runMode==="WATCH"&&action==="GET ON"&&rv<1.4)action="WAIT";
+        scored.push({t:t,bias:bias,price:close.toFixed(2),station:station.toFixed(2),d2tStr:d2tStr,hit:hRound,rv:rv.toFixed(1),action:action,score:score});
       }catch(e){}
       setTimeout(next,50);
     }
 
-    fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+t+"?apiKey="+API)
+    fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+t+"?apiKey="+apiKeyParam())
       .then(function(r){return r.json();})
       .then(function(d){snapData=d.ticker||null;snapDone=true;tryProcess();})
       .catch(function(){snapData=null;snapDone=true;tryProcess();});
 
-    fetch("https://api.polygon.io/v2/aggs/ticker/"+t+"/range/1/day/"+fromD+"/"+today+"?adjusted=true&sort=desc&limit=60&apiKey="+API)
+    fetch("https://api.polygon.io/v2/aggs/ticker/"+t+"/range/1/day/"+fromD+"/"+today+"?adjusted=true&sort=desc&limit=60&apiKey="+apiKeyParam())
       .then(function(r){return r.json();})
       .then(function(d){dailyData=d.results||[];dailyDone=true;tryProcess();})
       .catch(function(){dailyData=[];dailyDone=true;tryProcess();});
@@ -528,12 +658,13 @@ function startScan(){
   scanTimer=setInterval(function(){if(!scanning)startScan();},5*60*1000);
 }
 
-var NAMES={AAPL:"Apple Inc.",MSFT:"Microsoft Corp.",NVDA:"NVIDIA Corp.",GOOGL:"Alphabet Inc.",AMZN:"Amazon.com Inc.",META:"Meta Platforms",TSLA:"Tesla Inc.",JPM:"JPMorgan Chase",V:"Visa Inc.",WMT:"Walmart Inc.",GS:"Goldman Sachs",MS:"Morgan Stanley",AMD:"Adv Micro Devices",NFLX:"Netflix Inc.",CRWD:"CrowdStrike",DDOG:"Datadog Inc.",AVGO:"Broadcom Inc.",COST:"Costco Wholesale",UNH:"UnitedHealth Group",MA:"Mastercard Inc.",ADBE:"Adobe Inc.",BKNG:"Booking Holdings",ISRG:"Intuitive Surgical",SPGI:"S&P Global",LMT:"Lockheed Martin",CAT:"Caterpillar Inc.",RTX:"Raytheon Tech",BAC:"Bank of America",XOM:"Exxon Mobil",CVX:"Chevron Corp.",BA:"Boeing Co.",HD:"Home Depot Inc.",MCD:"McDonalds Corp",HON:"Honeywell Intl",CVX:"Chevron Corp",IBM:"IBM Corp",MMM:"3M Company",MRK:"Merck and Co",DIS:"Walt Disney Co.",KO:"Coca-Cola Co.",VZ:"Verizon Comms",INTC:"Intel Corp",SHW:"Sherwin-Williams",COIN:"Coinbase Global",HOOD:"Robinhood Markets",AFRM:"Affirm Holdings",UPST:"Upstart Holdings",SOFI:"SoFi Technologies",RIVN:"Rivian Automotive",LCID:"Lucid Group",PLUG:"Plug Power",SMCI:"Super Micro",CHWY:"Chewy Inc.",BBIO:"BridgeBio Pharma",TMDX:"TransMedics",ACVA:"ACV Auctions",PRCT:"Procept Bio",RKT:"Rocket Companies",JOBY:"Joby Aviation",OPEN:"Opendoor Tech",BLNK:"Blink Charging",FCEL:"FuelCell Energy",SNDX:"Syndax Pharma"};
+var NAMES={AAPL:"Apple Inc.",MSFT:"Microsoft Corp.",NVDA:"NVIDIA Corp.",GOOGL:"Alphabet Inc.",AMZN:"Amazon.com Inc.",META:"Meta Platforms",TSLA:"Tesla Inc.",JPM:"JPMorgan Chase",V:"Visa Inc.",WMT:"Walmart Inc.",GS:"Goldman Sachs",MS:"Morgan Stanley",AMD:"Adv Micro Devices",NFLX:"Netflix Inc.",CRWD:"CrowdStrike",DDOG:"Datadog Inc.",AVGO:"Broadcom Inc.",COST:"Costco Wholesale",UNH:"UnitedHealth Group",MA:"Mastercard Inc.",ADBE:"Adobe Inc.",BKNG:"Booking Holdings",ISRG:"Intuitive Surgical",SPGI:"S&P Global",LMT:"Lockheed Martin",CAT:"Caterpillar Inc.",RTX:"Raytheon Tech",BAC:"Bank of America",XOM:"Exxon Mobil",CVX:"Chevron Corp.",BA:"Boeing Co.",HD:"Home Depot Inc.",MCD:"McDonalds Corp",HON:"Honeywell Intl",CVX:"Chevron Corp",IBM:"IBM Corp",MMM:"3M Company",MRK:"Merck and Co",DIS:"Walt Disney Co.",KO:"Coca-Cola Co.",VZ:"Verizon Comms",INTC:"Intel Corp",SHW:"Sherwin-Williams",COIN:"Coinbase Global",HOOD:"Robinhood Markets",AFRM:"Affirm Holdings",UPST:"Upstart Holdings",SOFI:"SoFi Technologies",RIVN:"Rivian Automotive",LCID:"Lucid Group",PLUG:"Plug Power",SMCI:"Super Micro",CHWY:"Chewy Inc.",BBIO:"BridgeBio Pharma",TMDX:"TransMedics",ACVA:"ACV Auctions",PRCT:"Procept Bio",RKT:"Rocket Companies",JOBY:"Joby Aviation",OPEN:"Opendoor Tech",BLNK:"Blink Charging",FCEL:"FuelCell Energy",SNDX:"Syndax Pharma",LLY:"Eli Lilly",ORCL:"Oracle Corp",PM:"Philip Morris",CRM:"Salesforce",PG:"Procter & Gamble",JNJ:"Johnson & Johnson",ABBV:"AbbVie",WFC:"Wells Fargo",PANW:"Palo Alto Networks",ZS:"Zscaler",NET:"Cloudflare",MDB:"MongoDB",SNOW:"Snowflake",APP:"AppLovin",ARM:"Arm Holdings",MSTR:"MicroStrategy",QBTS:"D-Wave Quantum",RGTI:"Rigetti Computing",ASTS:"AST SpaceMobile",ACHR:"Archer Aviation",FNMA:"Fannie Mae",FMCC:"Freddie Mac",NTDOY:"Nintendo",RHHBY:"Roche",BAYRY:"Bayer",SFTBY:"SoftBank",TCEHY:"Tencent",PDD:"PDD Holdings",NIO:"NIO",XPEV:"XPeng",LI:"Li Auto",BYDDY:"BYD"};
 
 function renderTable(){
   var vis=results.filter(function(r){return completed.indexOf(r.t)===-1;});
-  var ul=universe==="SP500"?"S&P 500":universe==="DOW30"?"DOW 30":universe==="RUT2K"?"RUT 2K":"WATCHLIST";
-  document.getElementById("infoBar").textContent=ul+" - "+vis.length+" SETUPS - "+new Date().toLocaleTimeString();
+  var ul=universeLabel();
+  var modeText=(universe==="WATCHLIST")?"WATCH MODE":scanMode;
+  document.getElementById("infoBar").innerHTML="<span class=\"status-pill\">"+scannerTypeLabel()+"</span> <span class=\"status-pill\">"+ul+"</span> <span class=\"status-pill\">"+modeText+"</span><br>"+vis.length+" TRAINS - "+marketStatusLabel()+" - "+new Date().toLocaleTimeString();
 
   if(vis.length===0){
     document.getElementById("emptyMsg").style.display="block";
@@ -555,15 +686,16 @@ function renderTable(){
     html+='<div class="row" style="background:'+bg+';border-left:3px solid '+dc+';cursor:pointer" onclick="openDash(\''+item.t+'\',\''+( NAMES[item.t]||item.t)+'\')">'
       +'<div onclick="event.stopPropagation();markDone(\''+item.t+'\')" class="chk"></div>'
       +'<div class="cell" style="font-size:13px;font-weight:bold;color:#fff">'+item.t+'</div>'
-      +'<div class="cell" style="font-size:15px;font-weight:bold;color:'+dc+'">'+(isN?"▲":"▼")+'</div>'
-      +'<div class="cell" style="color:#fff">$'+item.price+'</div>'
-      +'<div class="cell" style="color:'+dc+';font-weight:bold">$'+item.station+'</div>'
+      +'<div class="cell" style="font-size:15px;font-weight:bold;color:'+dc+'">'+(isN?"â²":"â¼")+'</div>'
+      +'<div class="cell" style="color:#fff">'+(item.price==='--'?'--':'$'+item.price)+'</div>'
+      +'<div class="cell" style="color:'+dc+';font-weight:bold">'+(item.station==='--'?'--':'$'+item.station)+'</div>'
       +'<div class="cell" style="color:'+dc+';font-weight:bold">'+item.d2tStr+'</div>'
       +'<div style="text-align:center">'
-        +'<div style="font-size:13px;font-weight:bold;color:'+hcol+'">'+(item.hit!==null?item.hit+"%":"—")+'</div>'
+        +'<div style="font-size:13px;font-weight:bold;color:'+hcol+'">'+(item.hit!==null?item.hit+"%":"â")+'</div>'
         +'<div class="bar-bg"><div class="bar-fill" style="width:'+(item.hit||0)+'%;background:'+hcol+'"></div></div>'
       +'</div>'
       +'<div class="cell" style="color:'+vc(item.rv)+'">'+item.rv+'x</div>'
+      +'<div class="cell"><span class="action-pill" style="background:'+colorForAction(item.action)+';color:'+textForAction(item.action)+'">'+(item.action==='GET ON'?'ON':item.action==='GET OFF'?'OFF':'WAIT')+'</span></div>'
     +'</div>';
   });
   document.getElementById("tableBody").innerHTML=html;
@@ -745,11 +877,18 @@ function runMMGDash(ticker,b15,b60,b240,bD,snap,cb){
 
     var action=mode>=2&&mode<=4?"GET ON":mode>=6?"GET OFF":"WAIT";
     var modeNames=["WAITING","BOARDING","DEPART","ROLLING","SLOW","REV 33%","REV 67%","REV 99%"];
+    var engineTemp=clamp(Math.abs(dir)*100,0,100);
+    var modeTrust=mode===4?90:mode===3?75:mode===2?55:mode===5?45:mode===6?35:mode===7?20:mode===8?5:25;
+    var arriveTrust=hit===null?50:hit;
+    var flowTrust=vwapOK?80:40;
+    var certainty=bias===0?0:clamp((engineTemp*0.40)+(modeTrust*0.25)+(arriveTrust*0.20)+(flowTrust*0.15),0,100);
 
     cb({
       bias:bias,close:closeN,
       s1:s1,s2:s2,sta:sta,
       hit:hit!==null?Math.round(hit):null,
+      certainty:Math.round(certainty),
+      engineTemp:Math.round(engineTemp),
       mName:modeNames[mode-1]||"WAITING",
       action:action,mode:mode
     });
@@ -794,8 +933,8 @@ function openDash(ticker,name){
         var day=snapData&&snapData.day?snapData.day:{};
         var prev=snapData&&snapData.prevDay?snapData.prevDay:{};
         var close=day.c||prev.c||0;
-        document.getElementById("dashPrice").textContent=close?"$"+close.toFixed(2):"—";
-        document.getElementById("dashArrow").textContent="—";
+        document.getElementById("dashPrice").textContent=close?"$"+close.toFixed(2):"â";
+        document.getElementById("dashArrow").textContent="â";
         document.getElementById("dashDirLabel").textContent="BALANCE";
         document.getElementById("dashDirBox").style.border="2px solid #888";
         document.getElementById("dashMode").textContent="WAITING";
@@ -803,10 +942,14 @@ function openDash(ticker,name){
         document.getElementById("dashModeBox").style.border="2px solid #888";
         document.getElementById("dashAction").textContent="WAIT";
         document.getElementById("dashActionBox").style.background="#ffcc00";
-        document.getElementById("dashStop1").textContent="—";
-        document.getElementById("dashStop2").textContent="—";
-        document.getElementById("dashStation").textContent="—";
-        document.getElementById("dashHit").textContent="—";
+        document.getElementById("dashStop1").textContent="â";
+        document.getElementById("dashStop2").textContent="â";
+        document.getElementById("dashStation").textContent="â";
+        document.getElementById("dashHit").textContent="â";
+        var certEl=document.getElementById("dashCert"); if(certEl)certEl.textContent="â";
+        var tempEl=document.getElementById("dashTemp"); if(tempEl)tempEl.textContent="â";
+        var certBar=document.getElementById("dashCertBar"); if(certBar)certBar.style.width="0%";
+        var tempBar=document.getElementById("dashTempBar"); if(tempBar)tempBar.style.width="0%";
         return;
       }
 
@@ -816,7 +959,7 @@ function openDash(ticker,name){
       var hcol=result.hit!==null?(result.hit>=75?"#ff8844":result.hit>=50?"#ffcc00":result.hit>=25?"#00ccff":"#00ff88"):"#aaa";
       var mc=result.mName==="ROLLING"?"#00ff88":result.mName==="DEPART"?"#88ffcc":result.mName==="BOARDING"?"#ffcc00":result.mName==="SLOW"?"#ff8844":result.mName.indexOf("REV")!==-1?"#ff4466":"#aaa";
 
-      document.getElementById("dashArrow").textContent=result.bias===1?"▲":"▼";
+      document.getElementById("dashArrow").textContent=result.bias===1?"â²":"â¼";
       document.getElementById("dashArrow").style.color=dc;
       document.getElementById("dashDirLabel").textContent=result.bias===1?"NORTH":"SOUTH";
       document.getElementById("dashDirLabel").style.color=dc;
@@ -827,22 +970,34 @@ function openDash(ticker,name){
       document.getElementById("dashAction").textContent=result.action;
       document.getElementById("dashActionBox").style.background=ab;
       document.getElementById("dashPrice").textContent="$"+result.close.toFixed(2);
-      document.getElementById("dashStop1").textContent=result.s1?"$"+result.s1.toFixed(2):"—";
-      document.getElementById("dashStop2").textContent=result.s2?"$"+result.s2.toFixed(2):"—";
-      document.getElementById("dashStation").textContent=result.sta?"$"+result.sta.toFixed(2):"—";
+      document.getElementById("dashStop1").textContent=result.s1?"$"+result.s1.toFixed(2):"â";
+      document.getElementById("dashStop2").textContent=result.s2?"$"+result.s2.toFixed(2):"â";
+      document.getElementById("dashStation").textContent=result.sta?"$"+result.sta.toFixed(2):"â";
       document.getElementById("dashStation").style.color=dc;
       document.getElementById("dashStationRow").style.background=result.bias===1?"#001a00":"#1a0000";
-      var hitTxt=result.hit!==null?result.hit+"%":"—";
+      var hitTxt=result.hit!==null?result.hit+"%":"â";
       document.getElementById("dashHit").textContent=hitTxt;
       document.getElementById("dashHit").style.color=hcol;
       document.getElementById("dashHitBar").style.width=(result.hit||0)+"%";
       document.getElementById("dashHitBar").style.background=hcol;
+      var cert=result.certainty!==undefined?result.certainty:null;
+      var temp=result.engineTemp!==undefined?result.engineTemp:null;
+      var ccol=cert===null?"#aaa":cert>=75?"#00ff88":cert>=50?"#00ccff":cert>=25?"#ffcc00":"#ff4466";
+      var tcol=temp===null?"#aaa":temp>=75?"#ff4466":temp>=50?"#ff8844":temp>=25?"#ffcc00":"#fff";
+      document.getElementById("dashCert").textContent=cert===null?"â":cert+"%";
+      document.getElementById("dashCert").style.color=ccol;
+      document.getElementById("dashCertBar").style.width=(cert||0)+"%";
+      document.getElementById("dashCertBar").style.background=ccol;
+      document.getElementById("dashTemp").textContent=temp===null?"â":temp+"%";
+      document.getElementById("dashTemp").style.color=tcol;
+      document.getElementById("dashTempBar").style.width=(temp||0)+"%";
+      document.getElementById("dashTempBar").style.background=tcol;
       // Draw chart after a short delay to let DOM settle
       setTimeout(function(){drawChart(ticker,result.bias);},200);
     });
   }
 
-  fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+ticker+"?apiKey="+API)
+  fetch("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/"+ticker+"?apiKey="+apiKeyParam())
     .then(function(r){return r.json();}).then(function(d){snapData=d.ticker||null;snapDone=true;tryRender();}).catch(function(){snapDone=true;tryRender();});
   fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/15/minute/"+from3+"/"+today+"?adjusted=true&sort=asc&limit=200&apiKey="+API)
     .then(function(r){return r.json();}).then(function(d){b15Data=d.results||[];b15Done=true;tryRender();}).catch(function(){b15Data=[];b15Done=true;tryRender();});
@@ -852,6 +1007,40 @@ function openDash(ticker,name){
     .then(function(r){return r.json();}).then(function(d){b240Data=d.results||[];b240Done=true;tryRender();}).catch(function(){b240Data=[];b240Done=true;tryRender();});
   fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/1/day/"+from60+"/"+today+"?adjusted=true&sort=desc&limit=60&apiKey="+API)
     .then(function(r){return r.json();}).then(function(d){bDData=d.results||[];bDDone=true;tryRender();}).catch(function(){bDData=[];bDDone=true;tryRender();});
+}
+
+
+function drawChart(ticker,bias){
+  var canvas=document.getElementById("miniChart");
+  if(!canvas)return;
+  var ctx=canvas.getContext("2d");
+  var rect=canvas.getBoundingClientRect();
+  canvas.width=Math.max(300,Math.floor(rect.width*2));
+  canvas.height=260;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle="#06060f";ctx.fillRect(0,0,canvas.width,canvas.height);
+  var today=new Date().toISOString().split("T")[0];
+  var from=new Date(Date.now()-2*86400000).toISOString().split("T")[0];
+  fetch("https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/15/minute/"+from+"/"+today+"?adjusted=true&sort=asc&limit=120&apiKey="+apiKeyParam())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var bars=(d.results||[]).slice(-40);
+      if(!bars.length){ctx.fillStyle="#888";ctx.font="22px Courier New";ctx.fillText("NO CHART DATA",30,130);return;}
+      var vals=bars.map(function(b){return b.c;});
+      var hi=Math.max.apply(null,vals),lo=Math.min.apply(null,vals);
+      var pad=(hi-lo)*0.12||1;hi+=pad;lo-=pad;
+      function x(i){return 18+(i/(bars.length-1))*(canvas.width-36);}
+      function y(v){return 16+((hi-v)/(hi-lo))*(canvas.height-32);}
+      ctx.strokeStyle="#1a1a3a";ctx.lineWidth=1;
+      for(var g=0;g<4;g++){var yy=16+g*(canvas.height-32)/3;ctx.beginPath();ctx.moveTo(12,yy);ctx.lineTo(canvas.width-12,yy);ctx.stroke();}
+      ctx.strokeStyle=bias===1?"#00ff88":"#ff4466";ctx.lineWidth=3;ctx.beginPath();
+      for(var i=0;i<bars.length;i++){if(i===0)ctx.moveTo(x(i),y(bars[i].c));else ctx.lineTo(x(i),y(bars[i].c));}
+      ctx.stroke();
+      var ema=calcEMA(bars,21); var vwap=calcVWAP(bars);
+      ctx.strokeStyle="#ffcc88";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(18,y(ema));ctx.lineTo(canvas.width-18,y(ema));ctx.stroke();
+      ctx.strokeStyle="#00ccff";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(18,y(vwap));ctx.lineTo(canvas.width-18,y(vwap));ctx.stroke();
+    })
+    .catch(function(){ctx.fillStyle="#888";ctx.font="22px Courier New";ctx.fillText("CHART ERROR",30,130);});
 }
 
 function goPage(p){
@@ -910,7 +1099,7 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
   </div>
   <!-- Loading state -->
   <div id="dashLoading" style="text-align:center;padding:40px;color:#00ccff">
-    <div style="font-size:24px;margin-bottom:8px">⟳</div>
+    <div style="font-size:24px;margin-bottom:8px">â³</div>
     <div style="font-size:12px;color:#fff">Running MMG V9.8C...</div>
   </div>
   <!-- Content -->
@@ -950,10 +1139,10 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
         <div id="dashStation" style="font-size:18px;font-weight:bold"></div>
       </div>
     </div>
-    <!-- HIT% -->
+    <!-- TRIP % -->
     <div style="background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:12px 16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:14px;font-weight:bold;color:#fff">HIT % TODAY</div>
+        <div style="font-size:14px;font-weight:bold;color:#fff">TRIP % TODAY</div>
         <div id="dashHit" style="font-size:22px;font-weight:bold"></div>
       </div>
       <div style="background:#1a1a3a;border-radius:6px;height:12px;overflow:hidden">
@@ -962,6 +1151,19 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
       <div style="display:flex;justify-content:space-between;margin-top:5px">
         <div style="font-size:10px;font-weight:bold;color:#fff">SESSION START</div>
         <div style="font-size:10px;font-weight:bold;color:#fff">NEXT STATION</div>
+      </div>
+    </div>
+    <!-- Certainty + Engine Temp -->
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px">
+      <div class="mini-stat" style="flex:1">
+        <div class="mini-stat-label">CERTAINTY %</div>
+        <div id="dashCert" class="mini-stat-value">â</div>
+        <div style="background:#1a1a3a;border-radius:5px;height:8px;overflow:hidden;margin-top:6px"><div id="dashCertBar" style="height:100%;width:0%;border-radius:5px"></div></div>
+      </div>
+      <div class="mini-stat" style="flex:1">
+        <div class="mini-stat-label">ENGINE TEMP</div>
+        <div id="dashTemp" class="mini-stat-value">â</div>
+        <div style="background:#1a1a3a;border-radius:5px;height:8px;overflow:hidden;margin-top:6px"><div id="dashTempBar" style="height:100%;width:0%;border-radius:5px"></div></div>
       </div>
     </div>
     <!-- MINI CHART -->
@@ -987,20 +1189,20 @@ if(wlInp){wlInp.addEventListener("keydown",function(e){if(e.key==="Enter")addToW
 
 <div id="botNav" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#0a0a1a;border-top:1px solid #2a2a50;display:none;z-index:100">
   <button onclick="goPage('scanner')" id="navScanner" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
-    <span style="font-size:20px">📊</span>
+    <span style="font-size:20px">ð</span>
     <span id="navScannerLbl" style="font-size:9px;font-weight:bold;color:#00ccff">SCANNER</span>
     <span style="width:20px;height:2px;background:#00ccff;border-radius:1px;display:block"></span>
   </button>
   <button onclick="goPage('dashboard')" id="navDash" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace;opacity:0.4">
-    <span style="font-size:20px">🚂</span>
+    <span style="font-size:20px">ð</span>
     <span id="navDashLbl" style="font-size:9px;font-weight:bold;color:#fff">DASHBOARD</span>
   </button>
   <button onclick="goPage('manual')" id="navManual" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
-    <span style="font-size:20px">📖</span>
+    <span style="font-size:20px">ð</span>
     <span id="navManualLbl" style="font-size:9px;font-weight:bold;color:#fff">MANUAL</span>
   </button>
   <button onclick="doLogout()" style="flex:1;padding:10px 4px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Courier New',monospace">
-    <span style="font-size:20px">🚪</span>
+    <span style="font-size:20px">ðª</span>
     <span style="font-size:9px;font-weight:bold;color:#fff">EXIT</span>
   </button>
 </div>
