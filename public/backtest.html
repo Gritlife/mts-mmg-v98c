@@ -1,125 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V17 Polygon Historical Backtester</title>
+<title>MMG V17B — Polygon Historical Backtester</title>
 <style>
-  :root{
-    --bg:#070b10; --panel:#101922; --panel2:#17232e; --text:#e8eef5; --muted:#9aa8b7;
-    --green:#2ecc71; --red:#ff5c5c; --yellow:#f1c40f; --blue:#4aa3ff; --purple:#b47cff;
-    --orange:#ff9f43; --line:#263847;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
-  header{padding:22px;border-bottom:1px solid var(--line);background:#0d131a}
-  h1{margin:0 0 8px;font-size:24px}
-  .sub{color:var(--muted);font-size:14px;line-height:1.45}
-  main{padding:18px;display:grid;grid-template-columns:380px 1fr;gap:18px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-  h2{margin:0 0 12px;font-size:18px}
-  label{display:block;color:var(--muted);font-size:13px;margin:12px 0 5px}
-  input,select,textarea,button{
-    width:100%;border-radius:10px;border:1px solid var(--line);background:#0b1118;color:var(--text);padding:10px;font-size:14px
-  }
-  textarea{min-height:110px;font-family:Consolas,monospace}
-  button{background:linear-gradient(135deg,#1f8cff,#24c67a);border:0;color:white;font-weight:800;margin-top:14px;cursor:pointer}
-  button.secondary{background:#17212c;border:1px solid var(--line)}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
-  .metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
-  .metric .k{color:var(--muted);font-size:12px}
-  .metric .v{font-size:22px;margin-top:6px;font-weight:800}
-  canvas{width:100%;height:330px;background:#071018;border:1px solid var(--line);border-radius:12px}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-  th{color:var(--muted);background:#0d131a;position:sticky;top:0}
-  .tablewrap{max-height:570px;overflow:auto;border:1px solid var(--line);border-radius:12px}
-  .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
-  .green{color:#06140b;background:var(--green)} .red{color:#190505;background:var(--red)}
-  .yellow{color:#161100;background:var(--yellow)} .blue{color:#06101b;background:var(--blue)}
-  .purple{color:#12071b;background:var(--purple)} .orange{color:#160d03;background:var(--orange)}
-  .gray{background:#384657;color:#dce7f2}
-  .note,.status{color:var(--muted);font-size:12px;line-height:1.45;margin-top:10px}
-  .status{padding:10px;border:1px solid var(--line);border-radius:10px;background:#0b1118}
-  @media(max-width:950px){main{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}}
+:root{
+  --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
+  --line:#294055;--green:#2ecc71;--red:#ff5c5c;--yellow:#f1c40f;--blue:#37a2ff;
+  --purple:#b47cff;--orange:#ff9f43;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+header{padding:20px;background:#0b1118;border-bottom:1px solid var(--line)}
+h1{margin:0 0 8px;font-size:24px}
+.sub{color:var(--muted);font-size:14px;line-height:1.45}
+main{padding:16px;display:grid;grid-template-columns:390px 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+h2{margin:0 0 12px;font-size:18px}
+label{display:block;color:var(--muted);font-size:13px;margin:12px 0 5px}
+input,select,textarea,button{
+  width:100%;border-radius:10px;border:1px solid var(--line);background:#080e15;color:var(--text);
+  padding:11px;font-size:15px
+}
+textarea{min-height:110px;font-family:Consolas,monospace}
+button{border:0;background:linear-gradient(135deg,#2196f3,#2ecc71);font-weight:800;color:white;margin-top:12px;cursor:pointer}
+button.secondary{background:#162331;border:1px solid var(--line)}
+button.danger{background:linear-gradient(135deg,#ff5c5c,#ff9f43)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px}
+.metric .k{color:var(--muted);font-size:12px}
+.metric .v{font-size:23px;margin-top:6px;font-weight:800}
+.status{margin-top:12px;padding:12px;border-radius:10px;border:1px solid var(--line);background:#080e15;color:var(--muted);font-size:13px;line-height:1.45;white-space:pre-wrap}
+.good{border-color:rgba(46,204,113,.7);color:#bdf7d5}
+.bad{border-color:rgba(255,92,92,.7);color:#ffd0d0}
+.warn{border-color:rgba(241,196,15,.7);color:#fff0b3}
+.note{color:var(--muted);font-size:12px;line-height:1.45;margin-top:10px}
+canvas{width:100%;height:330px;background:#071018;border:1px solid var(--line);border-radius:12px}
+.tablewrap{max-height:570px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);background:#0b1118;position:sticky;top:0}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+.green{background:var(--green);color:#06140b}.red{background:var(--red);color:#1a0505}
+.yellow{background:var(--yellow);color:#161100}.blue{background:var(--blue);color:#06101b}
+.purple{background:var(--purple);color:#12071b}.orange{background:var(--orange);color:#160d03}
+.gray{background:#39495a;color:#e3eef8}
+#csvBlock{display:none}
+@media(max-width:950px){
+  main{grid-template-columns:1fr;padding:12px}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .two,.three{grid-template-columns:1fr 1fr}
+  h1{font-size:22px}
+}
 </style>
 </head>
 <body>
 <header>
-  <h1>MMG V17 Backtester — Polygon Historical Data</h1>
+  <h1>MMG V17B — Polygon Historical Backtester</h1>
   <div class="sub">
-    V17 uses Polygon/Massive historical aggregate bars when Polygon mode is selected.
-    Engine stack: Structure → Flow → Regime → Participation → CMP Execution.
+    This version pulls historical OHLCV bars from Polygon/Massive first, then runs MMG V17 Regime + Participation logic.
   </div>
 </header>
 
 <main>
 <section class="card">
-  <h2>Data Source</h2>
+  <h2>1) Polygon Historical Data</h2>
 
   <label>Data Mode</label>
-  <select id="mode">
+  <select id="mode" onchange="toggleCsv()">
     <option value="polygon">Polygon Historical Data</option>
-    <option value="csv">CSV Paste</option>
-    <option value="synthetic">Synthetic Demo Data</option>
+    <option value="csv">CSV Paste Backup</option>
   </select>
 
-  <label>Polygon API Key</label>
-  <input id="apiKey" type="password" placeholder="Paste Polygon/Massive API key here"/>
+  <div id="polygonBlock">
+    <label>Polygon API Key</label>
+    <input id="apiKey" type="password" placeholder="Paste your Polygon API key"/>
 
-  <div class="two">
-    <div>
-      <label>Ticker</label>
-      <input id="ticker" value="SPY"/>
+    <div class="two">
+      <div>
+        <label>Ticker</label>
+        <input id="ticker" value="SPY"/>
+      </div>
+      <div>
+        <label>Adjusted</label>
+        <select id="adjusted">
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+      </div>
     </div>
-    <div>
-      <label>Adjusted</label>
-      <select id="adjusted">
-        <option value="true">True</option>
-        <option value="false">False</option>
-      </select>
+
+    <div class="three">
+      <div>
+        <label>Multiplier</label>
+        <input id="multiplier" type="number" value="5"/>
+      </div>
+      <div>
+        <label>Timespan</label>
+        <select id="timespan">
+          <option value="minute">minute</option>
+          <option value="hour">hour</option>
+          <option value="day">day</option>
+          <option value="week">week</option>
+          <option value="month">month</option>
+        </select>
+      </div>
+      <div>
+        <label>Limit</label>
+        <input id="limit" type="number" value="50000"/>
+      </div>
     </div>
+
+    <div class="two">
+      <div>
+        <label>From Date</label>
+        <input id="fromDate" type="date" value="2025-01-01"/>
+      </div>
+      <div>
+        <label>To Date</label>
+        <input id="toDate" type="date" value="2025-02-01"/>
+      </div>
+    </div>
+
+    <button class="secondary" onclick="testPolygon()">Test Polygon API</button>
   </div>
 
-  <div class="three">
-    <div>
-      <label>Multiplier</label>
-      <input id="multiplier" type="number" value="5"/>
-    </div>
-    <div>
-      <label>Timespan</label>
-      <select id="timespan">
-        <option value="minute">minute</option>
-        <option value="hour">hour</option>
-        <option value="day">day</option>
-        <option value="week">week</option>
-        <option value="month">month</option>
-      </select>
-    </div>
-    <div>
-      <label>Limit</label>
-      <input id="limit" type="number" value="50000"/>
-    </div>
-  </div>
-
-  <div class="two">
-    <div>
-      <label>From</label>
-      <input id="fromDate" type="date" value="2025-01-01"/>
-    </div>
-    <div>
-      <label>To</label>
-      <input id="toDate" type="date" value="2025-03-01"/>
-    </div>
-  </div>
-
-  <label>CSV Paste Format</label>
-  <textarea id="csv" placeholder="time,open,high,low,close,volume
+  <div id="csvBlock">
+    <label>CSV Paste Format</label>
+    <textarea id="csv" placeholder="time,open,high,low,close,volume
 2026-01-01 09:30,100,101,99.8,100.7,120000"></textarea>
+    <button class="secondary" onclick="loadSampleCsv()">Load Sample CSV</button>
+  </div>
 
-  <h2 style="margin-top:18px">Backtest Settings</h2>
+  <h2 style="margin-top:18px">2) Backtest Settings</h2>
 
   <div class="two">
     <div><label>Starting Capital</label><input id="capital" type="number" value="10000"/></div>
@@ -141,16 +157,18 @@
     <div><label>Runner Trigger R</label><input id="runnerR" type="number" value="1.2" step="0.1"/></div>
   </div>
 
-  <button onclick="runBacktest()">Run V17 Backtest</button>
-  <button class="secondary" onclick="loadSampleCsv()">Load Sample CSV</button>
+  <button onclick="runBacktest()">Run V17B Backtest</button>
+  <button class="danger" onclick="clearResults()">Clear Results</button>
 
-  <div id="status" class="status">
-    Ready. Polygon mode uses /v2/aggs/ticker/{ticker}/range/{multiplier}/{timespan}/{from}/{to}.
-  </div>
+  <div id="status" class="status warn">Ready.
+Step 1: Paste API key.
+Step 2: Pick ticker/date/timeframe.
+Step 3: Press “Test Polygon API”.
+Step 4: Press “Run V17B Backtest”.</div>
 
   <div class="note">
-    Security note: putting an API key in client-side HTML exposes it in the browser. This is okay for private testing,
-    but production should use a Netlify Function / Cloud Run proxy.
+    Important: if intraday/minute data fails, your Polygon plan may not include that historical timeframe.
+    Test daily bars first using Timespan = day, Multiplier = 1.
   </div>
 </section>
 
@@ -185,87 +203,133 @@
 </main>
 
 <script>
-function setStatus(msg){ document.getElementById('status').textContent = msg; }
+let cachedBars = [];
 
-async function fetchPolygonBars(){
-  const apiKey = document.getElementById('apiKey').value.trim();
-  const ticker = document.getElementById('ticker').value.trim().toUpperCase();
-  const multiplier = document.getElementById('multiplier').value;
-  const timespan = document.getElementById('timespan').value;
-  const from = document.getElementById('fromDate').value;
-  const to = document.getElementById('toDate').value;
-  const adjusted = document.getElementById('adjusted').value;
-  const limit = document.getElementById('limit').value || 50000;
+window.addEventListener("load", () => {
+  const saved = localStorage.getItem("polygon_api_key");
+  if(saved) document.getElementById("apiKey").value = saved;
+  toggleCsv();
+});
+
+function setStatus(msg,type="warn"){
+  const el=document.getElementById("status");
+  el.textContent=msg;
+  el.className="status " + (type==="good"?"good":type==="bad"?"bad":"warn");
+}
+
+function toggleCsv(){
+  const mode=document.getElementById("mode").value;
+  document.getElementById("polygonBlock").style.display = mode==="polygon" ? "block" : "none";
+  document.getElementById("csvBlock").style.display = mode==="csv" ? "block" : "none";
+}
+
+function polygonUrl(){
+  const apiKey=document.getElementById("apiKey").value.trim();
+  const ticker=document.getElementById("ticker").value.trim().toUpperCase();
+  const multiplier=document.getElementById("multiplier").value.trim();
+  const timespan=document.getElementById("timespan").value;
+  const from=document.getElementById("fromDate").value;
+  const to=document.getElementById("toDate").value;
+  const adjusted=document.getElementById("adjusted").value;
+  const limit=document.getElementById("limit").value || 50000;
 
   if(!apiKey) throw new Error("Missing Polygon API key.");
-  if(!ticker || !from || !to) throw new Error("Ticker, From, and To are required.");
+  if(!ticker) throw new Error("Missing ticker.");
+  if(!from || !to) throw new Error("Missing From Date or To Date.");
+  if(new Date(from) > new Date(to)) throw new Error("From Date must be before To Date.");
 
-  let url = `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(ticker)}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=${adjusted}&sort=asc&limit=${limit}&apiKey=${encodeURIComponent(apiKey)}`;
-  let all = [];
-  let page = 1;
+  localStorage.setItem("polygon_api_key", apiKey);
+
+  return `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(ticker)}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=${adjusted}&sort=asc&limit=${limit}&apiKey=${encodeURIComponent(apiKey)}`;
+}
+
+async function testPolygon(){
+  try{
+    cachedBars=[];
+    setStatus("Testing Polygon connection...", "warn");
+    const bars = await fetchPolygonBars(true);
+    cachedBars = bars;
+    const first = bars[0];
+    const last = bars[bars.length-1];
+    setStatus(`Polygon OK.
+Loaded ${bars.length} bars.
+First: ${first.time} | Close ${first.close}
+Last: ${last.time} | Close ${last.close}
+
+Now press “Run V17B Backtest”.`, "good");
+  }catch(err){
+    setStatus(`Polygon test failed.
+
+${err.message}
+
+Quick fix:
+1) Try Timespan = day and Multiplier = 1.
+2) Check the API key.
+3) Check your Polygon plan access.
+4) Use a shorter date range.`, "bad");
+    console.error(err);
+  }
+}
+
+async function fetchPolygonBars(isTest=false){
+  let url=polygonUrl();
+  let all=[];
+  let page=1;
 
   while(url){
-    setStatus(`Fetching Polygon data page ${page} for ${ticker}...`);
-    const res = await fetch(url);
+    setStatus(`${isTest ? "Testing" : "Fetching"} Polygon page ${page}...`, "warn");
+
+    const res=await fetch(url);
+    const text=await res.text();
+
     if(!res.ok){
-      const text = await res.text();
-      throw new Error(`Polygon error ${res.status}: ${text.slice(0,220)}`);
+      throw new Error(`HTTP ${res.status}: ${text.slice(0,500)}`);
     }
-    const json = await res.json();
-    if(json.status && json.status !== "OK" && json.status !== "DELAYED"){
+
+    let json;
+    try{ json=JSON.parse(text); }
+    catch{ throw new Error("Polygon returned non-JSON response: " + text.slice(0,300)); }
+
+    if(json.error) throw new Error(json.error);
+    if(json.status && !["OK","DELAYED"].includes(json.status)){
       throw new Error(`Polygon status: ${json.status}. ${json.message || ""}`);
     }
+
     if(Array.isArray(json.results)) all = all.concat(json.results);
 
-    url = json.next_url ? `${json.next_url}&apiKey=${encodeURIComponent(apiKey)}` : null;
+    url = json.next_url ? `${json.next_url}&apiKey=${encodeURIComponent(document.getElementById("apiKey").value.trim())}` : null;
     page++;
-    if(page > 10) break;
+    if(page > 20) break;
   }
 
-  if(!all.length) throw new Error("No bars returned. Check plan access, ticker, date range, or timeframe.");
+  if(!all.length){
+    throw new Error("No bars returned. The ticker/date/timeframe may not be available on your plan.");
+  }
 
-  return all.map(r => ({
-    time: new Date(r.t).toLocaleString(),
-    open: r.o,
-    high: r.h,
-    low: r.l,
-    close: r.c,
-    volume: r.v
-  })).filter(x => Number.isFinite(x.close));
+  return all.map(r=>({
+    time:new Date(r.t).toLocaleString(),
+    open:r.o, high:r.h, low:r.l, close:r.c, volume:r.v
+  })).filter(x=>Number.isFinite(x.close));
 }
 
 function parseCSV(txt){
-  const lines = txt.trim().split(/\n+/).filter(Boolean);
-  const out = [];
+  const lines=txt.trim().split(/\n+/).filter(Boolean);
+  const out=[];
   for(let i=1;i<lines.length;i++){
-    const p = lines[i].split(',').map(x=>x.trim());
-    if(p.length < 6) continue;
+    const p=lines[i].split(",").map(x=>x.trim());
+    if(p.length<6) continue;
     out.push({time:p[0],open:+p[1],high:+p[2],low:+p[3],close:+p[4],volume:+p[5]});
   }
   return out.filter(x=>Number.isFinite(x.close));
 }
 
-function syntheticData(n=420){
-  let price=100, arr=[];
-  for(let i=0;i<n;i++){
-    const drift=i<90?0.02:i<170?0.16:i<270?-0.11:i<340?0.04:0.18;
-    const noise=(Math.random()-0.5)*1.15;
-    const open=price; price += drift+noise; const close=price;
-    const high=Math.max(open,close)+Math.random()*0.7;
-    const low=Math.min(open,close)-Math.random()*0.7;
-    const volBase=i<90?90000:i<170?180000:i<270?150000:i<340?80000:230000;
-    arr.push({time:`Bar ${i+1}`,open,high,low,close,volume:Math.round(volBase*(0.75+Math.random()*0.9))});
-  }
-  return arr;
-}
-
-function sma(a,i,len,key='close'){
+function sma(a,i,len,key="close"){
   let s=0,c=0;
   for(let j=i-len+1;j<=i;j++){ if(j>=0 && a[j]){s+=a[j][key];c++;} }
   return c?s/c:0;
 }
-function emaSeries(a,len,key='close'){
-  const k=2/(len+1), out=[];
+function emaSeries(a,len,key="close"){
+  const k=2/(len+1),out=[];
   for(let i=0;i<a.length;i++) out[i]=i===0?a[i][key]:(a[i][key]*k+out[i-1]*(1-k));
   return out;
 }
@@ -274,14 +338,13 @@ function atrSeries(a,len){
   for(let i=0;i<a.length;i++){
     tr.push(i===0 ? a[i].high-a[i].low : Math.max(a[i].high-a[i].low,Math.abs(a[i].high-a[i-1].close),Math.abs(a[i].low-a[i-1].close)));
   }
-  return tr.map((_,i)=>sma(tr.map(x=>({close:x})),i,len,'close'));
+  return tr.map((_,i)=>sma(tr.map(x=>({close:x})),i,len,"close"));
 }
 function vwapSeries(a){
   let pv=0,v=0,out=[];
   for(let i=0;i<a.length;i++){
     const typical=(a[i].high+a[i].low+a[i].close)/3;
-    pv += typical*a[i].volume; v += a[i].volume;
-    out[i]=pv/v;
+    pv+=typical*a[i].volume; v+=a[i].volume; out[i]=pv/v;
   }
   return out;
 }
@@ -289,70 +352,73 @@ function rollingHigh(a,i,len){let h=-Infinity;for(let j=Math.max(0,i-len+1);j<=i
 function rollingLow(a,i,len){let l=Infinity;for(let j=Math.max(0,i-len+1);j<=i;j++)l=Math.min(l,a[j].low);return l;}
 
 function classifyRegime({atrExp,rvol,emaSlope,impulse,price,vwap,rangePct}){
-  const aligned = (price > vwap && emaSlope > 0) || (price < vwap && emaSlope < 0);
-  if(atrExp > 1.25 && rvol > 1.6 && Math.abs(impulse) > 0.75 && aligned) return "EXPANSION";
-  if(rangePct < 0.012 && atrExp < 0.8) return "COMPRESSION";
-  if(atrExp > 1.1 && rvol > 1.3 && !aligned) return "TRAP";
-  if(Math.abs(emaSlope) < 0.02 && atrExp < 1.0) return "CHOP";
-  if(aligned && atrExp >= 0.85) return "TREND";
-  return "MIXED";
+  const aligned=(price>vwap&&emaSlope>0)||(price<vwap&&emaSlope<0);
+  if(atrExp>1.25&&rvol>1.6&&Math.abs(impulse)>0.75&&aligned)return"EXPANSION";
+  if(rangePct<0.012&&atrExp<0.8)return"COMPRESSION";
+  if(atrExp>1.1&&rvol>1.3&&!aligned)return"TRAP";
+  if(Math.abs(emaSlope)<0.02&&atrExp<1.0)return"CHOP";
+  if(aligned&&atrExp>=0.85)return"TREND";
+  return"MIXED";
 }
-
-function participationMode(score, runwayScore, wallRisk, regime){
-  if(regime === "TRAP" || regime === "CHOP") return "NO TRADE";
-  if(score >= 82 && runwayScore >= 75 && wallRisk < 45 && regime === "EXPANSION") return "AGGRESSIVE";
-  if(score >= 70 && runwayScore >= 60) return "STANDARD";
-  if(score >= 58 && runwayScore >= 45) return "SCOUT";
-  if(score >= 65 && regime === "TREND") return "RUNNER";
-  return "NO TRADE";
+function participationMode(score,runwayScore,wallRisk,regime){
+  if(regime==="TRAP"||regime==="CHOP")return"NO TRADE";
+  if(score>=82&&runwayScore>=75&&wallRisk<45&&regime==="EXPANSION")return"AGGRESSIVE";
+  if(score>=70&&runwayScore>=60)return"STANDARD";
+  if(score>=58&&runwayScore>=45)return"SCOUT";
+  if(score>=65&&regime==="TREND")return"RUNNER";
+  return"NO TRADE";
 }
-
 function pill(txt){
   const m={"AGGRESSIVE":"green","STANDARD":"blue","SCOUT":"yellow","RUNNER":"purple","NO TRADE":"gray",
   "EXPANSION":"green","TREND":"blue","COMPRESSION":"yellow","TRAP":"red","CHOP":"orange","MIXED":"gray","LONG":"green","SHORT":"red"};
-  return `<span class="pill ${m[txt]||'gray'}">${txt}</span>`;
+  return `<span class="pill ${m[txt]||"gray"}">${txt}</span>`;
+}
+
+async function getData(){
+  const mode=document.getElementById("mode").value;
+  if(mode==="polygon"){
+    if(cachedBars.length) return cachedBars;
+    return await fetchPolygonBars(false);
+  }
+  return parseCSV(document.getElementById("csv").value);
 }
 
 async function runBacktest(){
   try{
-    const mode=document.getElementById('mode').value;
-    let data;
-    if(mode === 'polygon') data = await fetchPolygonBars();
-    else if(mode === 'csv') data = parseCSV(document.getElementById('csv').value);
-    else data = syntheticData();
+    clearResults(false);
+    const data=await getData();
+    if(data.length<80) throw new Error(`Only ${data.length} bars loaded. Need at least 80 bars.`);
 
-    if(data.length < 80) throw new Error("Need at least 80 bars.");
+    setStatus(`Loaded ${data.length} bars. Running backtest...`, "warn");
 
-    setStatus(`Loaded ${data.length} bars. Running V17 backtest...`);
+    const capital0=+document.getElementById("capital").value;
+    const riskPct=+document.getElementById("riskPct").value/100;
+    const atrLen=+document.getElementById("atrLen").value;
+    const atrMin=+document.getElementById("atrMin").value;
+    const rvolMin=+document.getElementById("rvolMin").value;
+    const vwapMax=+document.getElementById("vwapMax").value;
+    const wallMin=+document.getElementById("wallMin").value;
+    const runnerR=+document.getElementById("runnerR").value;
 
-    const capital0=+document.getElementById('capital').value;
-    const riskPct=+document.getElementById('riskPct').value/100;
-    const atrLen=+document.getElementById('atrLen').value;
-    const atrMin=+document.getElementById('atrMin').value;
-    const rvolMin=+document.getElementById('rvolMin').value;
-    const vwapMax=+document.getElementById('vwapMax').value;
-    const wallMin=+document.getElementById('wallMin').value;
-    const runnerR=+document.getElementById('runnerR').value;
-
-    const atr=atrSeries(data,atrLen), ema13=emaSeries(data,13), ema34=emaSeries(data,34), vwap=vwapSeries(data);
+    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),vwap=vwapSeries(data);
     let equity=capital0,trades=[],equityCurve=[capital0],open=null;
 
     for(let i=55;i<data.length;i++){
       const bar=data[i];
-      const avgAtr=sma(atr.map(x=>({close:x})),i,30,'close') || atr[i];
+      const avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i];
       const atrExp=atr[i]/avgAtr;
-      const avgVol=sma(data,i,30,'volume') || bar.volume;
+      const avgVol=sma(data,i,30,"volume")||bar.volume;
       const rvol=bar.volume/avgVol;
       const emaSlope=ema13[i]-ema13[i-5];
       const impulse=(bar.close-bar.open)/(atr[i]||1);
       const vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
 
-      const swingH=rollingHigh(data,i,55), swingL=rollingLow(data,i,55), range=swingH-swingL||1;
-      const fib236=swingL+range*0.236, fib382=swingL+range*0.382, fib618=swingL+range*0.618;
-      const ext127=swingL+range*1.272, ext161=swingL+range*1.618;
+      const swingH=rollingHigh(data,i,55),swingL=rollingLow(data,i,55),range=swingH-swingL||1;
+      const fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618;
+      const ext127=swingL+range*1.272,ext161=swingL+range*1.618;
 
-      const longBias=ema13[i]>ema34[i] && bar.close>vwap[i];
-      const shortBias=ema13[i]<ema34[i] && bar.close<vwap[i];
+      const longBias=ema13[i]>ema34[i]&&bar.close>vwap[i];
+      const shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i];
 
       const nearestWallLong=bar.close<ext127?ext127:ext161;
       const nearestWallShort=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236;
@@ -360,25 +426,23 @@ async function runBacktest(){
       const wallRisk=Math.max(0,100-wallDist*35);
       const runwayScore=Math.max(0,Math.min(100,wallDist*32));
 
-      const rangePct=range/bar.close;
-      const regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct});
-
-      const flowScore=Math.min(25,atrExp/1.4*25)+Math.min(25,rvol/2.0*25)+Math.min(25,Math.abs(impulse)/1.2*25)+Math.max(0,25-vwDist/vwapMax*25);
-      const structureScore=Math.min(40,runwayScore*0.4)+Math.max(0,30-wallRisk*0.25)+(bar.close>fib382&&bar.close<ext127?15:0)+(wallDist>wallMin?15:0);
-      const totalScore=Math.round(flowScore*0.55+structureScore*0.45);
+      const regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct:range/bar.close});
+      const flowScore=Math.min(25,atrExp/1.4*25)+Math.min(25,rvol/2*25)+Math.min(25,Math.abs(impulse)/1.2*25)+Math.max(0,25-vwDist/vwapMax*25);
+      const structureScore=Math.min(40,runwayScore*.4)+Math.max(0,30-wallRisk*.25)+(bar.close>fib382&&bar.close<ext127?15:0)+(wallDist>wallMin?15:0);
+      const totalScore=Math.round(flowScore*.55+structureScore*.45);
       const modeNow=participationMode(totalScore,runwayScore,wallRisk,regime);
 
       if(open){
         const dirMult=open.dir==="LONG"?1:-1;
         const rNow=((bar.close-open.entry)*dirMult)/open.risk;
         let exitReason=null;
-        if(rNow<=-1) exitReason="STOP";
-        if(rNow>=runnerR && !open.be){open.be=true;open.stop=open.entry;}
-        if(open.be && rNow<0.05) exitReason="BE";
-        if(regime==="TRAP" && rNow>0.25) exitReason="GTFO TRAP";
-        if(wallRisk>78 && rNow>0.4) exitReason="WALL TAKE";
-        if(i-open.i>32 && rNow<0.35) exitReason="TIME EXIT";
-        if(rNow>=2.2) exitReason="RUNNER TAKE";
+        if(rNow<=-1)exitReason="STOP";
+        if(rNow>=runnerR&&!open.be){open.be=true;open.stop=open.entry;}
+        if(open.be&&rNow<.05)exitReason="BE";
+        if(regime==="TRAP"&&rNow>.25)exitReason="GTFO TRAP";
+        if(wallRisk>78&&rNow>.4)exitReason="WALL TAKE";
+        if(i-open.i>32&&rNow<.35)exitReason="TIME EXIT";
+        if(rNow>=2.2)exitReason="RUNNER TAKE";
 
         if(exitReason){
           const pl=rNow*open.risk*open.size;
@@ -389,75 +453,87 @@ async function runBacktest(){
         }
       }
 
-      if(!open && modeNow!=="NO TRADE" && atrExp>=atrMin && rvol>=rvolMin && vwDist<=vwapMax){
+      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax){
         const dir=longBias?"LONG":shortBias?"SHORT":null;
         if(dir){
-          const modeRisk=modeNow==="AGGRESSIVE"?1.4:modeNow==="STANDARD"?1.0:modeNow==="RUNNER"?0.85:0.55;
+          const modeRisk=modeNow==="AGGRESSIVE"?1.4:modeNow==="STANDARD"?1:modeNow==="RUNNER"?.85:.55;
           const dollarsRisk=equity*riskPct*modeRisk;
-          const stopAtr=modeNow==="SCOUT"?0.85:1.05;
-          const riskPerShare=atr[i]*stopAtr;
+          const riskPerShare=atr[i]*(modeNow==="SCOUT"?.85:1.05);
           const size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));
           open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,
-            stop:dir==="LONG"?bar.close-riskPerShare:bar.close+riskPerShare,
             why:`Score ${totalScore}; Runway ${Math.round(runwayScore)}; WallRisk ${Math.round(wallRisk)}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}`};
         }
       }
     }
 
-    const wins=trades.filter(t=>t.pl>0), losses=trades.filter(t=>t.pl<0);
-    const grossWin=wins.reduce((s,t)=>s+t.pl,0), grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0));
-    const pf=grossLoss?grossWin/grossLoss:grossWin?99:0, net=equity-capital0;
+    const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0);
+    const grossWin=wins.reduce((s,t)=>s+t.pl,0),grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0));
+    const pf=grossLoss?grossWin/grossLoss:grossWin?99:0,net=equity-capital0;
 
-    document.getElementById('net').textContent=`$${net.toFixed(2)}`;
-    document.getElementById('winrate').textContent=trades.length?`${(wins.length/trades.length*100).toFixed(1)}%`:"0%";
-    document.getElementById('trades').textContent=trades.length;
-    document.getElementById('pf').textContent=pf.toFixed(2);
+    document.getElementById("net").textContent=`$${net.toFixed(2)}`;
+    document.getElementById("winrate").textContent=trades.length?`${(wins.length/trades.length*100).toFixed(1)}%`:"0%";
+    document.getElementById("trades").textContent=trades.length;
+    document.getElementById("pf").textContent=pf.toFixed(2);
 
-    document.getElementById('log').innerHTML=trades.map((t,idx)=>`
+    document.getElementById("log").innerHTML=trades.map((t,idx)=>`
       <tr><td>${idx+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td>
       <td>${t.entry.toFixed(2)}</td><td>${t.exit.toFixed(2)}</td><td>${t.r.toFixed(2)}</td>
-      <td style="color:${t.pl>=0?'var(--green)':'var(--red)'}">$${t.pl.toFixed(2)}</td>
-      <td>${t.exitReason} | ${t.why}</td></tr>`).join('');
+      <td style="color:${t.pl>=0?"var(--green)":"var(--red)"}">$${t.pl.toFixed(2)}</td><td>${t.exitReason} | ${t.why}</td></tr>`).join("");
 
     drawChart(equityCurve);
-    setStatus(`Done. Loaded ${data.length} bars. Completed ${trades.length} trades.`);
+    setStatus(`Backtest complete.
+Bars loaded: ${data.length}
+Trades: ${trades.length}
+Net P/L: $${net.toFixed(2)}`, "good");
   }catch(err){
-    setStatus(`Error: ${err.message}`);
+    setStatus(`Backtest failed.
+
+${err.message}`, "bad");
     console.error(err);
   }
 }
 
 function drawChart(points){
-  const c=document.getElementById('chart'),ctx=c.getContext('2d');
+  const c=document.getElementById("chart"),ctx=c.getContext("2d");
   ctx.clearRect(0,0,c.width,c.height);
-  ctx.strokeStyle="#263847";ctx.lineWidth=1;
+  ctx.strokeStyle="#294055";ctx.lineWidth=1;
   for(let x=0;x<c.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
   for(let y=0;y<c.height;y+=55){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
   if(points.length<2)return;
-  const min=Math.min(...points),max=Math.max(...points),pad=(max-min)*0.1||1;
-  ctx.strokeStyle="#4aa3ff";ctx.lineWidth=3;ctx.beginPath();
+  const min=Math.min(...points),max=Math.max(...points),pad=(max-min)*.1||1;
+  ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();
   points.forEach((p,i)=>{
     const x=i/(points.length-1)*c.width;
     const y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;
     if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
   });
   ctx.stroke();
-  ctx.fillStyle="#e8eef5";ctx.font="14px Arial";
+  ctx.fillStyle="#edf4fb";ctx.font="14px Arial";
   ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24);
+}
+
+function clearResults(resetStatus=true){
+  document.getElementById("net").textContent="—";
+  document.getElementById("winrate").textContent="—";
+  document.getElementById("trades").textContent="—";
+  document.getElementById("pf").textContent="—";
+  document.getElementById("log").innerHTML="";
+  const c=document.getElementById("chart"),ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  if(resetStatus)setStatus("Results cleared.", "warn");
 }
 
 function loadSampleCsv(){
   const rows=["time,open,high,low,close,volume"];
   let p=100;
   for(let i=0;i<160;i++){
-    const drift=i<45?0.03:i<85?0.22:i<120?-0.14:0.08;
+    const drift=i<45?.03:i<85?.22:i<120?-.14:.08;
     const open=p;p+=drift+(Math.random()-.5)*.8;
     const high=Math.max(open,p)+Math.random()*.45,low=Math.min(open,p)-Math.random()*.45;
-    const vol=Math.round((i<45?90000:i<85?210000:i<120?160000:130000)*(0.7+Math.random()));
+    const vol=Math.round((i<45?90000:i<85?210000:i<120?160000:130000)*(.7+Math.random()));
     rows.push(`Bar ${i+1},${open.toFixed(2)},${high.toFixed(2)},${low.toFixed(2)},${p.toFixed(2)},${vol}`);
   }
-  document.getElementById('mode').value='csv';
-  document.getElementById('csv').value=rows.join("\n");
+  document.getElementById("csv").value=rows.join("\n");
 }
 </script>
 </body>
