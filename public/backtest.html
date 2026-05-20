@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V17B — Polygon Historical Backtester</title>
+<title>MMG V17C — Polygon + Session + HTF Engine</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -15,7 +15,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica
 header{padding:20px;background:#0b1118;border-bottom:1px solid var(--line)}
 h1{margin:0 0 8px;font-size:24px}
 .sub{color:var(--muted);font-size:14px;line-height:1.45}
-main{padding:16px;display:grid;grid-template-columns:390px 1fr;gap:16px}
+main{padding:16px;display:grid;grid-template-columns:400px 1fr;gap:16px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
 h2{margin:0 0 12px;font-size:18px}
 label{display:block;color:var(--muted);font-size:13px;margin:12px 0 5px}
@@ -30,6 +30,7 @@ button.danger{background:linear-gradient(135deg,#ff5c5c,#ff9f43)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
 .metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px}
 .metric .k{color:var(--muted);font-size:12px}
 .metric .v{font-size:23px;margin-top:6px;font-weight:800}
@@ -52,6 +53,7 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
 @media(max-width:950px){
   main{grid-template-columns:1fr;padding:12px}
   .grid{grid-template-columns:repeat(2,1fr)}
+  .grid2{grid-template-columns:repeat(2,1fr)}
   .two,.three{grid-template-columns:1fr 1fr}
   h1{font-size:22px}
 }
@@ -59,9 +61,9 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
 </head>
 <body>
 <header>
-  <h1>MMG V17B — Polygon Historical Backtester</h1>
+  <h1>MMG V17C — Polygon + Session + HTF Engine</h1>
   <div class="sub">
-    This version pulls historical OHLCV bars from Polygon/Massive first, then runs MMG V17 Regime + Participation logic.
+    V17C adds session intelligence, higher-timeframe alignment, ATR/RVOL rising confirmation, and analytics.
   </div>
 </header>
 
@@ -80,49 +82,19 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
     <input id="apiKey" type="password" placeholder="Paste your Polygon API key"/>
 
     <div class="two">
-      <div>
-        <label>Ticker</label>
-        <input id="ticker" value="SPY"/>
-      </div>
-      <div>
-        <label>Adjusted</label>
-        <select id="adjusted">
-          <option value="true">True</option>
-          <option value="false">False</option>
-        </select>
-      </div>
+      <div><label>Ticker</label><input id="ticker" value="SPY"/></div>
+      <div><label>Adjusted</label><select id="adjusted"><option value="true">True</option><option value="false">False</option></select></div>
     </div>
 
     <div class="three">
-      <div>
-        <label>Multiplier</label>
-        <input id="multiplier" type="number" value="5"/>
-      </div>
-      <div>
-        <label>Timespan</label>
-        <select id="timespan">
-          <option value="minute">minute</option>
-          <option value="hour">hour</option>
-          <option value="day">day</option>
-          <option value="week">week</option>
-          <option value="month">month</option>
-        </select>
-      </div>
-      <div>
-        <label>Limit</label>
-        <input id="limit" type="number" value="50000"/>
-      </div>
+      <div><label>Multiplier</label><input id="multiplier" type="number" value="15"/></div>
+      <div><label>Timespan</label><select id="timespan"><option value="minute">minute</option><option value="hour">hour</option><option value="day">day</option></select></div>
+      <div><label>Limit</label><input id="limit" type="number" value="50000"/></div>
     </div>
 
     <div class="two">
-      <div>
-        <label>From Date</label>
-        <input id="fromDate" type="date" value="2025-01-01"/>
-      </div>
-      <div>
-        <label>To Date</label>
-        <input id="toDate" type="date" value="2025-02-01"/>
-      </div>
+      <div><label>From Date</label><input id="fromDate" type="date" value="2025-01-01"/></div>
+      <div><label>To Date</label><input id="toDate" type="date" value="2025-12-31"/></div>
     </div>
 
     <button class="secondary" onclick="testPolygon()">Test Polygon API</button>
@@ -130,8 +102,7 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
 
   <div id="csvBlock">
     <label>CSV Paste Format</label>
-    <textarea id="csv" placeholder="time,open,high,low,close,volume
-2026-01-01 09:30,100,101,99.8,100.7,120000"></textarea>
+    <textarea id="csv" placeholder="time,open,high,low,close,volume"></textarea>
     <button class="secondary" onclick="loadSampleCsv()">Load Sample CSV</button>
   </div>
 
@@ -144,31 +115,45 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
 
   <div class="two">
     <div><label>ATR Length</label><input id="atrLen" type="number" value="14"/></div>
-    <div><label>ATR Expansion Min</label><input id="atrMin" type="number" value="0.55" step="0.01"/></div>
+    <div><label>ATR Expansion Min</label><input id="atrMin" type="number" value="0.85" step="0.01"/></div>
   </div>
 
   <div class="two">
-    <div><label>RVOL Min</label><input id="rvolMin" type="number" value="1.15" step="0.05"/></div>
-    <div><label>VWAP Max Distance ATR</label><input id="vwapMax" type="number" value="2.8" step="0.1"/></div>
+    <div><label>RVOL Min</label><input id="rvolMin" type="number" value="1.35" step="0.05"/></div>
+    <div><label>VWAP Max Distance ATR</label><input id="vwapMax" type="number" value="2.4" step="0.1"/></div>
   </div>
 
   <div class="two">
-    <div><label>Wall Distance Min ATR</label><input id="wallMin" type="number" value="0.65" step="0.05"/></div>
-    <div><label>Runner Trigger R</label><input id="runnerR" type="number" value="1.2" step="0.1"/></div>
+    <div><label>Wall Distance Min ATR</label><input id="wallMin" type="number" value="0.75" step="0.05"/></div>
+    <div><label>Runner Trigger R</label><input id="runnerR" type="number" value="1.3" step="0.1"/></div>
   </div>
 
-  <button onclick="runBacktest()">Run V17B Backtest</button>
+  <h2 style="margin-top:18px">3) V17C Filters</h2>
+
+  <div class="two">
+    <div><label>Session Filter</label><select id="sessionFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    <div><label>Avoid Lunch Chop</label><select id="avoidLunch"><option value="on">ON</option><option value="off">OFF</option></select></div>
+  </div>
+
+  <div class="two">
+    <div><label>HTF Alignment</label><select id="htfFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    <div><label>HTF EMA Length</label><input id="htfLen" type="number" value="34"/></div>
+  </div>
+
+  <div class="two">
+    <div><label>Require ATR Rising</label><select id="atrRising"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    <div><label>Require RVOL Rising</label><select id="rvolRising"><option value="on">ON</option><option value="off">OFF</option></select></div>
+  </div>
+
+  <button onclick="runBacktest()">Run V17C Backtest</button>
   <button class="danger" onclick="clearResults()">Clear Results</button>
 
   <div id="status" class="status warn">Ready.
-Step 1: Paste API key.
-Step 2: Pick ticker/date/timeframe.
-Step 3: Press “Test Polygon API”.
-Step 4: Press “Run V17B Backtest”.</div>
+Default V17C settings are tuned for 15-minute Polygon bars.
+Use SPY first, then test QQQ/NVDA/TSLA.</div>
 
   <div class="note">
-    Important: if intraday/minute data fails, your Polygon plan may not include that historical timeframe.
-    Test daily bars first using Timespan = day, Multiplier = 1.
+    Session logic uses the timestamp shown by the browser. For best precision later, move this into backend/Cloud Run with exchange timezone handling.
   </div>
 </section>
 
@@ -180,21 +165,31 @@ Step 4: Press “Run V17B Backtest”.</div>
     <div class="metric"><div class="k">Profit Factor</div><div class="v" id="pf">—</div></div>
   </div>
 
+  <div class="grid2">
+    <div class="metric"><div class="k">Avg Win</div><div class="v" id="avgWin">—</div></div>
+    <div class="metric"><div class="k">Avg Loss</div><div class="v" id="avgLoss">—</div></div>
+    <div class="metric"><div class="k">Expectancy</div><div class="v" id="expectancy">—</div></div>
+    <div class="metric"><div class="k">Max DD</div><div class="v" id="maxDD">—</div></div>
+    <div class="metric"><div class="k">Loss Streak</div><div class="v" id="lossStreak">—</div></div>
+  </div>
+
   <div class="card" style="margin-bottom:14px">
     <h2>Equity Curve</h2>
     <canvas id="chart" width="1000" height="330"></canvas>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h2>Regime Breakdown</h2>
+    <div class="tablewrap" style="max-height:260px">
+      <table><thead><tr><th>Regime</th><th>Trades</th><th>Win Rate</th><th>Net P/L</th><th>PF</th></tr></thead><tbody id="regimeLog"></tbody></table>
+    </div>
   </div>
 
   <div class="card">
     <h2>Trade Log</h2>
     <div class="tablewrap">
       <table>
-        <thead>
-          <tr>
-            <th>#</th><th>Time</th><th>Dir</th><th>Regime</th><th>Mode</th>
-            <th>Entry</th><th>Exit</th><th>R</th><th>P/L</th><th>Why</th>
-          </tr>
-        </thead>
+        <thead><tr><th>#</th><th>Time</th><th>Dir</th><th>Regime</th><th>Mode</th><th>Entry</th><th>Exit</th><th>R</th><th>P/L</th><th>Why</th></tr></thead>
         <tbody id="log"></tbody>
       </table>
     </div>
@@ -203,26 +198,24 @@ Step 4: Press “Run V17B Backtest”.</div>
 </main>
 
 <script>
-let cachedBars = [];
+let cachedBars=[];
 
-window.addEventListener("load", () => {
-  const saved = localStorage.getItem("polygon_api_key");
-  if(saved) document.getElementById("apiKey").value = saved;
+window.addEventListener("load",()=>{
+  const saved=localStorage.getItem("polygon_api_key");
+  if(saved)document.getElementById("apiKey").value=saved;
   toggleCsv();
 });
 
 function setStatus(msg,type="warn"){
   const el=document.getElementById("status");
   el.textContent=msg;
-  el.className="status " + (type==="good"?"good":type==="bad"?"bad":"warn");
+  el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");
 }
-
 function toggleCsv(){
   const mode=document.getElementById("mode").value;
-  document.getElementById("polygonBlock").style.display = mode==="polygon" ? "block" : "none";
-  document.getElementById("csvBlock").style.display = mode==="csv" ? "block" : "none";
+  document.getElementById("polygonBlock").style.display=mode==="polygon"?"block":"none";
+  document.getElementById("csvBlock").style.display=mode==="csv"?"block":"none";
 }
-
 function polygonUrl(){
   const apiKey=document.getElementById("apiKey").value.trim();
   const ticker=document.getElementById("ticker").value.trim().toUpperCase();
@@ -231,125 +224,81 @@ function polygonUrl(){
   const from=document.getElementById("fromDate").value;
   const to=document.getElementById("toDate").value;
   const adjusted=document.getElementById("adjusted").value;
-  const limit=document.getElementById("limit").value || 50000;
-
-  if(!apiKey) throw new Error("Missing Polygon API key.");
-  if(!ticker) throw new Error("Missing ticker.");
-  if(!from || !to) throw new Error("Missing From Date or To Date.");
-  if(new Date(from) > new Date(to)) throw new Error("From Date must be before To Date.");
-
-  localStorage.setItem("polygon_api_key", apiKey);
-
+  const limit=document.getElementById("limit").value||50000;
+  if(!apiKey)throw new Error("Missing Polygon API key.");
+  if(!ticker)throw new Error("Missing ticker.");
+  if(!from||!to)throw new Error("Missing From Date or To Date.");
+  localStorage.setItem("polygon_api_key",apiKey);
   return `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(ticker)}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=${adjusted}&sort=asc&limit=${limit}&apiKey=${encodeURIComponent(apiKey)}`;
 }
-
 async function testPolygon(){
   try{
     cachedBars=[];
-    setStatus("Testing Polygon connection...", "warn");
-    const bars = await fetchPolygonBars(true);
-    cachedBars = bars;
-    const first = bars[0];
-    const last = bars[bars.length-1];
+    const bars=await fetchPolygonBars(true);
+    cachedBars=bars;
     setStatus(`Polygon OK.
 Loaded ${bars.length} bars.
-First: ${first.time} | Close ${first.close}
-Last: ${last.time} | Close ${last.close}
+First: ${bars[0].time} | Close ${bars[0].close}
+Last: ${bars[bars.length-1].time} | Close ${bars[bars.length-1].close}
 
-Now press “Run V17B Backtest”.`, "good");
+Now press Run V17C Backtest.`,"good");
   }catch(err){
     setStatus(`Polygon test failed.
 
-${err.message}
-
-Quick fix:
-1) Try Timespan = day and Multiplier = 1.
-2) Check the API key.
-3) Check your Polygon plan access.
-4) Use a shorter date range.`, "bad");
-    console.error(err);
+${err.message}`,"bad");
   }
 }
-
 async function fetchPolygonBars(isTest=false){
-  let url=polygonUrl();
-  let all=[];
-  let page=1;
-
+  let url=polygonUrl(),all=[],page=1;
   while(url){
-    setStatus(`${isTest ? "Testing" : "Fetching"} Polygon page ${page}...`, "warn");
-
+    setStatus(`${isTest?"Testing":"Fetching"} Polygon page ${page}...`,"warn");
     const res=await fetch(url);
     const text=await res.text();
-
-    if(!res.ok){
-      throw new Error(`HTTP ${res.status}: ${text.slice(0,500)}`);
-    }
-
-    let json;
-    try{ json=JSON.parse(text); }
-    catch{ throw new Error("Polygon returned non-JSON response: " + text.slice(0,300)); }
-
-    if(json.error) throw new Error(json.error);
-    if(json.status && !["OK","DELAYED"].includes(json.status)){
-      throw new Error(`Polygon status: ${json.status}. ${json.message || ""}`);
-    }
-
-    if(Array.isArray(json.results)) all = all.concat(json.results);
-
-    url = json.next_url ? `${json.next_url}&apiKey=${encodeURIComponent(document.getElementById("apiKey").value.trim())}` : null;
+    if(!res.ok)throw new Error(`HTTP ${res.status}: ${text.slice(0,500)}`);
+    const json=JSON.parse(text);
+    if(json.error)throw new Error(json.error);
+    if(json.status&&!["OK","DELAYED"].includes(json.status))throw new Error(`Polygon status: ${json.status}. ${json.message||""}`);
+    if(Array.isArray(json.results))all=all.concat(json.results);
+    url=json.next_url?`${json.next_url}&apiKey=${encodeURIComponent(document.getElementById("apiKey").value.trim())}`:null;
     page++;
-    if(page > 20) break;
+    if(page>20)break;
   }
-
-  if(!all.length){
-    throw new Error("No bars returned. The ticker/date/timeframe may not be available on your plan.");
-  }
-
-  return all.map(r=>({
-    time:new Date(r.t).toLocaleString(),
-    open:r.o, high:r.h, low:r.l, close:r.c, volume:r.v
-  })).filter(x=>Number.isFinite(x.close));
+  if(!all.length)throw new Error("No bars returned.");
+  return all.map(r=>({time:new Date(r.t).toLocaleString(), rawTime:r.t, open:r.o, high:r.h, low:r.l, close:r.c, volume:r.v})).filter(x=>Number.isFinite(x.close));
 }
-
 function parseCSV(txt){
-  const lines=txt.trim().split(/\n+/).filter(Boolean);
-  const out=[];
+  const lines=txt.trim().split(/\n+/).filter(Boolean),out=[];
   for(let i=1;i<lines.length;i++){
     const p=lines[i].split(",").map(x=>x.trim());
-    if(p.length<6) continue;
-    out.push({time:p[0],open:+p[1],high:+p[2],low:+p[3],close:+p[4],volume:+p[5]});
+    if(p.length<6)continue;
+    out.push({time:p[0],rawTime:null,open:+p[1],high:+p[2],low:+p[3],close:+p[4],volume:+p[5]});
   }
   return out.filter(x=>Number.isFinite(x.close));
 }
-
-function sma(a,i,len,key="close"){
-  let s=0,c=0;
-  for(let j=i-len+1;j<=i;j++){ if(j>=0 && a[j]){s+=a[j][key];c++;} }
-  return c?s/c:0;
-}
-function emaSeries(a,len,key="close"){
-  const k=2/(len+1),out=[];
-  for(let i=0;i<a.length;i++) out[i]=i===0?a[i][key]:(a[i][key]*k+out[i-1]*(1-k));
-  return out;
-}
+function sma(a,i,len,key="close"){let s=0,c=0;for(let j=i-len+1;j<=i;j++){if(j>=0&&a[j]){s+=a[j][key];c++;}}return c?s/c:0;}
+function emaSeries(a,len,key="close"){const k=2/(len+1),out=[];for(let i=0;i<a.length;i++)out[i]=i===0?a[i][key]:(a[i][key]*k+out[i-1]*(1-k));return out;}
 function atrSeries(a,len){
   const tr=[];
-  for(let i=0;i<a.length;i++){
-    tr.push(i===0 ? a[i].high-a[i].low : Math.max(a[i].high-a[i].low,Math.abs(a[i].high-a[i-1].close),Math.abs(a[i].low-a[i-1].close)));
-  }
+  for(let i=0;i<a.length;i++)tr.push(i===0?a[i].high-a[i].low:Math.max(a[i].high-a[i].low,Math.abs(a[i].high-a[i-1].close),Math.abs(a[i].low-a[i-1].close)));
   return tr.map((_,i)=>sma(tr.map(x=>({close:x})),i,len,"close"));
 }
-function vwapSeries(a){
-  let pv=0,v=0,out=[];
-  for(let i=0;i<a.length;i++){
-    const typical=(a[i].high+a[i].low+a[i].close)/3;
-    pv+=typical*a[i].volume; v+=a[i].volume; out[i]=pv/v;
-  }
-  return out;
-}
+function vwapSeries(a){let pv=0,v=0,out=[];for(let i=0;i<a.length;i++){const typical=(a[i].high+a[i].low+a[i].close)/3;pv+=typical*a[i].volume;v+=a[i].volume;out[i]=pv/v;}return out;}
 function rollingHigh(a,i,len){let h=-Infinity;for(let j=Math.max(0,i-len+1);j<=i;j++)h=Math.max(h,a[j].high);return h;}
 function rollingLow(a,i,len){let l=Infinity;for(let j=Math.max(0,i-len+1);j<=i;j++)l=Math.min(l,a[j].low);return l;}
+
+function inTradingSession(bar){
+  const useFilter=document.getElementById("sessionFilter").value==="on";
+  const avoidLunch=document.getElementById("avoidLunch").value==="on";
+  if(!useFilter)return true;
+  const d=bar.rawTime?new Date(bar.rawTime):new Date(bar.time);
+  const h=d.getHours(),m=d.getMinutes();
+  const minutes=h*60+m;
+  const open=9*60+30, close=15*60+45;
+  const lunchStart=11*60+30, lunchEnd=13*60+30;
+  if(minutes<open||minutes>close)return false;
+  if(avoidLunch&&minutes>=lunchStart&&minutes<=lunchEnd)return false;
+  return true;
+}
 
 function classifyRegime({atrExp,rvol,emaSlope,impulse,price,vwap,rangePct}){
   const aligned=(price>vwap&&emaSlope>0)||(price<vwap&&emaSlope<0);
@@ -369,15 +318,12 @@ function participationMode(score,runwayScore,wallRisk,regime){
   return"NO TRADE";
 }
 function pill(txt){
-  const m={"AGGRESSIVE":"green","STANDARD":"blue","SCOUT":"yellow","RUNNER":"purple","NO TRADE":"gray",
-  "EXPANSION":"green","TREND":"blue","COMPRESSION":"yellow","TRAP":"red","CHOP":"orange","MIXED":"gray","LONG":"green","SHORT":"red"};
+  const m={"AGGRESSIVE":"green","STANDARD":"blue","SCOUT":"yellow","RUNNER":"purple","NO TRADE":"gray","EXPANSION":"green","TREND":"blue","COMPRESSION":"yellow","TRAP":"red","CHOP":"orange","MIXED":"gray","LONG":"green","SHORT":"red"};
   return `<span class="pill ${m[txt]||"gray"}">${txt}</span>`;
 }
-
 async function getData(){
-  const mode=document.getElementById("mode").value;
-  if(mode==="polygon"){
-    if(cachedBars.length) return cachedBars;
+  if(document.getElementById("mode").value==="polygon"){
+    if(cachedBars.length)return cachedBars;
     return await fetchPolygonBars(false);
   }
   return parseCSV(document.getElementById("csv").value);
@@ -387,9 +333,8 @@ async function runBacktest(){
   try{
     clearResults(false);
     const data=await getData();
-    if(data.length<80) throw new Error(`Only ${data.length} bars loaded. Need at least 80 bars.`);
-
-    setStatus(`Loaded ${data.length} bars. Running backtest...`, "warn");
+    if(data.length<80)throw new Error(`Only ${data.length} bars loaded. Need at least 80 bars.`);
+    setStatus(`Loaded ${data.length} bars. Running V17C...`,"warn");
 
     const capital0=+document.getElementById("capital").value;
     const riskPct=+document.getElementById("riskPct").value/100;
@@ -399,16 +344,21 @@ async function runBacktest(){
     const vwapMax=+document.getElementById("vwapMax").value;
     const wallMin=+document.getElementById("wallMin").value;
     const runnerR=+document.getElementById("runnerR").value;
+    const htfOn=document.getElementById("htfFilter").value==="on";
+    const atrRiseOn=document.getElementById("atrRising").value==="on";
+    const rvolRiseOn=document.getElementById("rvolRising").value==="on";
+    const htfLen=+document.getElementById("htfLen").value;
 
-    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),vwap=vwapSeries(data);
+    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),htfEma=emaSeries(data,htfLen),vwap=vwapSeries(data);
+    const rvolArr=data.map((b,i)=>b.volume/(sma(data,i,30,"volume")||b.volume));
+
     let equity=capital0,trades=[],equityCurve=[capital0],open=null;
 
     for(let i=55;i<data.length;i++){
       const bar=data[i];
       const avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i];
       const atrExp=atr[i]/avgAtr;
-      const avgVol=sma(data,i,30,"volume")||bar.volume;
-      const rvol=bar.volume/avgVol;
+      const rvol=rvolArr[i];
       const emaSlope=ema13[i]-ema13[i-5];
       const impulse=(bar.close-bar.open)/(atr[i]||1);
       const vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
@@ -419,6 +369,8 @@ async function runBacktest(){
 
       const longBias=ema13[i]>ema34[i]&&bar.close>vwap[i];
       const shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i];
+      const htfLong=bar.close>htfEma[i]&&htfEma[i]>htfEma[i-5];
+      const htfShort=bar.close<htfEma[i]&&htfEma[i]<htfEma[i-5];
 
       const nearestWallLong=bar.close<ext127?ext127:ext161;
       const nearestWallShort=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236;
@@ -453,46 +405,78 @@ async function runBacktest(){
         }
       }
 
-      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax){
+      const atrRising=atr[i]>atr[i-1]&&atr[i-1]>=atr[i-2];
+      const rvolRising=rvolArr[i]>rvolArr[i-1];
+      const sessionOK=inTradingSession(bar);
+
+      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax&&sessionOK){
         const dir=longBias?"LONG":shortBias?"SHORT":null;
-        if(dir){
-          const modeRisk=modeNow==="AGGRESSIVE"?1.4:modeNow==="STANDARD"?1:modeNow==="RUNNER"?.85:.55;
-          const dollarsRisk=equity*riskPct*modeRisk;
-          const riskPerShare=atr[i]*(modeNow==="SCOUT"?.85:1.05);
-          const size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));
-          open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,
-            why:`Score ${totalScore}; Runway ${Math.round(runwayScore)}; WallRisk ${Math.round(wallRisk)}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}`};
-        }
+        if(!dir)continue;
+        if(htfOn&&dir==="LONG"&&!htfLong)continue;
+        if(htfOn&&dir==="SHORT"&&!htfShort)continue;
+        if(atrRiseOn&&!atrRising)continue;
+        if(rvolRiseOn&&!rvolRising)continue;
+
+        const modeRisk=modeNow==="AGGRESSIVE"?1.4:modeNow==="STANDARD"?1:modeNow==="RUNNER"?.85:.55;
+        const dollarsRisk=equity*riskPct*modeRisk;
+        const riskPerShare=atr[i]*(modeNow==="SCOUT"?.85:1.05);
+        const size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));
+        open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,
+          why:`Score ${totalScore}; Runway ${Math.round(runwayScore)}; WallRisk ${Math.round(wallRisk)}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}; HTF ${htfOn?"ON":"OFF"}`};
       }
     }
 
-    const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0);
-    const grossWin=wins.reduce((s,t)=>s+t.pl,0),grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0));
-    const pf=grossLoss?grossWin/grossLoss:grossWin?99:0,net=equity-capital0;
-
-    document.getElementById("net").textContent=`$${net.toFixed(2)}`;
-    document.getElementById("winrate").textContent=trades.length?`${(wins.length/trades.length*100).toFixed(1)}%`:"0%";
-    document.getElementById("trades").textContent=trades.length;
-    document.getElementById("pf").textContent=pf.toFixed(2);
-
-    document.getElementById("log").innerHTML=trades.map((t,idx)=>`
-      <tr><td>${idx+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td>
-      <td>${t.entry.toFixed(2)}</td><td>${t.exit.toFixed(2)}</td><td>${t.r.toFixed(2)}</td>
-      <td style="color:${t.pl>=0?"var(--green)":"var(--red)"}">$${t.pl.toFixed(2)}</td><td>${t.exitReason} | ${t.why}</td></tr>`).join("");
-
-    drawChart(equityCurve);
-    setStatus(`Backtest complete.
+    renderResults(trades,equityCurve,capital0,equity);
+    setStatus(`V17C complete.
 Bars loaded: ${data.length}
 Trades: ${trades.length}
-Net P/L: $${net.toFixed(2)}`, "good");
+Net P/L: $${(equity-capital0).toFixed(2)}`,"good");
   }catch(err){
     setStatus(`Backtest failed.
 
-${err.message}`, "bad");
+${err.message}`,"bad");
     console.error(err);
   }
 }
 
+function renderResults(trades,equityCurve,capital0,equity){
+  const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0);
+  const grossWin=wins.reduce((s,t)=>s+t.pl,0),grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0));
+  const pf=grossLoss?grossWin/grossLoss:grossWin?99:0,net=equity-capital0;
+  const avgWin=wins.length?grossWin/wins.length:0,avgLoss=losses.length?grossLoss/losses.length:0;
+  const wr=trades.length?wins.length/trades.length:0;
+  const expectancy=trades.length?(wr*avgWin-(1-wr)*avgLoss):0;
+
+  let peak=capital0,maxDD=0;
+  for(const e of equityCurve){peak=Math.max(peak,e);maxDD=Math.max(maxDD,peak-e);}
+  let streak=0,maxStreak=0;
+  for(const t of trades){if(t.pl<0){streak++;maxStreak=Math.max(maxStreak,streak);}else streak=0;}
+
+  document.getElementById("net").textContent=`$${net.toFixed(2)}`;
+  document.getElementById("winrate").textContent=trades.length?`${(wr*100).toFixed(1)}%`:"0%";
+  document.getElementById("trades").textContent=trades.length;
+  document.getElementById("pf").textContent=pf.toFixed(2);
+  document.getElementById("avgWin").textContent=`$${avgWin.toFixed(2)}`;
+  document.getElementById("avgLoss").textContent=`$${avgLoss.toFixed(2)}`;
+  document.getElementById("expectancy").textContent=`$${expectancy.toFixed(2)}`;
+  document.getElementById("maxDD").textContent=`$${maxDD.toFixed(2)}`;
+  document.getElementById("lossStreak").textContent=maxStreak;
+
+  document.getElementById("log").innerHTML=trades.map((t,idx)=>`
+    <tr><td>${idx+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td>
+    <td>${t.entry.toFixed(2)}</td><td>${t.exit.toFixed(2)}</td><td>${t.r.toFixed(2)}</td>
+    <td style="color:${t.pl>=0?"var(--green)":"var(--red)"}">$${t.pl.toFixed(2)}</td><td>${t.exitReason} | ${t.why}</td></tr>`).join("");
+
+  const regimes=[...new Set(trades.map(t=>t.regime))];
+  document.getElementById("regimeLog").innerHTML=regimes.map(r=>{
+    const arr=trades.filter(t=>t.regime===r),w=arr.filter(t=>t.pl>0),l=arr.filter(t=>t.pl<0);
+    const gw=w.reduce((s,t)=>s+t.pl,0),gl=Math.abs(l.reduce((s,t)=>s+t.pl,0));
+    const rpf=gl?gw/gl:gw?99:0, rnet=arr.reduce((s,t)=>s+t.pl,0);
+    return `<tr><td>${pill(r)}</td><td>${arr.length}</td><td>${arr.length?(w.length/arr.length*100).toFixed(1):0}%</td><td style="color:${rnet>=0?"var(--green)":"var(--red)"}">$${rnet.toFixed(2)}</td><td>${rpf.toFixed(2)}</td></tr>`;
+  }).join("");
+
+  drawChart(equityCurve);
+}
 function drawChart(points){
   const c=document.getElementById("chart"),ctx=c.getContext("2d");
   ctx.clearRect(0,0,c.width,c.height);
@@ -502,37 +486,21 @@ function drawChart(points){
   if(points.length<2)return;
   const min=Math.min(...points),max=Math.max(...points),pad=(max-min)*.1||1;
   ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();
-  points.forEach((p,i)=>{
-    const x=i/(points.length-1)*c.width;
-    const y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;
-    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-  });
+  points.forEach((p,i)=>{const x=i/(points.length-1)*c.width;const y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
   ctx.stroke();
   ctx.fillStyle="#edf4fb";ctx.font="14px Arial";
   ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24);
 }
-
 function clearResults(resetStatus=true){
-  document.getElementById("net").textContent="—";
-  document.getElementById("winrate").textContent="—";
-  document.getElementById("trades").textContent="—";
-  document.getElementById("pf").textContent="—";
+  ["net","winrate","trades","pf","avgWin","avgLoss","expectancy","maxDD","lossStreak"].forEach(id=>document.getElementById(id).textContent="—");
   document.getElementById("log").innerHTML="";
-  const c=document.getElementById("chart"),ctx=c.getContext("2d");
-  ctx.clearRect(0,0,c.width,c.height);
-  if(resetStatus)setStatus("Results cleared.", "warn");
+  document.getElementById("regimeLog").innerHTML="";
+  const c=document.getElementById("chart"),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);
+  if(resetStatus)setStatus("Results cleared.","warn");
 }
-
 function loadSampleCsv(){
-  const rows=["time,open,high,low,close,volume"];
-  let p=100;
-  for(let i=0;i<160;i++){
-    const drift=i<45?.03:i<85?.22:i<120?-.14:.08;
-    const open=p;p+=drift+(Math.random()-.5)*.8;
-    const high=Math.max(open,p)+Math.random()*.45,low=Math.min(open,p)-Math.random()*.45;
-    const vol=Math.round((i<45?90000:i<85?210000:i<120?160000:130000)*(.7+Math.random()));
-    rows.push(`Bar ${i+1},${open.toFixed(2)},${high.toFixed(2)},${low.toFixed(2)},${p.toFixed(2)},${vol}`);
-  }
+  const rows=["time,open,high,low,close,volume"];let p=100;
+  for(let i=0;i<160;i++){const drift=i<45?.03:i<85?.22:i<120?-.14:.08;const open=p;p+=drift+(Math.random()-.5)*.8;const high=Math.max(open,p)+Math.random()*.45,low=Math.min(open,p)-Math.random()*.45;const vol=Math.round((i<45?90000:i<85?210000:i<120?160000:130000)*(.7+Math.random()));rows.push(`Bar ${i+1},${open.toFixed(2)},${high.toFixed(2)},${low.toFixed(2)},${p.toFixed(2)},${vol}`);}
   document.getElementById("csv").value=rows.join("\n");
 }
 </script>
