@@ -3,318 +3,127 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-<meta name="theme-color" content="#06060f"/>
-<title>MMG V9 Adaptive Train Engine Backtester - MTS</title>
+<title>MMG V10 CMP Execution Backtester</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:#06060f;color:#fff;font-family:"Courier New",monospace;min-height:100vh}
-.wrap{max-width:540px;margin:0 auto;padding:16px 12px 80px}
-.card{background:#0e0e22;border:1px solid #333366;border-radius:12px;padding:14px;margin-bottom:14px}
-input,select{width:100%;background:#1a1a3a;border:2px solid #333366;border-radius:8px;color:#fff;padding:10px;font-family:"Courier New",monospace;font-size:14px;outline:none;-webkit-appearance:none}
-input:focus,select:focus{border-color:#00ccff}
-.btn{width:100%;padding:15px;border-radius:10px;border:none;font-family:"Courier New",monospace;font-weight:bold;font-size:15px;cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.stat{background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:12px 8px;text-align:center;min-height:70px}
-.small{font-size:10px;color:#aaa;letter-spacing:1.5px}
-.big{font-size:18px;font-weight:bold}
-.trade{padding:12px;border-bottom:1px solid #1a1a30;background:#0e0e22}
-.trade:last-child{border-bottom:none}
-.pill{display:inline-block;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:bold;margin-left:4px}
-.tab{padding:9px;border-radius:8px;border:none;font-family:"Courier New",monospace;font-weight:bold;font-size:12px;cursor:pointer;background:#1a1a3a;color:#ccc}
-.active{background:#00ccff;color:#000}
-.rule{font-size:12px;color:#bbb;line-height:1.7;margin-bottom:3px}
+*{box-sizing:border-box;margin:0;padding:0}body{background:#06060f;color:#fff;font-family:"Courier New",monospace}.wrap{max-width:560px;margin:auto;padding:16px 12px 80px}.card{background:#0e0e22;border:1px solid #333366;border-radius:12px;padding:14px;margin-bottom:14px}input,select{width:100%;background:#1a1a3a;border:2px solid #333366;border-radius:8px;color:#fff;padding:10px;font-family:"Courier New",monospace;font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.btn,.tab{padding:13px;border-radius:9px;border:none;font-family:"Courier New",monospace;font-weight:bold;cursor:pointer}.btn{width:100%;background:#00ff88;color:#000;font-size:15px}.tab{background:#1a1a3a;color:#ccc}.active{background:#00ccff;color:#000}.stat{background:#0e0e22;border:1px solid #333366;border-radius:10px;padding:12px 8px;text-align:center}.small{font-size:10px;color:#aaa;letter-spacing:1.5px}.big{font-size:18px;font-weight:bold}.trade{padding:12px;border-bottom:1px solid #1a1a30;background:#0e0e22}.rule{font-size:12px;color:#bbb;line-height:1.7}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div style="text-align:center;border-bottom:1px solid #2a2a50;padding-bottom:14px;margin-bottom:16px">
-    <div class="small">MTS - TRAIN OF FORTUNE</div>
-    <div style="font-size:22px;font-weight:bold;color:#00ccff;margin-top:4px">MMG V9 ADAPTIVE TRAIN ENGINE</div>
-    <div style="font-size:12px;color:#ffcc00;margin-top:4px">Backtester v9 — Market State + Trade Plan</div>
-  </div>
+<div style="text-align:center;border-bottom:1px solid #2a2a50;padding-bottom:14px;margin-bottom:16px">
+<div class="small">MTS - TRAIN OF FORTUNE</div>
+<div style="font-size:22px;font-weight:bold;color:#00ccff;margin-top:4px">MMG V10 — CMP EXECUTION ENGINE</div>
+<div style="font-size:12px;color:#ffcc00;margin-top:4px">MMG Context + CMP Entry/Exit + Adaptive Size</div>
+</div>
 
-  <div class="card" style="border-color:#00ccff">
-    <div style="font-size:12px;font-weight:bold;color:#00ccff;margin-bottom:8px">V9 DOCTRINE</div>
-    <div class="rule">✓ Market State Brain: TREND / EXPANSION / CHOP / REVERSAL / DEAD</div>
-    <div class="rule">✓ Opportunity Brain: Early / Clean / Late / Fake / Exhausted Train</div>
-    <div class="rule">✓ Execution Brain: Get On / Wait / Get Off / Micro Size</div>
-    <div class="rule">✓ Risk Brain: Size adapts to certainty, VIX proxy, market state</div>
-    <div class="rule">✓ Trade Management: partial TP, break-even, runner trail, time stop</div>
-  </div>
+<div class="card" style="border-color:#00ff88">
+<div style="font-size:12px;font-weight:bold;color:#00ff88;margin-bottom:8px">V10 DOCTRINE</div>
+<div class="rule">✓ MMG: direction, location, station, market state</div>
+<div class="rule">✓ CMP: LE/SE execution trigger, LO/SO exits, GTFO protection</div>
+<div class="rule">✓ Adaptive Engine: size down instead of rejecting everything</div>
+<div class="rule">✓ Goal: enough trades to matter, target 65–70%, manage risk aggressively</div>
+</div>
 
-  <div class="card">
-    <div class="small" style="margin-bottom:8px">ENGINE PRESET</div>
-    <div class="grid3">
-      <button id="pADAPTIVE" class="tab active" onclick="setPreset('ADAPTIVE')">ADAPTIVE</button>
-      <button id="pQUALITY" class="tab" onclick="setPreset('QUALITY')">QUALITY</button>
-      <button id="pSNIPER" class="tab" onclick="setPreset('SNIPER')">SNIPER</button>
-    </div>
-    <div id="presetBox" style="margin-top:10px;font-size:11px;color:#aaa;line-height:1.7"></div>
-  </div>
+<div class="card">
+<div class="small" style="margin-bottom:8px">EXECUTION PRESET</div>
+<div class="grid3">
+<button id="pSCOUT" class="tab" onclick="setPreset('SCOUT')">SCOUT</button>
+<button id="pCMP" class="tab active" onclick="setPreset('CMP')">CMP</button>
+<button id="pSNIPER" class="tab" onclick="setPreset('SNIPER')">SNIPER</button>
+</div>
+<div id="presetBox" style="margin-top:10px;font-size:11px;color:#aaa;line-height:1.7"></div>
+</div>
 
-  <div class="card">
-    <div class="grid" style="margin-bottom:10px">
-      <div><div class="small">TICKER</div><input id="ticker" value="NVDA" style="text-transform:uppercase"/></div>
-      <div><div class="small">MARKET FILTER</div><select id="mfilter"><option value="QQQ">QQQ</option><option value="SPY">SPY</option><option value="BOTH">SPY + QQQ</option><option value="OFF">OFF</option></select></div>
-    </div>
-    <div class="grid" style="margin-bottom:10px">
-      <div><div class="small">START DATE</div><input type="date" id="startDate" value="2025-01-01"/></div>
-      <div><div class="small">END DATE</div><input type="date" id="endDate" value="2025-04-30"/></div>
-    </div>
-    <div class="grid" style="margin-bottom:12px">
-      <div><div class="small">MAX TRADES / DAY</div><input id="maxTrades" value="3"/></div>
-      <div><div class="small">SLIPPAGE %</div><input id="slip" value="0.05"/></div>
-    </div>
-    <div class="grid" style="margin-bottom:12px">
-      <div><div class="small">MIN RISK SIZE %</div><input id="minSize" value="15"/></div>
-      <div><div class="small">MAX RISK SIZE %</div><input id="maxSize" value="100"/></div>
-    </div>
-    <button id="runBtn" class="btn" style="background:#00ff88;color:#000" onclick="startBacktest()">RUN V9 BACKTEST</button>
-  </div>
+<div class="card">
+<div class="grid" style="margin-bottom:10px">
+<div><div class="small">TICKER</div><input id="ticker" value="NVDA" style="text-transform:uppercase"/></div>
+<div><div class="small">MARKET FILTER</div><select id="mfilter"><option value="QQQ">QQQ</option><option value="SPY">SPY</option><option value="OFF">OFF</option></select></div>
+</div>
+<div class="grid" style="margin-bottom:10px">
+<div><div class="small">START DATE</div><input type="date" id="startDate" value="2025-01-01"/></div>
+<div><div class="small">END DATE</div><input type="date" id="endDate" value="2025-04-30"/></div>
+</div>
+<div class="grid" style="margin-bottom:12px">
+<div><div class="small">MAX TRADES / DAY</div><input id="maxTrades" value="5"/></div>
+<div><div class="small">SLIPPAGE %</div><input id="slip" value="0.05"/></div>
+</div>
+<div class="grid" style="margin-bottom:12px">
+<div><div class="small">MIN SIZE %</div><input id="minSize" value="20"/></div>
+<div><div class="small">MAX SIZE %</div><input id="maxSize" value="100"/></div>
+</div>
+<button id="runBtn" class="btn" onclick="startBacktest()">RUN CMP BACKTEST</button>
+</div>
 
-  <div id="progress" class="card" style="display:none">
-    <div style="height:7px;background:#1a1a3a;border-radius:4px;overflow:hidden;margin-bottom:8px"><div id="bar" style="height:100%;background:#00ccff;width:0%"></div></div>
-    <div id="progTxt" style="text-align:center;font-size:11px;color:#aaa">Starting...</div>
-  </div>
+<div id="progress" class="card" style="display:none"><div style="height:7px;background:#1a1a3a;border-radius:4px;overflow:hidden;margin-bottom:8px"><div id="bar" style="height:100%;background:#00ccff;width:0%"></div></div><div id="progTxt" style="text-align:center;font-size:11px;color:#aaa">Starting...</div></div>
+<div id="error" style="display:none;background:#1a0000;border:1px solid #ff4466;border-radius:10px;color:#ff4466;padding:12px;margin-bottom:14px"></div>
 
-  <div id="error" style="display:none;background:#1a0000;border:1px solid #ff4466;border-radius:10px;color:#ff4466;padding:12px;margin-bottom:14px"></div>
-
-  <div id="results" style="display:none">
-    <div id="badge" class="card" style="text-align:center"></div>
-    <div id="stats" class="grid3" style="margin-bottom:14px"></div>
-    <div class="card">
-      <div class="small" style="margin-bottom:8px">CUMULATIVE P&L %</div>
-      <canvas id="chart" style="width:100%;height:100px;display:block"></canvas>
-    </div>
-    <div class="grid3" style="margin-bottom:10px">
-      <button id="fALL" class="tab active" onclick="setFilter('ALL')">ALL</button>
-      <button id="fWIN" class="tab" onclick="setFilter('WIN')">WIN</button>
-      <button id="fLOSS" class="tab" onclick="setFilter('LOSS')">LOSS</button>
-    </div>
-    <div class="grid" style="margin-bottom:10px">
-      <button id="fMICRO" class="tab" onclick="setFilter('MICRO')">MICRO</button>
-      <button id="fSKIP" class="tab" onclick="setFilter('SKIP')">SKIPS</button>
-    </div>
-    <div id="rejectBox" class="card"></div>
-    <div id="tradeList" style="border:1px solid #2a2a50;border-radius:10px;overflow:hidden"></div>
-  </div>
-  <div style="font-size:9px;color:#555;text-align:center;margin-top:16px">MTS - NOT FINANCIAL ADVICE - BACKTEST DOES NOT GUARANTEE FUTURE RESULTS</div>
+<div id="results" style="display:none">
+<div id="badge" class="card" style="text-align:center"></div>
+<div id="stats" class="grid3" style="margin-bottom:14px"></div>
+<div class="card"><div class="small" style="margin-bottom:8px">CUMULATIVE P&L %</div><canvas id="chart" style="width:100%;height:100px;display:block"></canvas></div>
+<div class="grid3" style="margin-bottom:10px"><button id="fALL" class="tab active" onclick="setFilter('ALL')">ALL</button><button id="fWIN" class="tab" onclick="setFilter('WIN')">WIN</button><button id="fLOSS" class="tab" onclick="setFilter('LOSS')">LOSS</button></div>
+<div class="grid" style="margin-bottom:10px"><button id="fGTFO" class="tab" onclick="setFilter('GTFO')">GTFO</button><button id="fSKIP" class="tab" onclick="setFilter('SKIP')">SKIPS</button></div>
+<div id="rejectBox" class="card"></div>
+<div id="tradeList" style="border:1px solid #2a2a50;border-radius:10px;overflow:hidden"></div>
+</div>
+<div style="font-size:9px;color:#555;text-align:center;margin-top:16px">MTS - NOT FINANCIAL ADVICE - BACKTEST DOES NOT GUARANTEE FUTURE RESULTS</div>
 </div>
 
 <script>
-var API = localStorage.getItem("POLYGON_API_KEY") || prompt("Paste Polygon API Key for local testing:");
+var API=localStorage.getItem("POLYGON_API_KEY")||prompt("Paste Polygon API Key for local testing:");
 if(API){try{localStorage.setItem("POLYGON_API_KEY",API)}catch(e){}}
-var preset="ADAPTIVE", trades=[], skips=[], filter="ALL";
-
+var preset="CMP",trades=[],skips=[];
 var PRESETS={
- ADAPTIVE:{minCert:48,minET:35,maxET:92,minTrip:0,maxTrip:78,minRR:0.75,allow:[2,3,4,5],label:"ADAPTIVE",desc:"Adapts size/behavior to Market State. Can micro-size lower quality, full-size clean expansion."},
- QUALITY:{minCert:58,minET:42,maxET:88,minTrip:5,maxTrip:68,minRR:1.0,allow:[3,4,5],label:"QUALITY",desc:"Cleaner entries. Avoids most chop, allows Slow only when management favors exit/partial."},
- SNIPER:{minCert:68,minET:50,maxET:82,minTrip:10,maxTrip:55,minRR:1.25,allow:[3,4],label:"SNIPER",desc:"Fewest trades. Depart/Rolling only with stronger state confirmation."}
+ SCOUT:{minCert:36,minET:20,maxET:98,minRR:.35,allow:[2,3,4,5],label:"SCOUT",desc:"Flexible, higher trade count, smaller size, fast GTFO."},
+ CMP:{minCert:45,minET:28,maxET:96,minRR:.55,allow:[2,3,4,5],label:"CMP",desc:"Default. Direction plus CMP trigger and adaptive management."},
+ SNIPER:{minCert:60,minET:42,maxET:90,minRR:.90,allow:[3,4],label:"SNIPER",desc:"Cleaner trades only. Depart/Rolling, stronger confirmation."}
 };
+function setPreset(p){preset=p;["SCOUT","CMP","SNIPER"].forEach(k=>document.getElementById("p"+k).className="tab"+(k===p?" active":""));let c=PRESETS[p];document.getElementById("presetBox").innerHTML="<b style='color:#00ff88'>"+c.label+"</b><br>"+c.desc+"<br>Cert ≥ "+c.minCert+" | Engine "+c.minET+"-"+c.maxET+" | RR ≥ "+c.minRR;document.getElementById("runBtn").textContent="RUN "+p+" BACKTEST"}setPreset("CMP");
 
-function setPreset(p){
- preset=p;
- ["ADAPTIVE","QUALITY","SNIPER"].forEach(k=>{let el=document.getElementById("p"+k);el.className="tab"+(k===p?" active":"")});
- let c=PRESETS[p]; document.getElementById("presetBox").innerHTML="<b style='color:#00ff88'>"+c.label+" MODE</b><br>"+c.desc+"<br>Cert ≥ "+c.minCert+" | Engine "+c.minET+"-"+c.maxET+" | Trip "+c.minTrip+"-"+c.maxTrip+" | RR ≥ "+c.minRR;
- document.getElementById("runBtn").textContent="RUN "+p+" BACKTEST";
-}
-setPreset("ADAPTIVE");
-
-function ds(d){return d.toISOString().split("T")[0]}
-function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
-function pct(a,b){return b?((a-b)/b)*100:0}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-function showErr(m){let e=document.getElementById("error");e.textContent=m;e.style.display="block"}
-function prog(m,p){document.getElementById("progress").style.display="block";document.getElementById("progTxt").textContent=m;document.getElementById("bar").style.width=p+"%"}
+function ds(d){return d.toISOString().split("T")[0]}function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}function clamp(v,a,b){return Math.max(a,Math.min(b,v))}function prog(m,p){progress.style.display="block";progTxt.textContent=m;bar.style.width=p+"%"}function showErr(m){error.textContent=m;error.style.display="block"}
 function fetchBars(t,m,ts,f,to,lim){return fetch("https://api.polygon.io/v2/aggs/ticker/"+t+"/range/"+m+"/"+ts+"/"+f+"/"+to+"?adjusted=true&sort=asc&limit="+(lim||50000)+"&apiKey="+API).then(r=>r.json()).then(d=>d.results||[])}
-
 function ema(b,p){if(!b||!b.length)return 0;let n=Math.min(p,b.length),k=2/(n+1),e=0;for(let i=0;i<n;i++)e+=b[i].c;e/=n;for(let i=n;i<b.length;i++)e=b[i].c*k+e*(1-k);return e}
-function vwap(b){if(!b||!b.length)return 0;let sv=0,sp=0;b.forEach(x=>{let h=(x.h+x.l+x.c)/3;sp+=h*x.v;sv+=x.v});return sv?sp/sv:b[b.length-1].c}
+function vwap(b){let sv=0,sp=0;if(!b||!b.length)return 0;b.forEach(x=>{let h=(x.h+x.l+x.c)/3;sp+=h*x.v;sv+=x.v});return sv?sp/sv:b[b.length-1].c}
 function atr(b,p){if(!b||b.length<2)return b&&b[0]?b[0].h-b[0].l:1;let n=Math.min(p||14,b.length-1),s=0;for(let i=b.length-n;i<b.length;i++){let pc=b[i-1].c;s+=Math.max(b[i].h-b[i].l,Math.abs(b[i].h-pc),Math.abs(b[i].l-pc))}return s/n||1}
-function slope(b,p){if(!b||b.length<p+2)return 0;return ema(b.slice(0,-1),p)<ema(b,p)?1:-1}
 function avgVol(b,n){let a=b.slice(-n);return a.length?a.reduce((s,x)=>s+x.v,0)/a.length:0}
-function ph(b,pl){let r=null;for(let i=pl;i<b.length-pl;i++){let ok=true;for(let j=i-pl;j<=i+pl;j++){if(j!==i&&b[j].h>=b[i].h){ok=false;break}}if(ok)r=b[i].h}return r}
-function plow(b,pl){let r=null;for(let i=pl;i<b.length-pl;i++){let ok=true;for(let j=i-pl;j<=i+pl;j++){if(j!==i&&b[j].l<=b[i].l){ok=false;break}}if(ok)r=b[i].l}return r}
-function gu(b){for(let i=2;i<b.length;i++){if(b[i-2].h<b[i].l)return(b[i].l+b[i-2].h)/2}return null}
-function gd(b){for(let i=2;i<b.length;i++){if(b[i-2].l>b[i].h)return(b[i].h+b[i-2].l)/2}return null}
-function lv(b){return{res:ph(b,5),sup:plow(b,5),gu:gu(b),gd:gd(b)}}
+function slope(b,p){return b.length>p+2?(ema(b,p)>ema(b.slice(0,-1),p)?1:-1):0}
+function pivH(b,l){let r=null;for(let i=l;i<b.length-l;i++){let ok=true;for(let j=i-l;j<=i+l;j++){if(j!==i&&b[j].h>=b[i].h){ok=false;break}}if(ok)r=b[i].h}return r}
+function pivL(b,l){let r=null;for(let i=l;i<b.length-l;i++){let ok=true;for(let j=i-l;j<=i+l;j++){if(j!==i&&b[j].l<=b[i].l){ok=false;break}}if(ok)r=b[i].l}return r}
+function gapU(b){for(let i=2;i<b.length;i++){if(b[i-2].h<b[i].l)return(b[i].l+b[i-2].h)/2}return null}
+function gapD(b){for(let i=2;i<b.length;i++){if(b[i-2].l>b[i].h)return(b[i].h+b[i-2].l)/2}return null}
+function lv(b){return{res:pivH(b,5),sup:pivL(b,5),gu:gapU(b),gd:gapD(b)}}
 function nab(l,p){let a=[];Object.keys(l).forEach(k=>{if(l[k]!=null&&l[k]>p)a.push(l[k])});return a.length?Math.min(...a):null}
 function nbe(l,p){let a=[];Object.keys(l).forEach(k=>{if(l[k]!=null&&l[k]<p)a.push(l[k])});return a.length?Math.max(...a):null}
 function vote(u,d,p){if(u!=null&&d==null)return 1;if(u==null&&d!=null)return -1;if(u!=null&&d!=null){if(Math.abs(u-p)<Math.abs(p-d))return 1;if(Math.abs(p-d)<Math.abs(u-p))return -1}return 0}
-function cluster(raw,a){let band=a*.25,c=[];raw.forEach(v=>{let m=false;for(let i=0;i<c.length;i++){if(Math.abs(v-c[i])<=band){c[i]=(c[i]+v)/2;m=true;break}}if(!m)c.push(v)});return c}
+function cluster(raw,A){let band=A*.25,c=[];raw.forEach(v=>{let m=false;for(let i=0;i<c.length;i++){if(Math.abs(v-c[i])<=band){c[i]=(c[i]+v)/2;m=true;break}}if(!m)c.push(v)});return c}
 
 function mmg(b5,b15,b60,b240,bD){
- if(!b15||b15.length<25)return null;
- let c=b15[b15.length-1].c, prev=b15[b15.length-2].c, A=atr(b15,14), E=ema(b15,21), V=vwap(b15);
- let l5=lv(b5&&b5.length>15?b5:b15), l15=lv(b15), l60=lv(b60&&b60.length>15?b60:b15), l240=lv(b240&&b240.length>10?b240:b15), lD=lv(bD&&bD.length>10?bD:b15);
- let raw=[];[l5,l15,l60,l240,lD].forEach(x=>["res","sup","gu","gd"].forEach(k=>{if(x[k])raw.push(x[k])}));
- if(!raw.length)return null;
- let cl=cluster(raw,A), hi=Math.max(...cl), lo=Math.min(...cl);
- let votes=[l5,l15,l60,l240,lD].map(x=>vote(nab(x,c),nbe(x,c),c));
- let cA=0,cB=0,sA=0,sB=0;cl.forEach(x=>{if(x>c){cA++;sA+=x-c}else if(x<c){cB++;sB+=c-x}});
- let pSc=(cA+cB)?(cA-cB)/(cA+cB):0, avgA=cA?sA/cA:null, avgB=cB?sB/cB:null, gSc=0;
- if(avgA!=null&&avgB==null)gSc=1; else if(avgA==null&&avgB!=null)gSc=-1; else if(avgA!=null&&avgB!=null){if(avgA<avgB)gSc=1;else if(avgB<avgA)gSc=-1}
- let vSc=votes.reduce((a,b)=>a+b,0)/votes.length;
- let bullFlow=c>E&&c>V, bearFlow=c<E&&c<V, bullRun=c>hi&&bullFlow, bearRun=c<lo&&bearFlow;
- let dSc=pSc*.5+gSc*.3+vSc*.2; if(bullRun)dSc=Math.max(dSc,.85); if(bearRun)dSc=Math.min(dSc,-.85);
- let dir=dSc>.1?1:dSc<-.1?-1:0;
- let f=[],bh=[]; cl.forEach(x=>{if(dir===1){if(x>c)f.push(x);else if(x<c)bh.push(x)}else if(dir===-1){if(x<c)f.push(x);else if(x>c)bh.push(x)}});
- if(dir===1){f.sort((a,b)=>a-b);bh.sort((a,b)=>b-a)}else{f.sort((a,b)=>b-a);bh.sort((a,b)=>a-b)}
- let s1=f[0]||null,s2=null,sta=null,bp=bh[0]||null, sp=A*.25;
- if(f.length>1&&s1!=null){for(let i=1;i<f.length;i++){if(Math.abs(f[i]-s1)>sp){s2=f[i];break}}}
- if(f.length>2){let ref=s2||s1;for(let i=1;i<f.length;i++){if(f[i]===s1||f[i]===s2)continue;if(Math.abs(f[i]-ref)>sp){sta=f[i];break}}}
- if(dir===1){if(!bp)bp=hi;if(!s1)s1=c+A*.5;if(!s2)s2=c+A;if(!sta)sta=c+A*1.618}
- if(dir===-1){if(!bp)bp=lo;if(!s1)s1=c-A*.5;if(!s2)s2=c-A;if(!sta)sta=c-A*1.618}
- let near=(x)=>x&&Math.abs(c-x)<=A*.4, slow=dir!==0&&(near(s1)||near(s2)||near(sta)), vOK=dir===1?c>V:c<V;
- let boarding=(dir===1&&s1&&vOK&&c>s1+A*.1&&prev<=s1)||(dir===-1&&s1&&vOK&&c<s1-A*.1&&prev>=s1);
- let depart=!boarding&&((dir===1&&s1&&vOK&&c>s1&&c>prev&&prev>s1)||(dir===-1&&s1&&vOK&&c<s1&&c<prev&&prev<s1));
- let rolling=!boarding&&!depart&&((dir===1&&vOK&&c>E&&c>prev)||(dir===-1&&vOK&&c<E&&c<prev));
- let r33=dir===1?c<prev:c>prev, r67=dir===1?c<E:c>E, r99=bp&&(dir===1?c<bp:c>bp);
- let mode=1;if(r99)mode=8;else if(r67)mode=7;else if(r33&&slow)mode=6;else if(slow)mode=5;else if(rolling)mode=4;else if(depart)mode=3;else if(boarding)mode=2;
- let sesH=Math.max(...b15.map(x=>x.h)), sesL=Math.min(...b15.map(x=>x.l)), trip=null;
- if(dir===1&&sta&&sta>sesL)trip=clamp(((c-sesL)/(sta-sesL))*100,0,100); else if(dir===-1&&sta&&sta<sesH)trip=clamp(((sesH-c)/(sesH-sta))*100,0,100);
- let eTemp=clamp(Math.abs(dSc)*100,0,100), mTrust=mode===4?90:mode===3?75:mode===2?55:mode===5?45:mode>=6?15:25, fTrust=vOK?80:40;
- let cert=dir===0?0:clamp(eTemp*.4+mTrust*.25+(trip==null?50:trip)*.20+fTrust*.15,0,100);
- let rr=bp?Math.abs((sta-c)/(c-bp)):Math.abs((sta-c)/A);
- let rv=avgVol(b15,20)?b15[b15.length-1].v/avgVol(b15,20):1;
- let atrExp=atr(b15.slice(-8),5)>atr(b15.slice(-24,-8),14)?1:0;
- let mom=(dir===1?c>b15[b15.length-2].h:c<b15[b15.length-2].l);
- let eSlope=slope(b15,21), distV=Math.abs(c-V)/A;
- let tfAlign=(dir===1?(votes[2]>=0&&votes[3]>=0):(votes[2]<=0&&votes[3]<=0));
- let marketState="DEAD";
- if(dir===0||eTemp<25)marketState="DEAD";
- else if(rv>=1.35&&atrExp&&mom)marketState="EXPANSION";
- else if(tfAlign&&eSlope===dir&&distV<1.35)marketState="TREND";
- else if(r67||r99)marketState="REVERSAL";
- else marketState="CHOP";
- let action=mode>=2&&mode<=4?"GET ON":mode>=6?"GET OFF":"WAIT";
- return{dir,c,A,E,V,s1,s2,sta,bp,mode,action,cert,eTemp,trip,rr,rv,atrExp,mom,eSlope,distV,tfAlign,marketState,dSc,r67,r99};
+ if(!b15||b15.length<25)return null;let c=b15[b15.length-1].c,prev=b15[b15.length-2].c,A=atr(b15,14),E=ema(b15,21),V=vwap(b15);
+ let L=[lv(b5&&b5.length>15?b5:b15),lv(b15),lv(b60&&b60.length>15?b60:b15),lv(b240&&b240.length>10?b240:b15),lv(bD&&bD.length>10?bD:b15)];
+ let raw=[];L.forEach(x=>["res","sup","gu","gd"].forEach(k=>{if(x[k])raw.push(x[k])}));if(!raw.length)return null;
+ let cl=cluster(raw,A),hi=Math.max(...cl),lo=Math.min(...cl),votes=L.map(x=>vote(nab(x,c),nbe(x,c),c));
+ let ca=0,cb=0,sa=0,sb=0;cl.forEach(x=>{if(x>c){ca++;sa+=x-c}else if(x<c){cb++;sb+=c-x}});
+ let pSc=(ca+cb)?(ca-cb)/(ca+cb):0,aa=ca?sa/ca:null,ab=cb?sb/cb:null,gSc=aa!=null&&ab==null?1:aa==null&&ab!=null?-1:aa!=null&&ab!=null?(aa<ab?1:ab<aa?-1:0):0;
+ let vSc=votes.reduce((a,b)=>a+b,0)/votes.length,flowB=c>E&&c>V,flowS=c<E&&c<V,dSc=pSc*.5+gSc*.3+vSc*.2;if(c>hi&&flowB)dSc=Math.max(dSc,.85);if(c<lo&&flowS)dSc=Math.min(dSc,-.85);
+ let dir=dSc>.1?1:dSc<-.1?-1:0,f=[],bh=[];cl.forEach(x=>{if(dir===1){if(x>c)f.push(x);else if(x<c)bh.push(x)}else if(dir===-1){if(x<c)f.push(x);else if(x>c)bh.push(x)}});if(dir===1){f.sort((a,b)=>a-b);bh.sort((a,b)=>b-a)}else{f.sort((a,b)=>b-a);bh.sort((a,b)=>a-b)}
+ let s1=f[0]||null,s2=null,sta=null,bp=bh[0]||null,sp=A*.25;if(f.length>1&&s1!=null){for(let i=1;i<f.length;i++){if(Math.abs(f[i]-s1)>sp){s2=f[i];break}}}if(f.length>2){let ref=s2||s1;for(let i=1;i<f.length;i++){if(f[i]===s1||f[i]===s2)continue;if(Math.abs(f[i]-ref)>sp){sta=f[i];break}}}
+ if(dir===1){if(!bp)bp=hi;if(!s1)s1=c+A*.5;if(!s2)s2=c+A;if(!sta)sta=c+A*1.618}if(dir===-1){if(!bp)bp=lo;if(!s1)s1=c-A*.5;if(!s2)s2=c-A;if(!sta)sta=c-A*1.618}
+ let near=x=>x&&Math.abs(c-x)<=A*.4,slow=dir!==0&&(near(s1)||near(s2)||near(sta)),vOK=dir===1?c>V:c<V;
+ let boarding=(dir===1&&s1&&vOK&&c>s1+A*.1&&prev<=s1)||(dir===-1&&s1&&vOK&&c<s1-A*.1&&prev>=s1),depart=!boarding&&((dir===1&&s1&&vOK&&c>s1&&c>prev&&prev>s1)||(dir===-1&&s1&&vOK&&c<s1&&c<prev&&prev<s1)),rolling=!boarding&&!depart&&((dir===1&&vOK&&c>E&&c>prev)||(dir===-1&&vOK&&c<E&&c<prev));
+ let r67=dir===1?c<E:c>E,r99=bp&&(dir===1?c<bp:c>bp),mode=r99?8:r67?7:slow?5:rolling?4:depart?3:boarding?2:1;
+ let sesH=Math.max(...b15.map(x=>x.h)),sesL=Math.min(...b15.map(x=>x.l)),trip=null;if(dir===1&&sta&&sta>sesL)trip=clamp(((c-sesL)/(sta-sesL))*100,0,100);else if(dir===-1&&sta&&sta<sesH)trip=clamp(((sesH-c)/(sesH-sta))*100,0,100);
+ let eTemp=clamp(Math.abs(dSc)*100,0,100),mTrust=mode===4?90:mode===3?75:mode===2?55:mode===5?45:mode>=6?15:25,cert=dir===0?0:clamp(eTemp*.4+mTrust*.25+(trip==null?50:trip)*.2+(vOK?80:40)*.15,0,100),rr=bp?Math.abs((sta-c)/(c-bp)):Math.abs((sta-c)/A),rv=avgVol(b15,20)?b15[b15.length-1].v/avgVol(b15,20):1;
+ let atrExp=atr(b15.slice(-10),5)>=atr(b15.slice(-30,-10),14)*.9,mom=dir===1?(c>b15[b15.length-2].h||c>prev+A*.08):(c<b15[b15.length-2].l||c<prev-A*.08),eSlope=slope(b15,21),distV=Math.abs(c-V)/A,tf=(dir===1?(votes[2]>=0&&votes[3]>=0):(votes[2]<=0&&votes[3]<=0));
+ let state=dir===0||eTemp<18?"DEAD":rv>=1.1&&atrExp&&mom?"EXPANSION":tf&&eSlope===dir&&distV<2?"TREND":r67||r99?"REVERSAL":"CHOP";
+ return{dir,c,A,E,V,s1,s2,sta,bp,mode,action:mode>=2&&mode<=4?"GET ON":mode>=6?"GET OFF":"WAIT",cert,eTemp,trip,rr,rv,mom,distV,state,r67,r99}
 }
-
-function marketPass(sig,presetName,marketSig){
- let C=PRESETS[presetName], reasons=[];
- if(!sig){reasons.push("no signal"); return {ok:false,reasons}}
- if(sig.dir===0)reasons.push("balance");
- if(sig.action!=="GET ON")reasons.push("action not GET ON");
- if(C.allow.indexOf(sig.mode)===-1)reasons.push("mode");
- if(sig.cert<C.minCert)reasons.push("certainty");
- if(sig.eTemp<C.minET||sig.eTemp>C.maxET)reasons.push("engine temp");
- if(sig.trip!=null&&(sig.trip<C.minTrip||sig.trip>C.maxTrip))reasons.push("trip");
- if(sig.rr<C.minRR)reasons.push("rr");
- if(presetName!=="ADAPTIVE"){
-   if(sig.marketState==="DEAD"||sig.marketState==="CHOP")reasons.push("market state");
-   if(sig.rv<1.05)reasons.push("rvol");
-   if(sig.distV>1.8)reasons.push("vwap distance");
- } else {
-   if(sig.marketState==="DEAD")reasons.push("dead market");
- }
- if(marketSig&&marketSig.dir!==0&&marketSig.dir!==sig.dir&&presetName!=="ADAPTIVE")reasons.push("market filter");
- return {ok:reasons.length===0,reasons};
-}
-
-function riskSize(sig){
- let min=parseFloat(document.getElementById("minSize").value)||15, max=parseFloat(document.getElementById("maxSize").value)||100;
- let base=(sig.cert*.45)+(sig.eTemp*.25)+(sig.rr>2?15:8)+(sig.marketState==="EXPANSION"?15:sig.marketState==="TREND"?10:sig.marketState==="CHOP"?-10:0);
- if(sig.marketState==="CHOP")base=Math.min(base,35);
- if(sig.marketState==="DEAD")base=0;
- return clamp(base,min,max);
-}
-
-function simulate(dayBars,bi,sig){
- let slip=(parseFloat(document.getElementById("slip").value)||0)/100, entry=sig.c*(sig.dir===1?1+slip:1-slip);
- let stop=sig.bp|| (sig.dir===1?entry-sig.A:entry+sig.A);
- if(sig.dir===1&&stop>entry-sig.A*.35)stop=entry-sig.A*.35;
- if(sig.dir===-1&&stop<entry+sig.A*.35)stop=entry+sig.A*.35;
- let pos=1, pnl=0, hit1=false, hit2=false, be=false, reason="EOD", exit=dayBars[dayBars.length-1].c, timeLimit=8;
- for(let i=bi+1;i<dayBars.length;i++){
-  let b=dayBars[i], move=sig.dir===1?b.h-entry:entry-b.l;
-  if(!be&&move>=sig.A*.55){stop=entry;be=true}
-  if(i-bi>=timeLimit&&!hit1){exit=b.c; reason="time stop"; pnl += (sig.dir===1?exit-entry:entry-exit)*pos; pos=0; break}
-  if(sig.dir===1){
-    if(b.l<=stop){exit=stop;reason=be?"break-even/stop":"stop";pnl+=(exit-entry)*pos;pos=0;break}
-    if(!hit1&&b.h>=sig.s1){pnl+=(sig.s1-entry)*.50;pos-=.50;hit1=true;stop=entry}
-    if(!hit2&&sig.s2&&b.h>=sig.s2){pnl+=(sig.s2-entry)*.25;pos-=.25;hit2=true}
-    if(hit2){let tr=Math.max(stop,b.c-sig.A*.75);stop=tr}
-  } else {
-    if(b.h>=stop){exit=stop;reason=be?"break-even/stop":"stop";pnl+=(entry-exit)*pos;pos=0;break}
-    if(!hit1&&b.l<=sig.s1){pnl+=(entry-sig.s1)*.50;pos-=.50;hit1=true;stop=entry}
-    if(!hit2&&sig.s2&&b.l<=sig.s2){pnl+=(entry-sig.s2)*.25;pos-=.25;hit2=true}
-    if(hit2){let tr=Math.min(stop,b.c+sig.A*.75);stop=tr}
-  }
- }
- if(pos>0){exit=dayBars[dayBars.length-1].c; pnl+=(sig.dir===1?exit-entry:entry-exit)*pos}
- let pnlPct=(pnl/entry)*100, size=riskSize(sig), adj=pnlPct*(size/100);
- return{entry,exit,pnlPct,adj,reason,hit1,hit2,size};
-}
-
-async function startBacktest(){
- document.getElementById("error").style.display="none";document.getElementById("results").style.display="none";trades=[];skips=[];
- let ticker=document.getElementById("ticker").value.trim().toUpperCase(), sd=document.getElementById("startDate").value, ed=document.getElementById("endDate").value;
- if(!API)return showErr("Missing Polygon API key.");
- try{
-  document.getElementById("runBtn").disabled=true;prog("Fetching data...",5);
-  let from=ds(addDays(new Date(sd),-70));
-  let [b5,b15,b60,b240,bD,m15]=await Promise.all([
-    fetchBars(ticker,5,"minute",from,ed,50000), fetchBars(ticker,15,"minute",from,ed,50000), fetchBars(ticker,60,"minute",from,ed,50000),
-    fetchBars(ticker,240,"minute",from,ed,50000), fetchBars(ticker,1,"day",from,ed,5000),
-    document.getElementById("mfilter").value==="OFF"?Promise.resolve([]):fetchBars(document.getElementById("mfilter").value==="SPY"?"SPY":"QQQ",15,"minute",from,ed,50000)
-  ]);
-  prog("Processing bars...",35);
-  let dayMap={}; b15.filter(x=>ds(new Date(x.t))>=sd).forEach(x=>{let k=ds(new Date(x.t));(dayMap[k]=dayMap[k]||[]).push(x)});
-  let days=Object.keys(dayMap).sort(), maxDay=parseInt(document.getElementById("maxTrades").value)||3;
-  for(let di=0;di<days.length;di++){
-   let day=days[di], bars=dayMap[day], count=0; prog("Day "+(di+1)+"/"+days.length+" "+day,35+Math.round(di/days.length*60));
-   for(let bi=25;bi<bars.length-1;bi++){
-    let ts=bars[bi].t, dt=new Date(ts), mins=dt.getUTCHours()*60+dt.getUTCMinutes();
-    if(mins<810||mins>=1170)continue; // 9:30-16:30 ET in UTC rough DST-safe enough for test
-    let sb15=bars.slice(0,bi+1);
-    let sig=mmg(b5.filter(x=>x.t<=ts).slice(-160),sb15,b60.filter(x=>x.t<=ts).slice(-120),b240.filter(x=>x.t<=ts).slice(-80),bD.filter(x=>x.t<=ts).slice(-80));
-    let ms=null; if(m15.length){ms=mmg([],m15.filter(x=>x.t<=ts).slice(-160),[],[],[])}
-    let gate=marketPass(sig,preset,ms);
-    if(!gate.ok){skips.push({day,reason:gate.reasons[0]||"unknown"});continue}
-    let sim=simulate(bars,bi,sig), outcome=sim.adj>=0?"WIN":"LOSS";
-    trades.push({day,time:dt.toLocaleTimeString(),ticker,bias:sig.dir,mode:sig.mode,state:sig.marketState,entry:sim.entry,exit:sim.exit,pnlPct:sim.pnlPct,adj:sim.adj,outcome,size:sim.size,reason:sim.reason,cert:sig.cert,eTemp:sig.eTemp,trip:sig.trip,rr:sig.rr,rv:sig.rv});
-    count++; if(count>=maxDay)break;
-   }
-  }
-  prog("Done.",100); setTimeout(()=>{document.getElementById("progress").style.display="none";render()},400);
- }catch(e){showErr(e.message||String(e))}
- finally{document.getElementById("runBtn").disabled=false}
-}
-
-function render(){
- let wins=trades.filter(x=>x.outcome==="WIN"), losses=trades.filter(x=>x.outcome==="LOSS"), total=trades.length;
- let wr=total?wins.length/total*100:0, pnl=trades.reduce((s,x)=>s+x.adj,0), aw=wins.length?wins.reduce((s,x)=>s+x.adj,0)/wins.length:0, al=losses.length?losses.reduce((s,x)=>s+x.adj,0)/losses.length:0;
- let pf=losses.length?Math.abs(wins.reduce((s,x)=>s+x.adj,0)/losses.reduce((s,x)=>s+x.adj,0)).toFixed(2):"—";
- let col=wr>=70?"#00ff88":wr>=55?"#ffcc00":"#ff4466";
- document.getElementById("badge").style.border="2px solid "+col;document.getElementById("badge").innerHTML="<div style='color:#00ccff;font-weight:bold'>"+preset+" MODE</div><div style='font-size:24px;font-weight:bold;color:"+col+"'>"+wr.toFixed(1)+"% WIN RATE</div><div style='color:"+col+"'>"+(wr>=70?"TARGET MET":wr>=55?"PROMISING":"NEEDS TUNING")+"</div>";
- let stats=[["WIN RATE",wr.toFixed(1)+"%",col],["TOTAL P&L",pnl.toFixed(2)+"%",pnl>=0?"#00ff88":"#ff4466"],["TRADES",total,"#fff"],["WINS",wins.length,"#00ff88"],["LOSSES",losses.length,"#ff4466"],["AVG WIN",aw.toFixed(2)+"%","#00ff88"],["AVG LOSS",al.toFixed(2)+"%","#ff4466"],["PROFIT FACTOR",pf,"#ffcc00"],["SKIPS",skips.length,"#aaa"]];
- document.getElementById("stats").innerHTML=stats.map(s=>"<div class='stat'><div class='small'>"+s[0]+"</div><div class='big' style='color:"+s[2]+"'>"+s[1]+"</div></div>").join("");
- renderChart(); renderRejects(); document.getElementById("results").style.display="block"; setFilter("ALL");
-}
-function renderRejects(){
- let m={}; skips.forEach(x=>m[x.reason]=(m[x.reason]||0)+1);
- let rows=Object.keys(m).sort((a,b)=>m[b]-m[a]).slice(0,8).map(k=>"<div style='display:flex;justify-content:space-between;font-size:11px;color:#aaa'><span>"+k+"</span><span>"+m[k]+"</span></div>").join("");
- document.getElementById("rejectBox").innerHTML="<div style='font-size:12px;font-weight:bold;color:#ffcc00;margin-bottom:6px'>TOP REJECTION REASONS</div>"+(rows||"<div style='font-size:11px;color:#aaa'>None</div>");
-}
-function renderChart(){
- let c=document.getElementById("chart"),ctx=c.getContext("2d");c.width=c.offsetWidth||480;c.height=100;ctx.clearRect(0,0,c.width,c.height);
- let cum=[0];trades.forEach(x=>cum.push(cum[cum.length-1]+x.adj));let mn=Math.min(...cum),mx=Math.max(...cum),pad=(mx-mn)*.15||1;mn-=pad;mx+=pad;
- let X=i=>2+i/(Math.max(cum.length-1,1))*(c.width-4),Y=v=>c.height-2-(v-mn)/(mx-mn)*(c.height-4);
- ctx.strokeStyle="rgba(255,255,255,.08)";ctx.beginPath();ctx.moveTo(0,Y(0));ctx.lineTo(c.width,Y(0));ctx.stroke();
- ctx.strokeStyle=cum[cum.length-1]>=0?"#00ff88":"#ff4466";ctx.lineWidth=2.5;ctx.beginPath();cum.forEach((v,i)=>i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));ctx.stroke();
-}
-function setFilter(f){
- filter=f;["ALL","WIN","LOSS","MICRO","SKIP"].forEach(k=>{let e=document.getElementById("f"+k);if(e)e.className="tab"+(k===f?" active":"")});
- if(f==="SKIP"){document.getElementById("tradeList").innerHTML=skips.slice(0,100).map(x=>"<div class='trade'><b>"+x.day+"</b> <span style='color:#aaa'>"+x.reason+"</span></div>").join("")||"<div class='trade'>No skips</div>";return}
- let arr=trades.filter(x=>f==="ALL"||x.outcome===f||(f==="MICRO"&&x.size<=35));
- document.getElementById("tradeList").innerHTML=arr.map(x=>{
-  let col=x.outcome==="WIN"?"#00ff88":"#ff4466";
-  return "<div class='trade' style='border-left:3px solid "+col+"'><div style='display:flex;justify-content:space-between'><b>"+x.day+" "+x.time+"</b><b style='color:"+col+"'>"+x.adj.toFixed(2)+"%</b></div><div style='font-size:11px;color:#aaa;margin-top:4px'>"+(x.bias===1?"▲ NORTH":"▼ SOUTH")+" | State: "+x.state+" | Size: "+x.size.toFixed(0)+"% | "+x.reason+"</div><div style='font-size:10px;color:#666;margin-top:3px'>C:"+x.cert.toFixed(0)+" ET:"+x.eTemp.toFixed(0)+" Trip:"+(x.trip==null?"-":x.trip.toFixed(0))+" RR:"+x.rr.toFixed(2)+" RV:"+x.rv.toFixed(1)+"</div></div>";
- }).join("")||"<div class='trade'>No trades in this filter.</div>";
-}
+function cmpGate(s){let C=PRESETS[preset],r=[];if(!s)return{ok:false,r:["no signal"],type:"NONE"};if(s.dir===0)r.push("balance");if(C.allow.indexOf(s.mode)<0)r.push("mode");if(s.cert<C.minCert)r.push("certainty");if(s.eTemp<C.minET||s.eTemp>C.maxET)r.push("engine temp");if(s.rr<C.minRR)r.push("rr");if(s.action!=="GET ON")r.push("not get on");if(s.state==="DEAD")r.push("dead market");let type=s.state==="EXPANSION"?"LE/SE EXPANSION":s.state==="TREND"?"LE/SE TREND":s.state==="CHOP"?"MICRO CHOP":"CMP";if(preset==="SNIPER"&&s.state==="CHOP")r.push("chop");return{ok:r.length===0,r,type}}
+function riskSize(s){let mn=parseFloat(minSize.value)||20,mx=parseFloat(maxSize.value)||100,base=s.cert*.4+s.eTemp*.2+(s.rr>1.5?12:6)+(s.state==="EXPANSION"?18:s.state==="TREND"?12:s.state==="CHOP"?-15:0);if(s.mode===2)base-=8;if(s.mode===5)base-=12;if(s.state==="CHOP")base=Math.min(base,35);return clamp(base,mn,mx)}
+function sim(dayBars,bi,s){let sl=(parseFloat(slip.value)||0)/100,entry=s.c*(s.dir===1?1+sl:1-sl),stop=s.bp||(s.dir===1?entry-s.A:entry+s.A);if(s.dir===1&&stop>entry-s.A*.45)stop=entry-s.A*.45;if(s.dir===-1&&stop<entry+s.A*.45)stop=entry+s.A*.45;let pos=1,pnl=0,be=false,hit1=false,hit2=false,gtfo=false,reason="EOD";for(let i=bi+1;i<dayBars.length;i++){let b=dayBars[i],pr=dayBars[i-1],move=s.dir===1?b.h-entry:entry-b.l;if(!be&&move>=s.A*.45){stop=entry;be=true}let fail=s.dir===1?(b.c<pr.l||b.c<entry-s.A*.2):(b.c>pr.h||b.c>entry+s.A*.2);if(i-bi>=8&&!hit1||fail&&!hit1&&i-bi>=2){pnl+=(s.dir===1?b.c-entry:entry-b.c)*pos;reason=fail?"CMP momentum fail":"CMP time GTFO";gtfo=true;pos=0;break}if(s.dir===1){if(b.l<=stop){pnl+=(stop-entry)*pos;reason=be?"BE/stop":"stop";pos=0;break}if(!hit1&&s.s1&&b.h>=s.s1){pnl+=(s.s1-entry)*.45;pos-=.45;hit1=true;stop=entry}if(!hit2&&s.s2&&b.h>=s.s2){pnl+=(s.s2-entry)*.3;pos-=.3;hit2=true}}else{if(b.h>=stop){pnl+=(entry-stop)*pos;reason=be?"BE/stop":"stop";pos=0;break}if(!hit1&&s.s1&&b.l<=s.s1){pnl+=(entry-s.s1)*.45;pos-=.45;hit1=true;stop=entry}if(!hit2&&s.s2&&b.l<=s.s2){pnl+=(entry-s.s2)*.3;pos-=.3;hit2=true}}}if(pos>0){let x=dayBars[dayBars.length-1].c;pnl+=(s.dir===1?x-entry:entry-x)*pos}let pnlPct=pnl/entry*100,size=riskSize(s);return{pnlPct,adj:pnlPct*size/100,entry,size,reason,gtfo}}
+async function startBacktest(){error.style.display="none";results.style.display="none";trades=[];skips=[];try{runBtn.disabled=true;prog("Fetching data...",5);let t=ticker.value.trim().toUpperCase(),sd=startDate.value,ed=endDate.value,from=ds(addDays(new Date(sd),-70));let [b5,b15,b60,b240,bD]=await Promise.all([fetchBars(t,5,"minute",from,ed),fetchBars(t,15,"minute",from,ed),fetchBars(t,60,"minute",from,ed),fetchBars(t,240,"minute",from,ed),fetchBars(t,1,"day",from,ed,5000)]);let dm={};b15.filter(x=>ds(new Date(x.t))>=sd).forEach(x=>{let k=ds(new Date(x.t));(dm[k]=dm[k]||[]).push(x)});let days=Object.keys(dm).sort(),max=parseInt(maxTrades.value)||5;for(let di=0;di<days.length;di++){let day=days[di],bars=dm[day],cnt=0;prog("Day "+(di+1)+"/"+days.length,20+Math.round(di/days.length*75));for(let bi=25;bi<bars.length-1;bi++){let ts=bars[bi].t,d=new Date(ts),mins=d.getUTCHours()*60+d.getUTCMinutes();if(mins<810||mins>=1170)continue;let s=mmg(b5.filter(x=>x.t<=ts).slice(-180),bars.slice(0,bi+1),b60.filter(x=>x.t<=ts).slice(-140),b240.filter(x=>x.t<=ts).slice(-90),bD.filter(x=>x.t<=ts).slice(-90)),g=cmpGate(s);if(!g.ok){skips.push({day,reason:g.r[0]});continue}let z=sim(bars,bi,s),out=z.adj>=0?"WIN":"LOSS";trades.push({day,time:d.toLocaleTimeString(),bias:s.dir,type:g.type,state:s.state,outcome:out,adj:z.adj,pnlPct:z.pnlPct,size:z.size,reason:z.reason,gtfo:z.gtfo,cert:s.cert,eTemp:s.eTemp,trip:s.trip,rr:s.rr,rv:s.rv});cnt++;if(cnt>=max)break}}render()}catch(e){showErr(e.message||String(e))}finally{progress.style.display="none";runBtn.disabled=false}}
+function render(){let w=trades.filter(x=>x.outcome==="WIN"),l=trades.filter(x=>x.outcome==="LOSS"),tot=trades.length,wr=tot?w.length/tot*100:0,pnl=trades.reduce((s,x)=>s+x.adj,0),aw=w.length?w.reduce((s,x)=>s+x.adj,0)/w.length:0,al=l.length?l.reduce((s,x)=>s+x.adj,0)/l.length:0,pf=l.length?Math.abs(w.reduce((s,x)=>s+x.adj,0)/(l.reduce((s,x)=>s+x.adj,0)||1)).toFixed(2):"—",col=wr>=70?"#00ff88":wr>=55?"#ffcc00":"#ff4466";badge.style.border="2px solid "+col;badge.innerHTML="<div style='color:#00ccff;font-weight:bold'>"+preset+" EXECUTION</div><div style='font-size:24px;font-weight:bold;color:"+col+"'>"+wr.toFixed(1)+"% WIN RATE</div><div style='color:"+col+"'>"+(wr>=70?"TARGET MET":wr>=55?"PROMISING":"NEEDS TUNING")+"</div>";stats.innerHTML=[["WIN RATE",wr.toFixed(1)+"%",col],["TOTAL P&L",pnl.toFixed(2)+"%",pnl>=0?"#00ff88":"#ff4466"],["TRADES",tot,"#fff"],["WINS",w.length,"#00ff88"],["LOSSES",l.length,"#ff4466"],["AVG WIN",aw.toFixed(2)+"%","#00ff88"],["AVG LOSS",al.toFixed(2)+"%","#ff4466"],["PROFIT FACTOR",pf,"#ffcc00"],["SKIPS",skips.length,"#aaa"]].map(s=>"<div class='stat'><div class='small'>"+s[0]+"</div><div class='big' style='color:"+s[2]+"'>"+s[1]+"</div></div>").join("");renderRejects();renderChart();results.style.display="block";setFilter("ALL")}
+function renderRejects(){let m={};skips.forEach(x=>m[x.reason]=(m[x.reason]||0)+1);rejectBox.innerHTML="<div style='font-size:12px;font-weight:bold;color:#ffcc00;margin-bottom:6px'>TOP REJECTION REASONS</div>"+Object.keys(m).sort((a,b)=>m[b]-m[a]).slice(0,8).map(k=>"<div style='display:flex;justify-content:space-between;font-size:11px;color:#aaa'><span>"+k+"</span><span>"+m[k]+"</span></div>").join("")}
+function renderChart(){let c=chart,ctx=c.getContext("2d");c.width=c.offsetWidth||480;c.height=100;ctx.clearRect(0,0,c.width,c.height);let cum=[0];trades.forEach(x=>cum.push(cum[cum.length-1]+x.adj));let mn=Math.min(...cum),mx=Math.max(...cum),pad=(mx-mn)*.15||1;mn-=pad;mx+=pad;let X=i=>2+i/(Math.max(cum.length-1,1))*(c.width-4),Y=v=>c.height-2-(v-mn)/(mx-mn)*(c.height-4);ctx.strokeStyle="rgba(255,255,255,.08)";ctx.beginPath();ctx.moveTo(0,Y(0));ctx.lineTo(c.width,Y(0));ctx.stroke();ctx.strokeStyle=cum[cum.length-1]>=0?"#00ff88":"#ff4466";ctx.lineWidth=2.5;ctx.beginPath();cum.forEach((v,i)=>i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));ctx.stroke()}
+function setFilter(f){["ALL","WIN","LOSS","GTFO","SKIP"].forEach(k=>{let e=document.getElementById("f"+k);if(e)e.className="tab"+(k===f?" active":"")});if(f==="SKIP"){tradeList.innerHTML=skips.slice(0,100).map(x=>"<div class='trade'><b>"+x.day+"</b> <span style='color:#aaa'>"+x.reason+"</span></div>").join("")||"<div class='trade'>No skips</div>";return}let arr=trades.filter(x=>f==="ALL"||x.outcome===f||(f==="GTFO"&&x.gtfo));tradeList.innerHTML=arr.map(x=>{let col=x.outcome==="WIN"?"#00ff88":"#ff4466";return"<div class='trade' style='border-left:3px solid "+col+"'><div style='display:flex;justify-content:space-between'><b>"+x.day+" "+x.time+"</b><b style='color:"+col+"'>"+x.adj.toFixed(2)+"%</b></div><div style='font-size:11px;color:#aaa;margin-top:4px'>"+(x.bias===1?"▲ NORTH":"▼ SOUTH")+" | "+x.type+" | "+x.state+" | Size "+x.size.toFixed(0)+"% | "+x.reason+"</div><div style='font-size:10px;color:#666;margin-top:3px'>C:"+x.cert.toFixed(0)+" ET:"+x.eTemp.toFixed(0)+" Trip:"+(x.trip==null?"-":x.trip.toFixed(0))+" RR:"+x.rr.toFixed(2)+" RV:"+x.rv.toFixed(1)+"</div></div>"}).join("")||"<div class='trade'>No trades.</div>"}
 </script>
-</body>
-</html>
+</body></html>
