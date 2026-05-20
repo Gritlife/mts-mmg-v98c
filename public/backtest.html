@@ -3,27 +3,28 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V17C — Polygon + Session + HTF Engine</title>
+<title>MMG V18 — Persistence + Trap + Relative Strength Engine</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
   --line:#294055;--green:#2ecc71;--red:#ff5c5c;--yellow:#f1c40f;--blue:#37a2ff;
-  --purple:#b47cff;--orange:#ff9f43;
+  --purple:#b47cff;--orange:#ff9f43;--cyan:#36d1dc;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
 header{padding:20px;background:#0b1118;border-bottom:1px solid var(--line)}
 h1{margin:0 0 8px;font-size:24px}
 .sub{color:var(--muted);font-size:14px;line-height:1.45}
-main{padding:16px;display:grid;grid-template-columns:400px 1fr;gap:16px}
+main{padding:16px;display:grid;grid-template-columns:410px 1fr;gap:16px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
 h2{margin:0 0 12px;font-size:18px}
+h3{margin:14px 0 8px;font-size:15px;color:#dce8f5}
 label{display:block;color:var(--muted);font-size:13px;margin:12px 0 5px}
 input,select,textarea,button{
   width:100%;border-radius:10px;border:1px solid var(--line);background:#080e15;color:var(--text);
   padding:11px;font-size:15px
 }
-textarea{min-height:110px;font-family:Consolas,monospace}
+textarea{min-height:100px;font-family:Consolas,monospace}
 button{border:0;background:linear-gradient(135deg,#2196f3,#2ecc71);font-weight:800;color:white;margin-top:12px;cursor:pointer}
 button.secondary{background:#162331;border:1px solid var(--line)}
 button.danger{background:linear-gradient(135deg,#ff5c5c,#ff9f43)}
@@ -33,7 +34,7 @@ button.danger{background:linear-gradient(135deg,#ff5c5c,#ff9f43)}
 .grid2{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
 .metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px}
 .metric .k{color:var(--muted);font-size:12px}
-.metric .v{font-size:23px;margin-top:6px;font-weight:800}
+.metric .v{font-size:22px;margin-top:6px;font-weight:800}
 .status{margin-top:12px;padding:12px;border-radius:10px;border:1px solid var(--line);background:#080e15;color:var(--muted);font-size:13px;line-height:1.45;white-space:pre-wrap}
 .good{border-color:rgba(46,204,113,.7);color:#bdf7d5}
 .bad{border-color:rgba(255,92,92,.7);color:#ffd0d0}
@@ -48,7 +49,7 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
 .green{background:var(--green);color:#06140b}.red{background:var(--red);color:#1a0505}
 .yellow{background:var(--yellow);color:#161100}.blue{background:var(--blue);color:#06101b}
 .purple{background:var(--purple);color:#12071b}.orange{background:var(--orange);color:#160d03}
-.gray{background:#39495a;color:#e3eef8}
+.cyan{background:var(--cyan);color:#041314}.gray{background:#39495a;color:#e3eef8}
 #csvBlock{display:none}
 @media(max-width:950px){
   main{grid-template-columns:1fr;padding:12px}
@@ -61,9 +62,10 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
 </head>
 <body>
 <header>
-  <h1>MMG V17C — Polygon + Session + HTF Engine</h1>
+  <h1>MMG V18 — Persistence + Trap + Relative Strength Engine</h1>
   <div class="sub">
-    V17C adds session intelligence, higher-timeframe alignment, ATR/RVOL rising confirmation, and analytics.
+    V18 evolves V17C from “expansion detected” to “expansion likely to continue.”
+    Adds Trend Persistence, Trap Detection, Relative Strength, and Symbol Personality controls.
   </div>
 </header>
 
@@ -82,7 +84,7 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
     <input id="apiKey" type="password" placeholder="Paste your Polygon API key"/>
 
     <div class="two">
-      <div><label>Ticker</label><input id="ticker" value="SPY"/></div>
+      <div><label>Main Ticker</label><input id="ticker" value="QQQ"/></div>
       <div><label>Adjusted</label><select id="adjusted"><option value="true">True</option><option value="false">False</option></select></div>
     </div>
 
@@ -94,7 +96,12 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
 
     <div class="two">
       <div><label>From Date</label><input id="fromDate" type="date" value="2025-01-01"/></div>
-      <div><label>To Date</label><input id="toDate" type="date" value="2025-12-31"/></div>
+      <div><label>To Date</label><input id="toDate" type="date" value="2025-02-01"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Relative Strength Benchmark</label><select id="rsBenchmark"><option value="SPY">SPY</option><option value="QQQ">QQQ</option><option value="OFF">OFF</option></select></div>
+      <div><label>Fetch Benchmark?</label><select id="fetchBenchmark"><option value="on">ON</option><option value="off">OFF</option></select></div>
     </div>
 
     <button class="secondary" onclick="testPolygon()">Test Polygon API</button>
@@ -115,11 +122,11 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
 
   <div class="two">
     <div><label>ATR Length</label><input id="atrLen" type="number" value="14"/></div>
-    <div><label>ATR Expansion Min</label><input id="atrMin" type="number" value="0.85" step="0.01"/></div>
+    <div><label>ATR Expansion Min</label><input id="atrMin" type="number" value="0.80" step="0.01"/></div>
   </div>
 
   <div class="two">
-    <div><label>RVOL Min</label><input id="rvolMin" type="number" value="1.35" step="0.05"/></div>
+    <div><label>RVOL Min</label><input id="rvolMin" type="number" value="1.25" step="0.05"/></div>
     <div><label>VWAP Max Distance ATR</label><input id="vwapMax" type="number" value="2.4" step="0.1"/></div>
   </div>
 
@@ -128,32 +135,42 @@ th{color:var(--muted);background:#0b1118;position:sticky;top:0}
     <div><label>Runner Trigger R</label><input id="runnerR" type="number" value="1.3" step="0.1"/></div>
   </div>
 
-  <h2 style="margin-top:18px">3) V17C Filters</h2>
+  <h2 style="margin-top:18px">3) V18 Intelligence</h2>
 
   <div class="two">
+    <div><label>Symbol Personality</label><select id="personality"><option value="structured">Structured</option><option value="balanced">Balanced</option><option value="chaos">Chaos Control</option></select></div>
     <div><label>Session Filter</label><select id="sessionFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+  </div>
+
+  <div class="two">
     <div><label>Avoid Lunch Chop</label><select id="avoidLunch"><option value="on">ON</option><option value="off">OFF</option></select></div>
-  </div>
-
-  <div class="two">
     <div><label>HTF Alignment</label><select id="htfFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
-    <div><label>HTF EMA Length</label><input id="htfLen" type="number" value="34"/></div>
   </div>
 
   <div class="two">
-    <div><label>Require ATR Rising</label><select id="atrRising"><option value="on">ON</option><option value="off">OFF</option></select></div>
-    <div><label>Require RVOL Rising</label><select id="rvolRising"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    <div><label>Persistence Filter</label><select id="persistenceFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    <div><label>Min Persistence Score</label><input id="minPersistence" type="number" value="58"/></div>
   </div>
 
-  <button onclick="runBacktest()">Run V17C Backtest</button>
+  <div class="two">
+    <div><label>Trap Detection</label><select id="trapFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    <div><label>Max Trap Score</label><input id="maxTrap" type="number" value="62"/></div>
+  </div>
+
+  <div class="two">
+    <div><label>Relative Strength Filter</label><select id="rsFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    <div><label>Min RS Score</label><input id="minRS" type="number" value="50"/></div>
+  </div>
+
+  <button onclick="runBacktest()">Run V18 Backtest</button>
   <button class="danger" onclick="clearResults()">Clear Results</button>
 
   <div id="status" class="status warn">Ready.
-Default V17C settings are tuned for 15-minute Polygon bars.
-Use SPY first, then test QQQ/NVDA/TSLA.</div>
+V18 default path: QQQ / 15-minute / Jan 2025.
+For PLTR, TSLA, META try Personality = Chaos Control.</div>
 
   <div class="note">
-    Session logic uses the timestamp shown by the browser. For best precision later, move this into backend/Cloud Run with exchange timezone handling.
+    Relative Strength uses benchmark bars from Polygon when enabled. For production, move API calls to Cloud Run/Netlify Functions to protect the API key.
   </div>
 </section>
 
@@ -179,9 +196,9 @@ Use SPY first, then test QQQ/NVDA/TSLA.</div>
   </div>
 
   <div class="card" style="margin-bottom:14px">
-    <h2>Regime Breakdown</h2>
+    <h2>V18 Diagnostics</h2>
     <div class="tablewrap" style="max-height:260px">
-      <table><thead><tr><th>Regime</th><th>Trades</th><th>Win Rate</th><th>Net P/L</th><th>PF</th></tr></thead><tbody id="regimeLog"></tbody></table>
+      <table><thead><tr><th>Bucket</th><th>Trades</th><th>Win Rate</th><th>Net P/L</th><th>PF</th></tr></thead><tbody id="diagLog"></tbody></table>
     </div>
   </div>
 
@@ -189,7 +206,7 @@ Use SPY first, then test QQQ/NVDA/TSLA.</div>
     <h2>Trade Log</h2>
     <div class="tablewrap">
       <table>
-        <thead><tr><th>#</th><th>Time</th><th>Dir</th><th>Regime</th><th>Mode</th><th>Entry</th><th>Exit</th><th>R</th><th>P/L</th><th>Why</th></tr></thead>
+        <thead><tr><th>#</th><th>Time</th><th>Dir</th><th>Regime</th><th>Mode</th><th>Persist</th><th>Trap</th><th>RS</th><th>R</th><th>P/L</th><th>Why</th></tr></thead>
         <tbody id="log"></tbody>
       </table>
     </div>
@@ -198,7 +215,8 @@ Use SPY first, then test QQQ/NVDA/TSLA.</div>
 </main>
 
 <script>
-let cachedBars=[];
+let cachedMainBars=[];
+let cachedBenchBars=[];
 
 window.addEventListener("load",()=>{
   const saved=localStorage.getItem("polygon_api_key");
@@ -216,9 +234,15 @@ function toggleCsv(){
   document.getElementById("polygonBlock").style.display=mode==="polygon"?"block":"none";
   document.getElementById("csvBlock").style.display=mode==="csv"?"block":"none";
 }
-function polygonUrl(){
+function getPersonalitySettings(){
+  const p=document.getElementById("personality").value;
+  if(p==="chaos") return {persistAdj:8, trapAdj:-12, rsAdj:5, minScoreAdj:4, name:"CHAOS"};
+  if(p==="balanced") return {persistAdj:3, trapAdj:-5, rsAdj:0, minScoreAdj:0, name:"BALANCED"};
+  return {persistAdj:0, trapAdj:0, rsAdj:0, minScoreAdj:0, name:"STRUCTURED"};
+}
+function polygonUrl(tickerOverride=null){
   const apiKey=document.getElementById("apiKey").value.trim();
-  const ticker=document.getElementById("ticker").value.trim().toUpperCase();
+  const ticker=(tickerOverride||document.getElementById("ticker").value.trim()).toUpperCase();
   const multiplier=document.getElementById("multiplier").value.trim();
   const timespan=document.getElementById("timespan").value;
   const from=document.getElementById("fromDate").value;
@@ -233,25 +257,38 @@ function polygonUrl(){
 }
 async function testPolygon(){
   try{
-    cachedBars=[];
-    const bars=await fetchPolygonBars(true);
-    cachedBars=bars;
-    setStatus(`Polygon OK.
-Loaded ${bars.length} bars.
-First: ${bars[0].time} | Close ${bars[0].close}
-Last: ${bars[bars.length-1].time} | Close ${bars[bars.length-1].close}
+    cachedMainBars=[]; cachedBenchBars=[];
+    const mainTicker=document.getElementById("ticker").value.trim().toUpperCase();
+    const main=await fetchPolygonBars(mainTicker,true);
+    cachedMainBars=main;
 
-Now press Run V17C Backtest.`,"good");
+    let benchMsg="";
+    if(document.getElementById("fetchBenchmark").value==="on" && document.getElementById("rsBenchmark").value!=="OFF"){
+      const benchTicker=document.getElementById("rsBenchmark").value;
+      if(benchTicker!==mainTicker){
+        const bench=await fetchPolygonBars(benchTicker,true);
+        cachedBenchBars=bench;
+        benchMsg=`\nBenchmark ${benchTicker}: ${bench.length} bars loaded.`;
+      }
+    }
+
+    setStatus(`Polygon OK.
+Main ${mainTicker}: ${main.length} bars loaded.${benchMsg}
+First: ${main[0].time} | Close ${main[0].close}
+Last: ${main[main.length-1].time} | Close ${main[main.length-1].close}
+
+Now press Run V18 Backtest.`,"good");
   }catch(err){
     setStatus(`Polygon test failed.
 
 ${err.message}`,"bad");
+    console.error(err);
   }
 }
-async function fetchPolygonBars(isTest=false){
-  let url=polygonUrl(),all=[],page=1;
+async function fetchPolygonBars(ticker,isTest=false){
+  let url=polygonUrl(ticker),all=[],page=1;
   while(url){
-    setStatus(`${isTest?"Testing":"Fetching"} Polygon page ${page}...`,"warn");
+    setStatus(`${isTest?"Testing":"Fetching"} Polygon ${ticker} page ${page}...`,"warn");
     const res=await fetch(url);
     const text=await res.text();
     if(!res.ok)throw new Error(`HTTP ${res.status}: ${text.slice(0,500)}`);
@@ -263,8 +300,8 @@ async function fetchPolygonBars(isTest=false){
     page++;
     if(page>20)break;
   }
-  if(!all.length)throw new Error("No bars returned.");
-  return all.map(r=>({time:new Date(r.t).toLocaleString(), rawTime:r.t, open:r.o, high:r.h, low:r.l, close:r.c, volume:r.v})).filter(x=>Number.isFinite(x.close));
+  if(!all.length)throw new Error(`No bars returned for ${ticker}.`);
+  return all.map(r=>({time:new Date(r.t).toLocaleString(),rawTime:r.t,open:r.o,high:r.h,low:r.l,close:r.c,volume:r.v})).filter(x=>Number.isFinite(x.close));
 }
 function parseCSV(txt){
   const lines=txt.trim().split(/\n+/).filter(Boolean),out=[];
@@ -287,55 +324,103 @@ function rollingHigh(a,i,len){let h=-Infinity;for(let j=Math.max(0,i-len+1);j<=i
 function rollingLow(a,i,len){let l=Infinity;for(let j=Math.max(0,i-len+1);j<=i;j++)l=Math.min(l,a[j].low);return l;}
 
 function inTradingSession(bar){
-  const useFilter=document.getElementById("sessionFilter").value==="on";
+  if(document.getElementById("sessionFilter").value!=="on")return true;
   const avoidLunch=document.getElementById("avoidLunch").value==="on";
-  if(!useFilter)return true;
   const d=bar.rawTime?new Date(bar.rawTime):new Date(bar.time);
-  const h=d.getHours(),m=d.getMinutes();
-  const minutes=h*60+m;
-  const open=9*60+30, close=15*60+45;
-  const lunchStart=11*60+30, lunchEnd=13*60+30;
+  const h=d.getHours(),m=d.getMinutes(),minutes=h*60+m;
+  const open=9*60+30,close=15*60+45,lunchStart=11*60+30,lunchEnd=13*60+30;
   if(minutes<open||minutes>close)return false;
   if(avoidLunch&&minutes>=lunchStart&&minutes<=lunchEnd)return false;
   return true;
 }
-
-function classifyRegime({atrExp,rvol,emaSlope,impulse,price,vwap,rangePct}){
+function classifyRegime({atrExp,rvol,emaSlope,impulse,price,vwap,rangePct,persist,trap}){
   const aligned=(price>vwap&&emaSlope>0)||(price<vwap&&emaSlope<0);
-  if(atrExp>1.25&&rvol>1.6&&Math.abs(impulse)>0.75&&aligned)return"EXPANSION";
+  if(trap>72)return"TRAP";
+  if(atrExp>1.25&&rvol>1.6&&Math.abs(impulse)>0.75&&aligned&&persist>58)return"EXPANSION";
   if(rangePct<0.012&&atrExp<0.8)return"COMPRESSION";
-  if(atrExp>1.1&&rvol>1.3&&!aligned)return"TRAP";
   if(Math.abs(emaSlope)<0.02&&atrExp<1.0)return"CHOP";
-  if(aligned&&atrExp>=0.85)return"TREND";
+  if(aligned&&atrExp>=0.85&&persist>50)return"TREND";
   return"MIXED";
 }
-function participationMode(score,runwayScore,wallRisk,regime){
+function calcPersistence(data,i,ema13,ema34,vwap,atr,dir){
+  let score=0;
+  const dirMult=dir==="LONG"?1:-1;
+  let closeStreak=0, vwapHold=0, emaHold=0, impulseFollow=0;
+  for(let k=0;k<5;k++){
+    const idx=i-k;
+    if(idx<=0)continue;
+    if((data[idx].close-data[idx-1].close)*dirMult>0)closeStreak++;
+    if((data[idx].close-vwap[idx])*dirMult>0)vwapHold++;
+    if((ema13[idx]-ema34[idx])*dirMult>0)emaHold++;
+    if(((data[idx].close-data[idx].open)/(atr[idx]||1))*dirMult>0.25)impulseFollow++;
+  }
+  score += closeStreak*12;
+  score += vwapHold*8;
+  score += emaHold*8;
+  score += impulseFollow*10;
+  const slope=(ema13[i]-ema13[i-5])*dirMult;
+  if(slope>0)score+=15;
+  return Math.max(0,Math.min(100,score));
+}
+function calcTrap(data,i,atr,rvolArr,vwap,wallRisk,dir){
+  const dirMult=dir==="LONG"?1:-1;
+  const candleBody=Math.abs(data[i].close-data[i].open);
+  const upperWick=data[i].high-Math.max(data[i].open,data[i].close);
+  const lowerWick=Math.min(data[i].open,data[i].close)-data[i].low;
+  const badWick=dir==="LONG"?upperWick:lowerWick;
+  const wickRatio=badWick/(candleBody||0.01);
+
+  let score=0;
+  if(wickRatio>1.2)score+=25;
+  if(wallRisk>70)score+=25;
+  if(rvolArr[i]>1.8 && Math.abs(data[i].close-data[i].open)/(atr[i]||1)<0.35)score+=20;
+  if(((data[i].close-vwap[i])*dirMult)<0)score+=25;
+  if(i>1 && ((data[i].close-data[i-1].close)*dirMult)<0 && rvolArr[i]>rvolArr[i-1])score+=15;
+  return Math.max(0,Math.min(100,score));
+}
+function rsScore(main,i,bench){
+  if(!bench || !bench.length || document.getElementById("rsBenchmark").value==="OFF")return 70;
+  const look=8;
+  if(i<look || bench.length<=i)return 50;
+  const mainRet=(main[i].close-main[i-look].close)/main[i-look].close;
+  const benchRet=(bench[i].close-bench[i-look].close)/bench[i-look].close;
+  const diff=mainRet-benchRet;
+  return Math.max(0,Math.min(100,50+diff*900));
+}
+function participationMode(score,runwayScore,wallRisk,regime,persist,trap,rs){
   if(regime==="TRAP"||regime==="CHOP")return"NO TRADE";
-  if(score>=82&&runwayScore>=75&&wallRisk<45&&regime==="EXPANSION")return"AGGRESSIVE";
-  if(score>=70&&runwayScore>=60)return"STANDARD";
-  if(score>=58&&runwayScore>=45)return"SCOUT";
-  if(score>=65&&regime==="TREND")return"RUNNER";
+  if(trap>72)return"NO TRADE";
+  if(score>=84&&runwayScore>=75&&wallRisk<45&&persist>70&&rs>55)return"AGGRESSIVE";
+  if(score>=70&&runwayScore>=60&&persist>58)return"STANDARD";
+  if(score>=60&&runwayScore>=45&&persist>52)return"SCOUT";
+  if(score>=65&&regime==="TREND"&&persist>60)return"RUNNER";
   return"NO TRADE";
 }
 function pill(txt){
-  const m={"AGGRESSIVE":"green","STANDARD":"blue","SCOUT":"yellow","RUNNER":"purple","NO TRADE":"gray","EXPANSION":"green","TREND":"blue","COMPRESSION":"yellow","TRAP":"red","CHOP":"orange","MIXED":"gray","LONG":"green","SHORT":"red"};
+  const m={"AGGRESSIVE":"green","STANDARD":"blue","SCOUT":"yellow","RUNNER":"purple","NO TRADE":"gray","EXPANSION":"green","TREND":"blue","COMPRESSION":"yellow","TRAP":"red","CHOP":"orange","MIXED":"gray","LONG":"green","SHORT":"red","STRUCTURED":"cyan","BALANCED":"yellow","CHAOS":"orange"};
   return `<span class="pill ${m[txt]||"gray"}">${txt}</span>`;
 }
 async function getData(){
   if(document.getElementById("mode").value==="polygon"){
-    if(cachedBars.length)return cachedBars;
-    return await fetchPolygonBars(false);
-  }
-  return parseCSV(document.getElementById("csv").value);
-}
+    const mainTicker=document.getElementById("ticker").value.trim().toUpperCase();
+    if(!cachedMainBars.length)cachedMainBars=await fetchPolygonBars(mainTicker,false);
 
+    const benchTicker=document.getElementById("rsBenchmark").value;
+    if(document.getElementById("fetchBenchmark").value==="on" && benchTicker!=="OFF" && benchTicker!==mainTicker && !cachedBenchBars.length){
+      cachedBenchBars=await fetchPolygonBars(benchTicker,false);
+    }
+    return {main:cachedMainBars,bench:cachedBenchBars};
+  }
+  return {main:parseCSV(document.getElementById("csv").value),bench:[]};
+}
 async function runBacktest(){
   try{
     clearResults(false);
-    const data=await getData();
+    const {main:data,bench}=await getData();
     if(data.length<80)throw new Error(`Only ${data.length} bars loaded. Need at least 80 bars.`);
-    setStatus(`Loaded ${data.length} bars. Running V17C...`,"warn");
+    setStatus(`Loaded ${data.length} main bars. Running V18...`,"warn");
 
+    const personality=getPersonalitySettings();
     const capital0=+document.getElementById("capital").value;
     const riskPct=+document.getElementById("riskPct").value/100;
     const atrLen=+document.getElementById("atrLen").value;
@@ -345,16 +430,19 @@ async function runBacktest(){
     const wallMin=+document.getElementById("wallMin").value;
     const runnerR=+document.getElementById("runnerR").value;
     const htfOn=document.getElementById("htfFilter").value==="on";
-    const atrRiseOn=document.getElementById("atrRising").value==="on";
-    const rvolRiseOn=document.getElementById("rvolRising").value==="on";
-    const htfLen=+document.getElementById("htfLen").value;
+    const persistOn=document.getElementById("persistenceFilter").value==="on";
+    const trapOn=document.getElementById("trapFilter").value==="on";
+    const rsOn=document.getElementById("rsFilter").value==="on";
+    const minPersist=+document.getElementById("minPersistence").value + personality.persistAdj;
+    const maxTrap=+document.getElementById("maxTrap").value + personality.trapAdj;
+    const minRS=+document.getElementById("minRS").value + personality.rsAdj;
 
-    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),htfEma=emaSeries(data,htfLen),vwap=vwapSeries(data);
+    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),htfEma=emaSeries(data,55),vwap=vwapSeries(data);
     const rvolArr=data.map((b,i)=>b.volume/(sma(data,i,30,"volume")||b.volume));
 
     let equity=capital0,trades=[],equityCurve=[capital0],open=null;
 
-    for(let i=55;i<data.length;i++){
+    for(let i=60;i<data.length;i++){
       const bar=data[i];
       const avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i];
       const atrExp=atr[i]/avgAtr;
@@ -369,8 +457,7 @@ async function runBacktest(){
 
       const longBias=ema13[i]>ema34[i]&&bar.close>vwap[i];
       const shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i];
-      const htfLong=bar.close>htfEma[i]&&htfEma[i]>htfEma[i-5];
-      const htfShort=bar.close<htfEma[i]&&htfEma[i]<htfEma[i-5];
+      const dir=longBias?"LONG":shortBias?"SHORT":null;
 
       const nearestWallLong=bar.close<ext127?ext127:ext161;
       const nearestWallShort=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236;
@@ -378,11 +465,16 @@ async function runBacktest(){
       const wallRisk=Math.max(0,100-wallDist*35);
       const runwayScore=Math.max(0,Math.min(100,wallDist*32));
 
-      const regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct:range/bar.close});
+      const persist=dir?calcPersistence(data,i,ema13,ema34,vwap,atr,dir):0;
+      const trap=dir?calcTrap(data,i,atr,rvolArr,vwap,wallRisk,dir):100;
+      const rs=rsScore(data,i,bench);
+      const regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct:range/bar.close,persist,trap});
+
       const flowScore=Math.min(25,atrExp/1.4*25)+Math.min(25,rvol/2*25)+Math.min(25,Math.abs(impulse)/1.2*25)+Math.max(0,25-vwDist/vwapMax*25);
-      const structureScore=Math.min(40,runwayScore*.4)+Math.max(0,30-wallRisk*.25)+(bar.close>fib382&&bar.close<ext127?15:0)+(wallDist>wallMin?15:0);
-      const totalScore=Math.round(flowScore*.55+structureScore*.45);
-      const modeNow=participationMode(totalScore,runwayScore,wallRisk,regime);
+      const structureScore=Math.min(35,runwayScore*.35)+Math.max(0,25-wallRisk*.22)+(bar.close>fib382&&bar.close<ext127?12:0)+(wallDist>wallMin?12:0);
+      const intelScore=persist*.20 + (100-trap)*.15 + rs*.10;
+      const totalScore=Math.round(flowScore*.45+structureScore*.35+intelScore*.20);
+      const modeNow=participationMode(totalScore,runwayScore,wallRisk,regime,persist,trap,rs);
 
       if(open){
         const dirMult=open.dir==="LONG"?1:-1;
@@ -391,10 +483,11 @@ async function runBacktest(){
         if(rNow<=-1)exitReason="STOP";
         if(rNow>=runnerR&&!open.be){open.be=true;open.stop=open.entry;}
         if(open.be&&rNow<.05)exitReason="BE";
-        if(regime==="TRAP"&&rNow>.25)exitReason="GTFO TRAP";
-        if(wallRisk>78&&rNow>.4)exitReason="WALL TAKE";
+        if(trap>78&&rNow>.15)exitReason="GTFO TRAP";
+        if(wallRisk>80&&rNow>.35)exitReason="WALL TAKE";
+        if(persist<45&&rNow>.25)exitReason="PERSIST FADE";
         if(i-open.i>32&&rNow<.35)exitReason="TIME EXIT";
-        if(rNow>=2.2)exitReason="RUNNER TAKE";
+        if(rNow>=2.35)exitReason="RUNNER TAKE";
 
         if(exitReason){
           const pl=rNow*open.risk*open.size;
@@ -405,30 +498,27 @@ async function runBacktest(){
         }
       }
 
-      const atrRising=atr[i]>atr[i-1]&&atr[i-1]>=atr[i-2];
-      const rvolRising=rvolArr[i]>rvolArr[i-1];
-      const sessionOK=inTradingSession(bar);
-
-      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax&&sessionOK){
-        const dir=longBias?"LONG":shortBias?"SHORT":null;
+      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax&&inTradingSession(bar)){
         if(!dir)continue;
-        if(htfOn&&dir==="LONG"&&!htfLong)continue;
-        if(htfOn&&dir==="SHORT"&&!htfShort)continue;
-        if(atrRiseOn&&!atrRising)continue;
-        if(rvolRiseOn&&!rvolRising)continue;
+        if(htfOn&&dir==="LONG"&&!(bar.close>htfEma[i]&&htfEma[i]>htfEma[i-5]))continue;
+        if(htfOn&&dir==="SHORT"&&!(bar.close<htfEma[i]&&htfEma[i]<htfEma[i-5]))continue;
+        if(persistOn&&persist<minPersist)continue;
+        if(trapOn&&trap>maxTrap)continue;
+        if(rsOn&&rs<minRS)continue;
 
-        const modeRisk=modeNow==="AGGRESSIVE"?1.4:modeNow==="STANDARD"?1:modeNow==="RUNNER"?.85:.55;
+        const modeRisk=modeNow==="AGGRESSIVE"?1.35:modeNow==="STANDARD"?1:modeNow==="RUNNER"?.85:.55;
         const dollarsRisk=equity*riskPct*modeRisk;
         const riskPerShare=atr[i]*(modeNow==="SCOUT"?.85:1.05);
         const size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));
-        open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,
-          why:`Score ${totalScore}; Runway ${Math.round(runwayScore)}; WallRisk ${Math.round(wallRisk)}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}; HTF ${htfOn?"ON":"OFF"}`};
+        open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,persist,trap,rs,personality:personality.name,
+          why:`Score ${totalScore}; Runway ${Math.round(runwayScore)}; WallRisk ${Math.round(wallRisk)}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}; ${personality.name}`};
       }
     }
 
     renderResults(trades,equityCurve,capital0,equity);
-    setStatus(`V17C complete.
+    setStatus(`V18 complete.
 Bars loaded: ${data.length}
+Benchmark bars: ${bench.length || 0}
 Trades: ${trades.length}
 Net P/L: $${(equity-capital0).toFixed(2)}`,"good");
   }catch(err){
@@ -464,16 +554,23 @@ function renderResults(trades,equityCurve,capital0,equity){
 
   document.getElementById("log").innerHTML=trades.map((t,idx)=>`
     <tr><td>${idx+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td>
-    <td>${t.entry.toFixed(2)}</td><td>${t.exit.toFixed(2)}</td><td>${t.r.toFixed(2)}</td>
+    <td>${Math.round(t.persist)}</td><td>${Math.round(t.trap)}</td><td>${Math.round(t.rs)}</td><td>${t.r.toFixed(2)}</td>
     <td style="color:${t.pl>=0?"var(--green)":"var(--red)"}">$${t.pl.toFixed(2)}</td><td>${t.exitReason} | ${t.why}</td></tr>`).join("");
 
-  const regimes=[...new Set(trades.map(t=>t.regime))];
-  document.getElementById("regimeLog").innerHTML=regimes.map(r=>{
-    const arr=trades.filter(t=>t.regime===r),w=arr.filter(t=>t.pl>0),l=arr.filter(t=>t.pl<0);
+  const buckets=["EXPANSION","TREND","MIXED","SCOUT","STANDARD","RUNNER","AGGRESSIVE","STRUCTURED","BALANCED","CHAOS"];
+  const rows=[];
+  for(const b of buckets){
+    let arr=[];
+    if(["EXPANSION","TREND","MIXED"].includes(b))arr=trades.filter(t=>t.regime===b);
+    else if(["SCOUT","STANDARD","RUNNER","AGGRESSIVE"].includes(b))arr=trades.filter(t=>t.mode===b);
+    else arr=trades.filter(t=>t.personality===b);
+    if(!arr.length)continue;
+    const w=arr.filter(t=>t.pl>0),l=arr.filter(t=>t.pl<0);
     const gw=w.reduce((s,t)=>s+t.pl,0),gl=Math.abs(l.reduce((s,t)=>s+t.pl,0));
-    const rpf=gl?gw/gl:gw?99:0, rnet=arr.reduce((s,t)=>s+t.pl,0);
-    return `<tr><td>${pill(r)}</td><td>${arr.length}</td><td>${arr.length?(w.length/arr.length*100).toFixed(1):0}%</td><td style="color:${rnet>=0?"var(--green)":"var(--red)"}">$${rnet.toFixed(2)}</td><td>${rpf.toFixed(2)}</td></tr>`;
-  }).join("");
+    const rpf=gl?gw/gl:gw?99:0,rnet=arr.reduce((s,t)=>s+t.pl,0);
+    rows.push(`<tr><td>${pill(b)}</td><td>${arr.length}</td><td>${(w.length/arr.length*100).toFixed(1)}%</td><td style="color:${rnet>=0?"var(--green)":"var(--red)"}">$${rnet.toFixed(2)}</td><td>${rpf.toFixed(2)}</td></tr>`);
+  }
+  document.getElementById("diagLog").innerHTML=rows.join("");
 
   drawChart(equityCurve);
 }
@@ -494,8 +591,9 @@ function drawChart(points){
 function clearResults(resetStatus=true){
   ["net","winrate","trades","pf","avgWin","avgLoss","expectancy","maxDD","lossStreak"].forEach(id=>document.getElementById(id).textContent="—");
   document.getElementById("log").innerHTML="";
-  document.getElementById("regimeLog").innerHTML="";
+  document.getElementById("diagLog").innerHTML="";
   const c=document.getElementById("chart"),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);
+  cachedMainBars=[]; cachedBenchBars=[];
   if(resetStatus)setStatus("Results cleared.","warn");
 }
 function loadSampleCsv(){
