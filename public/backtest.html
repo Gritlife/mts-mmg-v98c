@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V22 — Profit Hunt + 60-70 WR Engine</title>
+<title>MMG V23 — Unified Multi-Personality Engine</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,9 +72,9 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V22 — Profit Hunt + 60–70% WR Engine</h1>
+  <h1>MMG V23 — Unified Multi‑Personality Engine</h1>
   <div class="sub">
-    V22 targets high-profit continuation with a 60–70% win-rate profile using Hunt Mode, market alignment, adaptive exits, and runner boost logic.
+    V23 runs multiple market personalities together, identifies the dominant personality, and uses alignment/conflict logic for scanning and backtesting.
   </div>
 </header>
 
@@ -151,7 +151,7 @@ tr.clickable:hover{background:#182637}
       <table>
         <thead>
           <tr>
-            <th>Rank</th><th>Ticker</th><th>Tier</th><th>Dir</th><th>Score</th><th>Regime</th><th>Confirm</th><th>Persist</th><th>Trap</th><th>RS</th>
+            <th>Rank</th><th>Ticker</th><th>Tier</th><th>Dir</th><th>Score</th><th>Mode</th><th>Conf</th><th>Regime</th><th>Trap</th><th>RS</th>
           </tr>
         </thead>
         <tbody id="scannerLog"></tbody>
@@ -241,6 +241,18 @@ tr.clickable:hover{background:#182637}
       <div><label>Profit Expansion Target R</label><input id="profitTargetR" type="number" value="3.2" step="0.1"/></div>
     </div>
 
+    <h2 style="margin-top:18px">V23 Personality Matrix</h2>
+
+    <div class="two">
+      <div><label>Personality Mode</label><select id="personalityMode"><option value="auto">AI Adaptive Auto</option><option value="safeTrend">Safe Hunt + Trend Rider</option><option value="expansion">Aggressive + Expansion Hunter</option><option value="trapReverse">Trap Hunter + Reversal Sniper</option><option value="runner">Runner Pyramid Focus</option></select></div>
+      <div><label>Minimum Personality Confidence</label><input id="minPersonalityConfidence" type="number" value="58"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Conflict Filter</label><select id="conflictFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Personality Stack Bonus</label><select id="stackBonus"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
+
     <div class="flexBtns">
       <button onclick="runBacktest()">Run + Add to Report</button>
       <button class="secondary" onclick="showTab('scanner')">Back to Scanner</button>
@@ -268,7 +280,7 @@ tr.clickable:hover{background:#182637}
       <button class="secondary" onclick="showTab('backtest')">Backtest More</button>
       <button class="danger" onclick="clearLedger()">Clear Report</button>
     </div>
-    <div class="note">V22: each backtest adds one row. Account P/L only counts ACCEPTED rows. Use Safe/Balanced/Aggressive Hunt to target 60–70% win rate with higher profit.</div>
+    <div class="note">V23: all personalities run together. Account P/L only counts ACCEPTED rows.</div>
   </div>
 
   <div class="card">
@@ -829,6 +841,246 @@ function analyzeLatest(ticker,bars,bench=[]){
   }
   if(!best)best={ticker,score:0,dir:"BALANCE",regime:"NO SETUP",confirm:0,persist:0,trap:100,rs:0,wrProfile:0};
   best.tier=best.score>=82?"S":best.score>=72?"A":best.score>=62?"B":best.score>=52?"C":"D";return best;
+}
+
+
+/* ===== V23 PATCH: Unified Multi-Personality Engine ===== */
+
+function personalityPill(name){
+  const label = String(name||"NONE").replace(" ","");
+  if(name==="Trend Rider") return pill("TREND").replace(">TREND<",">TREND<");
+  if(name==="Expansion Hunter") return pill("EXPANSION").replace(">EXPANSION<",">EXPAND<");
+  if(name==="Safe Hunt") return pill("S").replace(">S<",">SAFE<");
+  if(name==="Aggressive Hunt") return pill("AGGRESSIVE").replace(">AGGRESSIVE<",">AGG<");
+  if(name==="MM Trap Hunter") return pill("TRAP").replace(">TRAP<",">TRAP<");
+  if(name==="Reversal Sniper") return pill("SHORT").replace(">SHORT<",">REV<");
+  if(name==="Runner Pyramid") return pill("RUNNER").replace(">RUNNER<",">RUN<");
+  return pill("C").replace(">C<",">AUTO<");
+}
+
+function calcPersonalityMatrix(o){
+  const expansion = clamp(
+    o.atrExp*24 + o.rvol*12 + Math.abs(o.impulse)*18 + o.confirm*.18 + o.runwayScore*.16 - o.trap*.20
+  );
+  const trend = clamp(
+    o.persist*.34 + o.confirm*.22 + o.rs*.14 + o.runwayScore*.12 + (100-o.wallRisk)*.10 - o.trap*.12
+  );
+  const safe = clamp(
+    o.confirm*.30 + o.persist*.24 + (100-o.trap)*.24 + o.rs*.10 + (100-o.wallRisk)*.12
+  );
+  const aggressive = clamp(
+    o.runwayScore*.28 + o.atrExp*18 + o.rvol*12 + o.rs*.15 + o.confirm*.12 - o.trap*.10
+  );
+  const trapHunter = clamp(
+    o.trap*.42 + o.wallRisk*.18 + (100-o.confirm)*.18 + Math.max(0, o.rvol-1)*14 + (o.regime==="FAILED"?12:0)
+  );
+  const reversal = clamp(
+    o.wallRisk*.28 + o.trap*.22 + (100-o.persist)*.16 + (100-o.confirm)*.14 + (o.regime==="FAILED"?16:0)
+  );
+  const runner = clamp(
+    o.persist*.28 + o.confirm*.22 + o.runwayScore*.24 + o.rs*.12 + (100-o.wallRisk)*.10 - o.trap*.16
+  );
+
+  const arr=[
+    {name:"Safe Hunt",score:safe},
+    {name:"Trend Rider",score:trend},
+    {name:"Expansion Hunter",score:expansion},
+    {name:"Aggressive Hunt",score:aggressive},
+    {name:"MM Trap Hunter",score:trapHunter},
+    {name:"Reversal Sniper",score:reversal},
+    {name:"Runner Pyramid",score:runner}
+  ].sort((a,b)=>b.score-a.score);
+
+  const dominant=arr[0];
+  const support=arr[1];
+  const conflict = Math.max(trapHunter,reversal) - Math.max(safe,trend,runner,expansion);
+  return {dominant:dominant.name, confidence:Math.round(dominant.score), support:support.name, supportScore:Math.round(support.score), conflict:Math.round(conflict), scores:arr};
+}
+
+function clamp(x){ return Math.max(0,Math.min(100,Math.round(x))); }
+
+function v23ModeAllowed(matrix){
+  const mode=document.getElementById("personalityMode")?document.getElementById("personalityMode").value:"auto";
+  if(mode==="auto") return true;
+  if(mode==="safeTrend") return ["Safe Hunt","Trend Rider"].includes(matrix.dominant) || ["Safe Hunt","Trend Rider"].includes(matrix.support);
+  if(mode==="expansion") return ["Expansion Hunter","Aggressive Hunt"].includes(matrix.dominant) || ["Expansion Hunter","Aggressive Hunt"].includes(matrix.support);
+  if(mode==="trapReverse") return ["MM Trap Hunter","Reversal Sniper"].includes(matrix.dominant) || ["MM Trap Hunter","Reversal Sniper"].includes(matrix.support);
+  if(mode==="runner") return ["Runner Pyramid","Trend Rider"].includes(matrix.dominant) || ["Runner Pyramid","Trend Rider"].includes(matrix.support);
+  return true;
+}
+
+function v23ConflictOK(matrix,dir){
+  if(document.getElementById("conflictFilter") && document.getElementById("conflictFilter").value==="off") return true;
+  // Avoid long/continuation trades when trap/reversal personality dominates too strongly.
+  if(["MM Trap Hunter","Reversal Sniper"].includes(matrix.dominant) && matrix.confidence>=62) return false;
+  if(matrix.conflict>18) return false;
+  return true;
+}
+
+function v23ScoreBoost(baseScore,matrix){
+  let s=baseScore;
+  if(document.getElementById("stackBonus") && document.getElementById("stackBonus").value==="on"){
+    if(matrix.confidence>=70) s+=5;
+    if(["Safe Hunt","Trend Rider","Runner Pyramid"].includes(matrix.dominant)) s+=4;
+    if(["Safe Hunt","Trend Rider","Runner Pyramid"].includes(matrix.support)) s+=2;
+  }
+  if(["MM Trap Hunter","Reversal Sniper"].includes(matrix.dominant)) s-=12;
+  return clamp(s);
+}
+
+function v23ParticipationMode(score,wrProfile,runwayScore,wallRisk,regime,persist,trap,rs,confirm,hunt,matrix){
+  const minConf=+(document.getElementById("minPersonalityConfidence")?document.getElementById("minPersonalityConfidence").value:58);
+  if(matrix.confidence<minConf) return "NO TRADE";
+  if(!v23ModeAllowed(matrix)) return "NO TRADE";
+  if(!v23ConflictOK(matrix)) return "NO TRADE";
+  if(["TRAP","CHOP","FAILED"].includes(regime)) return "NO TRADE";
+  if(wrProfile < hunt.wrMin) return "NO TRADE";
+  if(trap > (hunt.name==="AGGRESSIVE"?80:72)) return "NO TRADE";
+  if(matrix.dominant==="Runner Pyramid" && score>=70 && wrProfile>=60) return "RUNNER";
+  if(matrix.dominant==="Trend Rider" && score>=68 && wrProfile>=60) return "STANDARD";
+  if(matrix.dominant==="Safe Hunt" && score>=66 && wrProfile>=62) return "SCOUT";
+  if(matrix.dominant==="Expansion Hunter" && score>=78 && runwayScore>=58) return "AGGRESSIVE";
+  if(score>=84 && wrProfile>=70 && runwayScore>=70 && wallRisk<55 && persist>66 && confirm>66) return "AGGRESSIVE";
+  if(score>=72 && wrProfile>=62 && runwayScore>=52 && persist>58 && confirm>58) return "STANDARD";
+  if(score>=62 && wrProfile>=58 && runwayScore>=40 && persist>52 && confirm>52) return "SCOUT";
+  return "NO TRADE";
+}
+
+async function runBacktest(){
+  try{
+    const ticker=document.getElementById("selectedTicker").value.trim().toUpperCase();
+    if(!ticker)throw new Error("Missing selected ticker.");
+    setStatus("backtestStatus",`Fetching ${ticker} bars...`,"warn");
+    const data=await fetchPolygonBars(ticker),benchTicker=document.getElementById("rsBenchmark").value;
+    let bench=[];
+    if(benchTicker!=="OFF"&&benchTicker!==ticker)bench=await fetchPolygonBars(benchTicker);
+    if(data.length<80)throw new Error(`Only ${data.length} bars loaded.`);
+
+    const personality=getPersonalitySettings(),hunt=getHuntSettings();
+    const capital0=+document.getElementById("capital").value;
+    const riskPct=+document.getElementById("riskPct").value/100;
+    const atrLen=+document.getElementById("atrLen").value;
+    const atrMin=+document.getElementById("atrMin").value;
+    const rvolMin=+document.getElementById("rvolMin").value;
+    const vwapMax=+document.getElementById("vwapMax").value;
+    const wallMin=+document.getElementById("wallMin").value;
+    const runnerR=+document.getElementById("runnerR").value;
+    const userTargetR=+document.getElementById("profitTargetR").value||hunt.targetR;
+    const minWRProfile=+document.getElementById("minWRProfile").value||hunt.wrMin;
+    const minPersist=+document.getElementById("minPersistence").value+personality.persistAdj+hunt.minPersistAdj;
+    const maxTrap=+document.getElementById("maxTrap").value+personality.trapAdj+hunt.maxTrapAdj;
+    const minRS=+document.getElementById("minRS").value+personality.rsAdj+hunt.minRSAdj;
+    const minConfirm=+document.getElementById("minConfirm").value+personality.confirmAdj+hunt.minConfirmAdj;
+    const htfOn=document.getElementById("htfFilter").value==="on";
+
+    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),htfEma=emaSeries(data,55),vwap=vwapSeries(data);
+    const rvolArr=data.map((b,i)=>b.volume/(sma(data,i,30,"volume")||b.volume));
+    let equity=capital0,trades=[],equityCurve=[capital0],open=null;
+
+    for(let i=65;i<data.length;i++){
+      const bar=data[i],avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],emaSlope=ema13[i]-ema13[i-5],impulse=(bar.close-bar.open)/(atr[i]||1),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+      const swingH=rollingHigh(data,i,55),swingL=rollingLow(data,i,55),range=swingH-swingL||1;
+      const fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618;
+      const longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":null;
+      const wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236;
+      const wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0;
+      const wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+      const persist=dir?calcPersistence(data,i,ema13,ema34,vwap,atr,dir):0;
+      const confirm=dir?calcConfirmation(data,i,ema13,ema34,vwap,atr,dir):0;
+      const trap=dir?calcTrap(data,i,atr,rvolArr,vwap,wallRisk,dir):100;
+      const rs=rsScore(data,i,bench);
+      const failed=dir?failedExpansion(data,i,atr,rvolArr,vwap,dir):true;
+      const regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct:range/bar.close,persist,trap,confirm});
+      const marketOK=dir?marketAlignmentOK(dir,rs,bench):false;
+      const wrProfile=calcWRProfile({persist,confirm,trap,rs,runwayScore,wallRisk,regime,marketOK});
+      const matrix=calcPersonalityMatrix({atrExp,rvol,impulse,persist,confirm,trap,rs,runwayScore,wallRisk,regime});
+      const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,Math.abs(impulse)/1.2*20)+Math.max(0,20-vwDist/vwapMax*20);
+      const structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(bar.close>fib382&&bar.close<ext127?10:0)+(wallDist>wallMin?12:0);
+      const intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+      const baseScore=Math.round(flow*.42+structure*.30+intel*.28);
+      const prelimMode=participationMode(baseScore,runwayScore,wallRisk,regime,persist,trap,rs,confirm);
+      let totalScore=calcV22TotalScore(baseScore,wrProfile,hunt,prelimMode);
+      totalScore=v23ScoreBoost(totalScore,matrix);
+      const modeNow=v23ParticipationMode(totalScore,Math.max(wrProfile,minWRProfile),runwayScore,wallRisk,regime,persist,trap,rs,confirm,hunt,matrix);
+
+      if(open){
+        const dm=open.dir==="LONG"?1:-1,rNow=((bar.close-open.entry)*dm)/open.risk;
+        let exitReason=null;
+        const adaptive=document.getElementById("adaptiveExit")&&document.getElementById("adaptiveExit").value==="on";
+        const targetR=document.getElementById("runnerBoost")&&document.getElementById("runnerBoost").value==="on"?userTargetR:2.45;
+        if(rNow<=-1)exitReason="STOP";
+        if(rNow>=runnerR&&!open.be){open.be=true;open.stop=open.entry;}
+        if(open.be&&rNow<.05)exitReason="BE";
+        if(adaptive&&trap>78&&rNow>.10)exitReason="GTFO TRAP";
+        if(adaptive&&confirm<34&&rNow>.10)exitReason="CONFIRM FAIL";
+        if(adaptive&&persist<38&&rNow>.20)exitReason="PERSIST FADE";
+        if(wallRisk>85&&rNow>.45)exitReason="WALL TAKE";
+        if(i-open.i>40&&rNow<.30)exitReason="TIME EXIT";
+        if(rNow>=targetR)exitReason="PROFIT HUNT TAKE";
+        if(exitReason){
+          let pl=rNow*open.risk*open.size;
+          if(document.getElementById("runnerBoost")&&document.getElementById("runnerBoost").value==="on"&&rNow>1.7&&open.wrProfile>=68){pl*=1.18;}
+          equity+=pl;
+          trades.push({...open,exit:bar.close,exitTime:bar.time,r:rNow,pl,exitReason});
+          open=null;
+          equityCurve.push(equity);
+        }
+      }
+
+      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax&&inTradingSession(bar)){
+        if(!dir)continue;
+        if(htfOn&&dir==="LONG"&&!(bar.close>htfEma[i]&&htfEma[i]>htfEma[i-5]))continue;
+        if(htfOn&&dir==="SHORT"&&!(bar.close<htfEma[i]&&htfEma[i]<htfEma[i-5]))continue;
+        if(!marketOK)continue;
+        if(wrProfile<minWRProfile)continue;
+        if(persist<minPersist||confirm<minConfirm||trap>maxTrap||rs<minRS||failed)continue;
+        const scoutRisk=document.getElementById("safeScout").value==="on"?hunt.scoutRisk:.55;
+        const modeRisk=modeNow==="AGGRESSIVE"?1.35:modeNow==="STANDARD"?hunt.standardRisk:modeNow==="RUNNER"?hunt.runnerRisk:scoutRisk;
+        const dollarsRisk=equity*riskPct*modeRisk;
+        const riskPerShare=atr[i]*(modeNow==="SCOUT"?.90:1.05);
+        const size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));
+        open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,persist,trap,rs,confirm,wrProfile,personality:matrix.dominant,
+          why:`V23 ${matrix.dominant} + ${matrix.support}; Conf ${matrix.confidence}; WRProfile ${wrProfile}; Score ${totalScore}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}`};
+      }
+    }
+
+    const rep=makeReport(ticker,trades,equityCurve,capital0,equity,data.length,"V23",personality.name);
+    ledger.push(rep);saveLedger();renderLedger();renderDetail(rep);renderAccount();
+    setStatus("backtestStatus",`V23 backtest added: ${ticker}. Trades: ${trades.length}. Net P/L: $${rep.net.toFixed(2)}. WR: ${(rep.wr*100).toFixed(1)}%`,"good");
+    showTab("report");
+  }catch(err){setStatus("backtestStatus",`Backtest failed.\n\n${err.message}`,"bad");}
+}
+
+function analyzeLatest(ticker,bars,bench=[]){
+  if(bars.length<90)return{ticker,score:0,tier:"D",dir:"BALANCE",regime:"NO DATA",confirm:0,persist:0,trap:100,rs:0,personality:"NONE",confidence:0};
+  const atr=atrSeries(bars,14),ema13=emaSeries(bars,13),ema34=emaSeries(bars,34),vwap=vwapSeries(bars),rvolArr=bars.map((b,i)=>b.volume/(sma(bars,i,30,"volume")||b.volume));
+  let best=null;
+  for(let i=Math.max(65,bars.length-20);i<bars.length;i++){
+    const bar=bars[i],longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":"BALANCE"; if(dir==="BALANCE")continue;
+    const swingH=rollingHigh(bars,i,55),swingL=rollingLow(bars,i,55),range=swingH-swingL||1,fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618,wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236,wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0,wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+    const persist=calcPersistence(bars,i,ema13,ema34,vwap,atr,dir),confirm=calcConfirmation(bars,i,ema13,ema34,vwap,atr,dir),trap=calcTrap(bars,i,atr,rvolArr,vwap,wallRisk,dir),rs=rsScore(bars,i,bench),avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],impulse=Math.abs((bar.close-bar.open)/(atr[i]||1)),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+    const regime=trap>72?"TRAP":confirm<45&&atrExp>1.1?"FAILED":atrExp>1.25&&rvol>1.6&&persist>58&&confirm>58?"EXPANSION":persist>50&&confirm>50?"TREND":"MIXED";
+    const marketOK=marketAlignmentOK(dir,rs,bench);
+    const wrProfile=calcWRProfile({persist,confirm,trap,rs,runwayScore,wallRisk,regime,marketOK});
+    const matrix=calcPersonalityMatrix({atrExp,rvol,impulse,persist,confirm,trap,rs,runwayScore,wallRisk,regime});
+    const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,impulse/1.2*20)+Math.max(0,20-vwDist/2.4*20),structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(wallDist>.75?12:0),intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+    let score=Math.round((flow*.42+structure*.30+intel*.28)*.55+wrProfile*.25+matrix.confidence*.20);
+    if(failedExpansion(bars,i,atr,rvolArr,vwap,dir))score-=12;
+    if(!v23ConflictOK(matrix))score-=18;
+    const cand={ticker,score:clamp(score),dir,regime,confirm:Math.round(confirm),persist:Math.round(persist),trap:Math.round(trap),rs:Math.round(rs),personality:matrix.dominant,confidence:matrix.confidence};
+    if(!best||cand.score>best.score)best=cand;
+  }
+  if(!best)best={ticker,score:0,dir:"BALANCE",regime:"NO SETUP",confirm:0,persist:0,trap:100,rs:0,personality:"NONE",confidence:0};
+  best.tier=best.score>=82?"S":best.score>=72?"A":best.score>=62?"B":best.score>=52?"C":"D";return best;
+}
+
+function renderScanner(results,fromCache=false){
+  document.getElementById("scannerLog").innerHTML=results.map((r,i)=>`
+    <tr class="clickable" onclick="selectTicker('${r.ticker}')">
+      <td>${i+1}</td><td><b>${r.ticker}</b></td><td>${pill(r.tier)}</td><td>${pill(r.dir)}</td><td>${r.score}</td>
+      <td>${personalityPill(r.personality)}</td><td>${r.confidence||0}</td><td>${pill(r.regime)}</td><td>${r.trap}</td><td>${r.rs}</td>
+    </tr>`).join("");
+  if(fromCache&&results.length)setStatus("scannerStatus","Loaded cached scanner list.","good");
 }
 
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
