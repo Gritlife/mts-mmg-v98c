@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V21 — Universe Scanner + Report Ledger + Account Summary</title>
+<title>MMG V21C — Correct P&L + Accept/Reject Account Logic</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -44,7 +44,7 @@ button.danger{background:linear-gradient(135deg,#ff5c5c,#ff9f43)}
 .bad{border-color:rgba(255,92,92,.7);color:#ffd0d0}
 .warn{border-color:rgba(241,196,15,.7);color:#fff0b3}
 .note{color:var(--muted);font-size:12px;line-height:1.45;margin-top:10px}
-canvas{width:100%;height:310px;background:#071018;border:1px solid var(--line);border-radius:12px}
+canvas{width:100%;height:240px;background:#071018;border:1px solid var(--line);border-radius:12px}
 .tablewrap{max-height:620px;overflow:auto;border:1px solid var(--line);border-radius:12px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
@@ -72,9 +72,9 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V21 — Scanner + Backtest + Report Ledger + Account</h1>
+  <h1>MMG V21C — Correct P&L + Accept / Reject Account</h1>
   <div class="sub">
-    V21 adds universe selection, report ledger, and account summary. Backtests append one ticker per row to the report list.
+    V21C fixes equity curve math and separates backtest P/L from account P/L. Only Accepted rows affect account balance.
   </div>
 </header>
 
@@ -241,7 +241,7 @@ tr.clickable:hover{background:#182637}
       <table class="ledgerTable">
         <thead>
           <tr>
-            <th>#</th><th>Ticker</th><th>P/L</th><th>PF</th><th>WR</th><th>Trades</th><th>DD</th><th class="compactHide">Exp</th><th class="compactHide">Engine</th><th class="compactHide">Date</th>
+            <th>#</th><th>Ticker</th><th>P/L</th><th>PF</th><th>WR</th><th>Trades</th><th>Status</th><th class="compactHide">DD</th><th class="compactHide">Act</th>
           </tr>
         </thead>
         <tbody id="reportLedger"></tbody>
@@ -251,18 +251,18 @@ tr.clickable:hover{background:#182637}
       <button class="secondary" onclick="showTab('backtest')">Backtest More</button>
       <button class="danger" onclick="clearLedger()">Clear Report</button>
     </div>
-    <div class="note">Each backtest adds one row. This list is saved in your browser storage.</div>
+    <div class="note">Each backtest adds one row. Account P/L only counts rows marked ACCEPT.</div>
   </div>
 
   <div class="card">
     <h2>Selected / Latest Detail</h2>
-    <div class="grid">
+    <div class="grid4">
       <div class="metric"><div class="k">Ticker</div><div class="v" id="detailTicker">—</div></div>
       <div class="metric"><div class="k">Net P/L</div><div class="v" id="detailNet">—</div></div>
       <div class="metric"><div class="k">Win Rate</div><div class="v" id="detailWR">—</div></div>
-      <div class="metric"><div class="k">Profit Factor</div><div class="v" id="detailPF">—</div></div>
+      <div class="metric"><div class="k">PF</div><div class="v" id="detailPF">—</div></div>
     </div>
-    <canvas id="chart" width="1000" height="310"></canvas>
+    <canvas id="chart" width="1000" height="240"></canvas>
   </div>
 
   <div class="card">
@@ -469,7 +469,7 @@ async function runBacktest(){
   }catch(err){setStatus("backtestStatus",`Backtest failed.\n\n${err.message}`,"bad")}
 }
 function makeReport(ticker,trades,equityCurve,capital0,equity,bars,engine,personality){
-  const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0),grossWin=wins.reduce((s,t)=>s+t.pl,0),grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0)),pf=grossLoss?grossWin/grossLoss:grossWin?99:0,net=equity-capital0,avgWin=wins.length?grossWin/wins.length:0,avgLoss=losses.length?grossLoss/losses.length:0,wr=trades.length?wins.length/trades.length:0,expectancy=trades.length?(wr*avgWin-(1-wr)*avgLoss):0;let peak=capital0,maxDD=0;for(const e of equityCurve){peak=Math.max(peak,e);maxDD=Math.max(maxDD,peak-e)}let streak=0,maxStreak=0;for(const t of trades){if(t.pl<0){streak++;maxStreak=Math.max(maxStreak,streak)}else streak=0}return{id:Date.now(),date:new Date().toLocaleString(),ticker,net,wr,pf,tradesCount:trades.length,avgWin,avgLoss,expectancy,maxDD,maxStreak,bars,engine:engine.toUpperCase(),personality,equityCurve,trades}}
+  const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0),grossWin=wins.reduce((s,t)=>s+t.pl,0),grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0)),pf=grossLoss?grossWin/grossLoss:grossWin?99:0,net=equity-capital0,avgWin=wins.length?grossWin/wins.length:0,avgLoss=losses.length?grossLoss/losses.length:0,wr=trades.length?wins.length/trades.length:0,expectancy=trades.length?(wr*avgWin-(1-wr)*avgLoss):0;let peak=capital0,maxDD=0;for(const e of equityCurve){peak=Math.max(peak,e);maxDD=Math.max(maxDD,peak-e)}let streak=0,maxStreak=0;for(const t of trades){if(t.pl<0){streak++;maxStreak=Math.max(maxStreak,streak)}else streak=0}return{id:Date.now(),date:new Date().toLocaleString(),ticker,net,wr,pf,tradesCount:trades.length,avgWin,avgLoss,expectancy,maxDD,maxStreak,bars,engine:engine.toUpperCase(),personality,status:'TEST',equityCurve,trades}}
 function loadLedger(){try{ledger=JSON.parse(localStorage.getItem("mmg_v21_ledger")||"[]")}catch(e){ledger=[]}renderLedger()}
 function saveLedger(){localStorage.setItem("mmg_v21_ledger",JSON.stringify(ledger))}
 function clearLedger(){ledger=[];saveLedger();renderLedger();renderDetail(null);renderAccount()}
@@ -479,6 +479,147 @@ function renderDetail(rep){if(!rep){["detailTicker","detailNet","detailWR","deta
 function drawChart(points){const c=document.getElementById("chart"),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);ctx.strokeStyle="#294055";ctx.lineWidth=1;for(let x=0;x<c.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke()}for(let y=0;y<c.height;y+=55){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke()}if(!points||points.length<2)return;const min=Math.min(...points),max=Math.max(...points),pad=(max-min)*.1||1;ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();points.forEach((p,i)=>{const x=i/(points.length-1)*c.width,y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.stroke();ctx.fillStyle="#edf4fb";ctx.font="14px Arial";ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24)}
 function saveAccountStart(){localStorage.setItem("mmg_v21_account_start",document.getElementById("accountStart").value)}
 function renderAccount(){const start=+document.getElementById("accountStart").value||10000,totalPL=ledger.reduce((s,r)=>s+r.net,0),bal=start+totalPL,runs=ledger.length,totalTrades=ledger.reduce((s,r)=>s+r.tradesCount,0),winningRuns=ledger.filter(r=>r.net>0).length,worstDD=ledger.reduce((m,r)=>Math.max(m,r.maxDD),0);document.getElementById("acctStart").textContent=`$${start.toFixed(2)}`;document.getElementById("acctBalance").textContent=`$${bal.toFixed(2)}`;document.getElementById("acctPL").textContent=`$${totalPL.toFixed(2)}`;document.getElementById("acctReturn").textContent=`${(totalPL/start*100).toFixed(2)}%`;document.getElementById("acctRuns").textContent=runs;document.getElementById("acctTrades").textContent=totalTrades;document.getElementById("acctWR").textContent=runs?`${(winningRuns/runs*100).toFixed(1)}%`:"0%";document.getElementById("acctDD").textContent=`$${worstDD.toFixed(2)}`}
+
+/* ===== V21C PATCH: Correct P&L, compact ledger, Accept/Reject account logic ===== */
+
+function statusPill(status){
+  if(status==="ACCEPTED") return pill("S").replace(">S<",">ACCEPT<");
+  if(status==="REJECTED") return pill("D").replace(">D<",">REJECT<");
+  return pill("C").replace(">C<",">TEST<");
+}
+
+function setLedgerStatus(id,status){
+  const r=ledger.find(x=>x.id===id);
+  if(!r)return;
+  r.status=status;
+  saveLedger();
+  renderLedger();
+  renderDetail(r);
+  renderAccount();
+}
+
+function deleteLedgerRow(id){
+  ledger=ledger.filter(x=>x.id!==id);
+  saveLedger();
+  renderLedger();
+  renderDetail(ledger.length?ledger[ledger.length-1]:null);
+  renderAccount();
+}
+
+function renderLedger(){
+  document.getElementById("reportLedger").innerHTML=ledger.map((r,i)=>`
+    <tr class="clickable" onclick="renderDetailById(${r.id})">
+      <td>${i+1}</td>
+      <td><b>${r.ticker}</b></td>
+      <td style="color:${r.net>=0?'var(--green)':'var(--red)'}">$${r.net.toFixed(2)}</td>
+      <td>${r.pf.toFixed(2)}</td>
+      <td>${(r.wr*100).toFixed(0)}%</td>
+      <td>${r.tradesCount}</td>
+      <td>${statusPill(r.status||"TEST")}</td>
+      <td class="compactHide">$${r.maxDD.toFixed(0)}</td>
+      <td class="compactHide">
+        <button class="secondary" style="padding:5px;margin:0;width:auto" onclick="event.stopPropagation();setLedgerStatus(${r.id},'ACCEPTED')">A</button>
+        <button class="secondary" style="padding:5px;margin:0;width:auto" onclick="event.stopPropagation();setLedgerStatus(${r.id},'REJECTED')">R</button>
+        <button class="danger" style="padding:5px;margin:0;width:auto" onclick="event.stopPropagation();deleteLedgerRow(${r.id})">X</button>
+      </td>
+    </tr>`).join("");
+}
+
+function makeReport(ticker,trades,equityCurve,capital0,equity,bars,engine,personality){
+  const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0);
+  const grossWin=wins.reduce((s,t)=>s+t.pl,0);
+  const grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0));
+  const pf=grossLoss?grossWin/grossLoss:grossWin?99:0;
+  const net=equity-capital0;
+  const avgWin=wins.length?grossWin/wins.length:0;
+  const avgLoss=losses.length?grossLoss/losses.length:0;
+  const wr=trades.length?wins.length/trades.length:0;
+  const expectancy=trades.length?(wr*avgWin-(1-wr)*avgLoss):0;
+
+  // Correct cumulative equity curve from actual trade P/L only.
+  let correctCurve=[capital0];
+  let running=capital0;
+  for(const t of trades){
+    running += t.pl;
+    correctCurve.push(running);
+  }
+  if(!trades.length) correctCurve=[capital0,capital0];
+
+  let peak=capital0,maxDD=0;
+  for(const e of correctCurve){peak=Math.max(peak,e);maxDD=Math.max(maxDD,peak-e)}
+
+  let streak=0,maxStreak=0;
+  for(const t of trades){if(t.pl<0){streak++;maxStreak=Math.max(maxStreak,streak)}else streak=0}
+
+  return {
+    id:Date.now()+Math.floor(Math.random()*10000),
+    date:new Date().toLocaleString(),
+    ticker,net,wr,pf,tradesCount:trades.length,avgWin,avgLoss,expectancy,maxDD,maxStreak,bars,
+    engine:engine.toUpperCase(),personality,status:"TEST",equityCurve:correctCurve,trades
+  };
+}
+
+function renderDetail(rep){
+  if(!rep){
+    ["detailTicker","detailNet","detailWR","detailPF"].forEach(id=>document.getElementById(id).textContent="—");
+    document.getElementById("tradeLog").innerHTML="";
+    drawChart([0,0]);
+    return;
+  }
+  document.getElementById("detailTicker").textContent=rep.ticker;
+  document.getElementById("detailNet").textContent=`$${rep.net.toFixed(2)}`;
+  document.getElementById("detailWR").textContent=`${(rep.wr*100).toFixed(1)}%`;
+  document.getElementById("detailPF").textContent=rep.pf.toFixed(2);
+  document.getElementById("tradeLog").innerHTML=rep.trades.map((t,i)=>`
+    <tr>
+      <td>${i+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td>
+      <td>${t.r.toFixed(2)}</td>
+      <td style="color:${t.pl>=0?'var(--green)':'var(--red)'}">$${t.pl.toFixed(2)}</td>
+      <td>${t.exitReason} | ${t.why}</td>
+    </tr>`).join("");
+  drawChart(rep.equityCurve);
+}
+
+function renderAccount(){
+  const start=+document.getElementById("accountStart").value||10000;
+  const accepted=ledger.filter(r=>(r.status||"TEST")==="ACCEPTED");
+  const totalPL=accepted.reduce((s,r)=>s+r.net,0);
+  const bal=start+totalPL;
+  const runs=accepted.length;
+  const totalTrades=accepted.reduce((s,r)=>s+r.tradesCount,0);
+  const winningRuns=accepted.filter(r=>r.net>0).length;
+  const worstDD=accepted.reduce((m,r)=>Math.max(m,r.maxDD),0);
+
+  document.getElementById("acctStart").textContent=`$${start.toFixed(2)}`;
+  document.getElementById("acctBalance").textContent=`$${bal.toFixed(2)}`;
+  document.getElementById("acctPL").textContent=`$${totalPL.toFixed(2)}`;
+  document.getElementById("acctReturn").textContent=`${(totalPL/start*100).toFixed(2)}%`;
+  document.getElementById("acctRuns").textContent=runs;
+  document.getElementById("acctTrades").textContent=totalTrades;
+  document.getElementById("acctWR").textContent=runs?`${(winningRuns/runs*100).toFixed(1)}%`:"0%";
+  document.getElementById("acctDD").textContent=`$${worstDD.toFixed(2)}`;
+}
+
+function drawChart(points){
+  const c=document.getElementById("chart"),ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle="#294055";ctx.lineWidth=1;
+  for(let x=0;x<c.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke()}
+  for(let y=0;y<c.height;y+=55){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke()}
+  if(!points||points.length<2)return;
+  const min=Math.min(...points),max=Math.max(...points);
+  const pad=Math.max((max-min)*.15, Math.max(10, Math.abs(points[0])*0.005));
+  ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();
+  points.forEach((p,i)=>{
+    const x=i/(points.length-1)*c.width;
+    const y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)
+  });
+  ctx.stroke();
+  ctx.fillStyle="#edf4fb";ctx.font="14px Arial";
+  ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24)
+}
+
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
 </script>
 </body>
