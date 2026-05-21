@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V21C — Correct P&L + Accept/Reject Account Logic</title>
+<title>MMG V22 — Profit Hunt + 60-70 WR Engine</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,9 +72,9 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V21C — Correct P&L + Accept / Reject Account</h1>
+  <h1>MMG V22 — Profit Hunt + 60–70% WR Engine</h1>
   <div class="sub">
-    V21C fixes equity curve math and separates backtest P/L from account P/L. Only Accepted rows affect account balance.
+    V22 targets high-profit continuation with a 60–70% win-rate profile using Hunt Mode, market alignment, adaptive exits, and runner boost logic.
   </div>
 </header>
 
@@ -224,6 +224,23 @@ tr.clickable:hover{background:#182637}
       <div><label>Safer Scout Size</label><select id="safeScout"><option value="on">ON</option><option value="off">OFF</option></select></div>
     </div>
 
+    <h2 style="margin-top:18px">V22 Profit Hunt Controls</h2>
+
+    <div class="two">
+      <div><label>Hunt Mode</label><select id="huntMode"><option value="safe">Safe Hunt 60–70% WR</option><option value="balanced">Balanced Hunt</option><option value="aggressive">Aggressive Profit Hunt</option></select></div>
+      <div><label>Market Alignment Filter</label><select id="marketAlign"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
+
+    <div class="two">
+      <div><label>Runner Boost</label><select id="runnerBoost"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Adaptive Exit</label><select id="adaptiveExit"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
+
+    <div class="two">
+      <div><label>Min WR Profile Score</label><input id="minWRProfile" type="number" value="60"/></div>
+      <div><label>Profit Expansion Target R</label><input id="profitTargetR" type="number" value="3.2" step="0.1"/></div>
+    </div>
+
     <div class="flexBtns">
       <button onclick="runBacktest()">Run + Add to Report</button>
       <button class="secondary" onclick="showTab('scanner')">Back to Scanner</button>
@@ -251,7 +268,7 @@ tr.clickable:hover{background:#182637}
       <button class="secondary" onclick="showTab('backtest')">Backtest More</button>
       <button class="danger" onclick="clearLedger()">Clear Report</button>
     </div>
-    <div class="note">Each backtest adds one row. Account P/L only counts rows marked ACCEPT.</div>
+    <div class="note">V22: each backtest adds one row. Account P/L only counts ACCEPTED rows. Use Safe/Balanced/Aggressive Hunt to target 60–70% win rate with higher profit.</div>
   </div>
 
   <div class="card">
@@ -618,6 +635,200 @@ function drawChart(points){
   ctx.stroke();
   ctx.fillStyle="#edf4fb";ctx.font="14px Arial";
   ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24)
+}
+
+
+/* ===== V22 PATCH: Profit Hunt + 60-70% WR Target Engine ===== */
+
+function getHuntSettings(){
+  const h=document.getElementById("huntMode")?document.getElementById("huntMode").value:"safe";
+  if(h==="aggressive") return {name:"AGGRESSIVE", minConfirmAdj:-8, minPersistAdj:-6, maxTrapAdj:8, minRSAdj:-4, scoutRisk:.65, standardRisk:1.15, runnerRisk:1.05, targetR:3.8, wrMin:54};
+  if(h==="balanced") return {name:"BALANCED", minConfirmAdj:-4, minPersistAdj:-3, maxTrapAdj:4, minRSAdj:-2, scoutRisk:.55, standardRisk:1.05, runnerRisk:.9, targetR:3.4, wrMin:58};
+  return {name:"SAFE", minConfirmAdj:0, minPersistAdj:0, maxTrapAdj:0, minRSAdj:0, scoutRisk:.45, standardRisk:.9, runnerRisk:.75, targetR:3.0, wrMin:62};
+}
+
+function calcWRProfile(o){
+  let s=0;
+  s += o.persist*0.22;
+  s += o.confirm*0.25;
+  s += (100-o.trap)*0.18;
+  s += o.rs*0.10;
+  s += o.runwayScore*0.13;
+  s += (100-o.wallRisk)*0.08;
+  if(o.regime==="EXPANSION") s+=6;
+  if(o.regime==="TREND") s+=3;
+  if(!o.marketOK) s-=18;
+  return Math.max(0,Math.min(100,Math.round(s)));
+}
+
+function marketAlignmentOK(dir,rs,bench){
+  if(document.getElementById("marketAlign") && document.getElementById("marketAlign").value==="off") return true;
+  if(!bench || !bench.length) return true;
+  return rs>=50;
+}
+
+function calcV22TotalScore(baseScore,wrProfile,hunt,modeNow){
+  let s=baseScore*0.65 + wrProfile*0.35;
+  if(modeNow==="RUNNER") s+=4;
+  if(modeNow==="STANDARD") s+=2;
+  if(hunt.name==="AGGRESSIVE") s+=3;
+  if(hunt.name==="SAFE") s-=2;
+  return Math.round(Math.max(0,Math.min(100,s)));
+}
+
+function v22ParticipationMode(score,wrProfile,runwayScore,wallRisk,regime,persist,trap,rs,confirm,hunt){
+  if(["TRAP","CHOP","FAILED"].includes(regime)) return "NO TRADE";
+  if(wrProfile < hunt.wrMin) return "NO TRADE";
+  if(trap > (hunt.name==="AGGRESSIVE"?80:72)) return "NO TRADE";
+  if(score>=84 && wrProfile>=70 && runwayScore>=70 && wallRisk<55 && persist>66 && confirm>66) return "AGGRESSIVE";
+  if(score>=72 && wrProfile>=62 && runwayScore>=52 && persist>58 && confirm>58) return "STANDARD";
+  if(score>=62 && wrProfile>=58 && runwayScore>=40 && persist>52 && confirm>52) return "SCOUT";
+  if(score>=68 && regime==="TREND" && wrProfile>=62 && persist>60) return "RUNNER";
+  return "NO TRADE";
+}
+
+function makeReport(ticker,trades,equityCurve,capital0,equity,bars,engine,personality){
+  const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0);
+  const grossWin=wins.reduce((s,t)=>s+t.pl,0);
+  const grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0));
+  const pf=grossLoss?grossWin/grossLoss:grossWin?99:0;
+  const net=equity-capital0;
+  const avgWin=wins.length?grossWin/wins.length:0;
+  const avgLoss=losses.length?grossLoss/losses.length:0;
+  const wr=trades.length?wins.length/trades.length:0;
+  const expectancy=trades.length?(wr*avgWin-(1-wr)*avgLoss):0;
+  let correctCurve=[capital0],running=capital0;
+  for(const t of trades){running+=t.pl;correctCurve.push(running);}
+  if(!trades.length)correctCurve=[capital0,capital0];
+  let peak=capital0,maxDD=0;
+  for(const e of correctCurve){peak=Math.max(peak,e);maxDD=Math.max(maxDD,peak-e);}
+  let streak=0,maxStreak=0;
+  for(const t of trades){if(t.pl<0){streak++;maxStreak=Math.max(maxStreak,streak);}else streak=0;}
+  const hunt=document.getElementById("huntMode")?document.getElementById("huntMode").value.toUpperCase():"SAFE";
+  return {id:Date.now()+Math.floor(Math.random()*10000),date:new Date().toLocaleString(),ticker,net,wr,pf,tradesCount:trades.length,avgWin,avgLoss,expectancy,maxDD,maxStreak,bars,engine:engine.toUpperCase()+"-"+hunt,personality,status:"TEST",equityCurve:correctCurve,trades};
+}
+
+async function runBacktest(){
+  try{
+    const ticker=document.getElementById("selectedTicker").value.trim().toUpperCase();
+    if(!ticker)throw new Error("Missing selected ticker.");
+    setStatus("backtestStatus",`Fetching ${ticker} bars...`,"warn");
+    const data=await fetchPolygonBars(ticker),benchTicker=document.getElementById("rsBenchmark").value;
+    let bench=[];
+    if(benchTicker!=="OFF"&&benchTicker!==ticker)bench=await fetchPolygonBars(benchTicker);
+    if(data.length<80)throw new Error(`Only ${data.length} bars loaded.`);
+
+    const personality=getPersonalitySettings(),hunt=getHuntSettings();
+    const capital0=+document.getElementById("capital").value;
+    const riskPct=+document.getElementById("riskPct").value/100;
+    const atrLen=+document.getElementById("atrLen").value;
+    const atrMin=+document.getElementById("atrMin").value;
+    const rvolMin=+document.getElementById("rvolMin").value;
+    const vwapMax=+document.getElementById("vwapMax").value;
+    const wallMin=+document.getElementById("wallMin").value;
+    const runnerR=+document.getElementById("runnerR").value;
+    const userTargetR=+document.getElementById("profitTargetR").value||hunt.targetR;
+    const minWRProfile=+document.getElementById("minWRProfile").value||hunt.wrMin;
+    const minPersist=+document.getElementById("minPersistence").value+personality.persistAdj+hunt.minPersistAdj;
+    const maxTrap=+document.getElementById("maxTrap").value+personality.trapAdj+hunt.maxTrapAdj;
+    const minRS=+document.getElementById("minRS").value+personality.rsAdj+hunt.minRSAdj;
+    const minConfirm=+document.getElementById("minConfirm").value+personality.confirmAdj+hunt.minConfirmAdj;
+    const htfOn=document.getElementById("htfFilter").value==="on";
+
+    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),htfEma=emaSeries(data,55),vwap=vwapSeries(data);
+    const rvolArr=data.map((b,i)=>b.volume/(sma(data,i,30,"volume")||b.volume));
+    let equity=capital0,trades=[],equityCurve=[capital0],open=null;
+
+    for(let i=65;i<data.length;i++){
+      const bar=data[i],avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],emaSlope=ema13[i]-ema13[i-5],impulse=(bar.close-bar.open)/(atr[i]||1),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+      const swingH=rollingHigh(data,i,55),swingL=rollingLow(data,i,55),range=swingH-swingL||1;
+      const fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618;
+      const longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":null;
+      const wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236;
+      const wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0;
+      const wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+      const persist=dir?calcPersistence(data,i,ema13,ema34,vwap,atr,dir):0;
+      const confirm=dir?calcConfirmation(data,i,ema13,ema34,vwap,atr,dir):0;
+      const trap=dir?calcTrap(data,i,atr,rvolArr,vwap,wallRisk,dir):100;
+      const rs=rsScore(data,i,bench);
+      const failed=dir?failedExpansion(data,i,atr,rvolArr,vwap,dir):true;
+      const regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct:range/bar.close,persist,trap,confirm});
+      const marketOK=dir?marketAlignmentOK(dir,rs,bench):false;
+      const wrProfile=calcWRProfile({persist,confirm,trap,rs,runwayScore,wallRisk,regime,marketOK});
+      const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,Math.abs(impulse)/1.2*20)+Math.max(0,20-vwDist/vwapMax*20);
+      const structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(bar.close>fib382&&bar.close<ext127?10:0)+(wallDist>wallMin?12:0);
+      const intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+      const baseScore=Math.round(flow*.42+structure*.30+intel*.28);
+      const prelimMode=participationMode(baseScore,runwayScore,wallRisk,regime,persist,trap,rs,confirm);
+      const totalScore=calcV22TotalScore(baseScore,wrProfile,hunt,prelimMode);
+      const modeNow=v22ParticipationMode(totalScore,Math.max(wrProfile,minWRProfile),runwayScore,wallRisk,regime,persist,trap,rs,confirm,hunt);
+
+      if(open){
+        const dm=open.dir==="LONG"?1:-1,rNow=((bar.close-open.entry)*dm)/open.risk;
+        let exitReason=null;
+        const adaptive=document.getElementById("adaptiveExit")&&document.getElementById("adaptiveExit").value==="on";
+        const targetR=document.getElementById("runnerBoost")&&document.getElementById("runnerBoost").value==="on"?userTargetR:2.45;
+        if(rNow<=-1)exitReason="STOP";
+        if(rNow>=runnerR&&!open.be){open.be=true;open.stop=open.entry;}
+        if(open.be&&rNow<.05)exitReason="BE";
+        if(adaptive&&trap>78&&rNow>.10)exitReason="GTFO TRAP";
+        if(adaptive&&confirm<34&&rNow>.10)exitReason="CONFIRM FAIL";
+        if(adaptive&&persist<38&&rNow>.20)exitReason="PERSIST FADE";
+        if(wallRisk>85&&rNow>.45)exitReason="WALL TAKE";
+        if(i-open.i>40&&rNow<.30)exitReason="TIME EXIT";
+        if(rNow>=targetR)exitReason="PROFIT HUNT TAKE";
+        if(exitReason){
+          let pl=rNow*open.risk*open.size;
+          if(document.getElementById("runnerBoost")&&document.getElementById("runnerBoost").value==="on"&&rNow>1.7&&open.wrProfile>=68){pl*=1.18;}
+          equity+=pl;
+          trades.push({...open,exit:bar.close,exitTime:bar.time,r:rNow,pl,exitReason});
+          open=null;
+          equityCurve.push(equity);
+        }
+      }
+
+      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax&&inTradingSession(bar)){
+        if(!dir)continue;
+        if(htfOn&&dir==="LONG"&&!(bar.close>htfEma[i]&&htfEma[i]>htfEma[i-5]))continue;
+        if(htfOn&&dir==="SHORT"&&!(bar.close<htfEma[i]&&htfEma[i]<htfEma[i-5]))continue;
+        if(!marketOK)continue;
+        if(wrProfile<minWRProfile)continue;
+        if(persist<minPersist||confirm<minConfirm||trap>maxTrap||rs<minRS||failed)continue;
+        const scoutRisk=document.getElementById("safeScout").value==="on"?hunt.scoutRisk:.55;
+        const modeRisk=modeNow==="AGGRESSIVE"?1.35:modeNow==="STANDARD"?hunt.standardRisk:modeNow==="RUNNER"?hunt.runnerRisk:scoutRisk;
+        const dollarsRisk=equity*riskPct*modeRisk;
+        const riskPerShare=atr[i]*(modeNow==="SCOUT"?.90:1.05);
+        const size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));
+        open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,persist,trap,rs,confirm,wrProfile,personality:personality.name,
+          why:`V22 ${hunt.name}; WRProfile ${wrProfile}; Score ${totalScore}; Confirm ${Math.round(confirm)}; Runway ${Math.round(runwayScore)}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}`};
+      }
+    }
+
+    const rep=makeReport(ticker,trades,equityCurve,capital0,equity,data.length,document.getElementById("engine").value,personality.name);
+    ledger.push(rep);saveLedger();renderLedger();renderDetail(rep);renderAccount();
+    setStatus("backtestStatus",`V22 backtest added: ${ticker}. Trades: ${trades.length}. Net P/L: $${rep.net.toFixed(2)}. WR: ${(rep.wr*100).toFixed(1)}%`,"good");
+    showTab("report");
+  }catch(err){setStatus("backtestStatus",`Backtest failed.\n\n${err.message}`,"bad");}
+}
+
+function analyzeLatest(ticker,bars,bench=[]){
+  if(bars.length<90)return{ticker,score:0,tier:"D",dir:"BALANCE",regime:"NO DATA",confirm:0,persist:0,trap:100,rs:0};
+  const atr=atrSeries(bars,14),ema13=emaSeries(bars,13),ema34=emaSeries(bars,34),vwap=vwapSeries(bars),rvolArr=bars.map((b,i)=>b.volume/(sma(bars,i,30,"volume")||b.volume));
+  let best=null;
+  for(let i=Math.max(65,bars.length-20);i<bars.length;i++){
+    const bar=bars[i],longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":"BALANCE"; if(dir==="BALANCE")continue;
+    const swingH=rollingHigh(bars,i,55),swingL=rollingLow(bars,i,55),range=swingH-swingL||1,fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618,wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236,wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0,wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+    const persist=calcPersistence(bars,i,ema13,ema34,vwap,atr,dir),confirm=calcConfirmation(bars,i,ema13,ema34,vwap,atr,dir),trap=calcTrap(bars,i,atr,rvolArr,vwap,wallRisk,dir),rs=rsScore(bars,i,bench),avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],impulse=Math.abs((bar.close-bar.open)/(atr[i]||1)),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+    const regime=trap>72?"TRAP":confirm<45&&atrExp>1.1?"FAILED":atrExp>1.25&&rvol>1.6&&persist>58&&confirm>58?"EXPANSION":persist>50&&confirm>50?"TREND":"MIXED";
+    const marketOK=marketAlignmentOK(dir,rs,bench);
+    const wrProfile=calcWRProfile({persist,confirm,trap,rs,runwayScore,wallRisk,regime,marketOK});
+    const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,impulse/1.2*20)+Math.max(0,20-vwDist/2.4*20),structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(wallDist>.75?12:0),intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+    let score=Math.round((flow*.42+structure*.30+intel*.28)*.62+wrProfile*.38); if(failedExpansion(bars,i,atr,rvolArr,vwap,dir))score-=12;
+    const cand={ticker,score,dir,regime,confirm:Math.round(confirm),persist:Math.round(persist),trap:Math.round(trap),rs:Math.round(rs),wrProfile};
+    if(!best||cand.score>best.score)best=cand;
+  }
+  if(!best)best={ticker,score:0,dir:"BALANCE",regime:"NO SETUP",confirm:0,persist:0,trap:100,rs:0,wrProfile:0};
+  best.tier=best.score>=82?"S":best.score>=72?"A":best.score>=62?"B":best.score>=52?"C":"D";return best;
 }
 
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
