@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V23 — Unified Multi-Personality Engine</title>
+<title>MMG V23B — Live P&L Report + Account Summary</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,9 +72,9 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V23 — Unified Multi‑Personality Engine</h1>
+  <h1>MMG V23B — Live P&L Report + Account Summary</h1>
   <div class="sub">
-    V23 runs multiple market personalities together, identifies the dominant personality, and uses alignment/conflict logic for scanning and backtesting.
+    V23B fixes live P&L accounting. Report ledger updates account summary in real time, with optional Accepted-only accounting.
   </div>
 </header>
 
@@ -265,12 +265,28 @@ tr.clickable:hover{background:#182637}
 
 <section id="report" class="tab">
   <div class="card">
-    <h2>Report Ledger</h2>
+    <h2>Live Report P&L Summary</h2>
+    <div class="grid">
+      <div class="metric"><div class="k">Starting Capital</div><div class="v" id="reportStart">—</div></div>
+      <div class="metric"><div class="k">Current Balance</div><div class="v" id="reportBalance">—</div></div>
+      <div class="metric"><div class="k">Total P/L</div><div class="v" id="reportTotalPL">—</div></div>
+      <div class="metric"><div class="k">Return %</div><div class="v" id="reportReturn">—</div></div>
+    </div>
+    <div class="grid">
+      <div class="metric"><div class="k">Backtests</div><div class="v" id="reportRuns">—</div></div>
+      <div class="metric"><div class="k">Total Trades</div><div class="v" id="reportTrades">—</div></div>
+      <div class="metric"><div class="k">Winning Rows</div><div class="v" id="reportWinRows">—</div></div>
+      <div class="metric"><div class="k">Worst DD</div><div class="v" id="reportWorstDD">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>P&L Report Ledger</h2>
     <div class="tablewrap">
       <table class="ledgerTable">
         <thead>
           <tr>
-            <th>#</th><th>Ticker</th><th>P/L</th><th>PF</th><th>WR</th><th>Trades</th><th>Status</th><th class="compactHide">DD</th><th class="compactHide">Act</th>
+            <th>#</th><th>Ticker</th><th>P/L</th><th>WR</th><th>PF</th><th>Tr</th><th>DD</th><th class="compactHide">Status</th>
           </tr>
         </thead>
         <tbody id="reportLedger"></tbody>
@@ -280,7 +296,7 @@ tr.clickable:hover{background:#182637}
       <button class="secondary" onclick="showTab('backtest')">Backtest More</button>
       <button class="danger" onclick="clearLedger()">Clear Report</button>
     </div>
-    <div class="note">V23: all personalities run together. Account P/L only counts ACCEPTED rows.</div>
+    <div class="note">V23B: Report and Account update live from the ledger. Use Account Mode to switch between All Rows and Accepted Only.</div>
   </div>
 
   <div class="card">
@@ -310,7 +326,7 @@ tr.clickable:hover{background:#182637}
     <h2>Account Summary</h2>
     <div class="two">
       <div><label>Account Starting Capital</label><input id="accountStart" type="number" value="10000" onchange="saveAccountStart(); renderAccount()"/></div>
-      <div><label>Mode</label><select id="accountMode" onchange="renderAccount()"><option value="ledger">Use Report Ledger</option><option value="manual">Manual Summary</option></select></div>
+      <div><label>Mode</label><select id="accountMode" onchange="renderAccount()"><option value="all">All Report Rows</option><option value="accepted">Accepted Only</option></select></div>
     </div>
     <div class="grid">
       <div class="metric"><div class="k">Starting Capital</div><div class="v" id="acctStart">—</div></div>
@@ -1081,6 +1097,115 @@ function renderScanner(results,fromCache=false){
       <td>${personalityPill(r.personality)}</td><td>${r.confidence||0}</td><td>${pill(r.regime)}</td><td>${r.trap}</td><td>${r.rs}</td>
     </tr>`).join("");
   if(fromCache&&results.length)setStatus("scannerStatus","Loaded cached scanner list.","good");
+}
+
+
+/* ===== V23B PATCH: Live P&L Report + Account Summary ===== */
+
+function getAccountRows(){
+  const modeEl=document.getElementById("accountMode");
+  const mode=modeEl?modeEl.value:"all";
+  if(mode==="accepted") return ledger.filter(r=>(r.status||"TEST")==="ACCEPTED");
+  return ledger;
+}
+
+function renderLedger(){
+  document.getElementById("reportLedger").innerHTML=ledger.map((r,i)=>`
+    <tr class="clickable" onclick="renderDetailById(${r.id})">
+      <td>${i+1}</td>
+      <td><b>${r.ticker}</b></td>
+      <td style="font-weight:800;color:${r.net>=0?'var(--green)':'var(--red)'}">$${r.net.toFixed(2)}</td>
+      <td>${(r.wr*100).toFixed(0)}%</td>
+      <td>${r.pf.toFixed(2)}</td>
+      <td>${r.tradesCount}</td>
+      <td>$${r.maxDD.toFixed(0)}</td>
+      <td class="compactHide">${statusPill(r.status||"TEST")}</td>
+    </tr>`).join("");
+  renderAccount();
+}
+
+function renderAccount(){
+  const start=+document.getElementById("accountStart").value||10000;
+  const rows=getAccountRows();
+  const totalPL=rows.reduce((s,r)=>s+r.net,0);
+  const bal=start+totalPL;
+  const runs=rows.length;
+  const totalTrades=rows.reduce((s,r)=>s+r.tradesCount,0);
+  const winningRows=rows.filter(r=>r.net>0).length;
+  const worstDD=rows.reduce((m,r)=>Math.max(m,r.maxDD),0);
+  const rowWR=runs?winningRows/runs:0;
+
+  // Account tab
+  if(document.getElementById("acctStart")) document.getElementById("acctStart").textContent=`$${start.toFixed(2)}`;
+  if(document.getElementById("acctBalance")) document.getElementById("acctBalance").textContent=`$${bal.toFixed(2)}`;
+  if(document.getElementById("acctPL")) document.getElementById("acctPL").textContent=`$${totalPL.toFixed(2)}`;
+  if(document.getElementById("acctReturn")) document.getElementById("acctReturn").textContent=`${(totalPL/start*100).toFixed(2)}%`;
+  if(document.getElementById("acctRuns")) document.getElementById("acctRuns").textContent=runs;
+  if(document.getElementById("acctTrades")) document.getElementById("acctTrades").textContent=totalTrades;
+  if(document.getElementById("acctWR")) document.getElementById("acctWR").textContent=`${(rowWR*100).toFixed(1)}%`;
+  if(document.getElementById("acctDD")) document.getElementById("acctDD").textContent=`$${worstDD.toFixed(2)}`;
+
+  // Report tab live summary
+  if(document.getElementById("reportStart")) document.getElementById("reportStart").textContent=`$${start.toFixed(2)}`;
+  if(document.getElementById("reportBalance")) document.getElementById("reportBalance").textContent=`$${bal.toFixed(2)}`;
+  if(document.getElementById("reportTotalPL")) document.getElementById("reportTotalPL").textContent=`$${totalPL.toFixed(2)}`;
+  if(document.getElementById("reportReturn")) document.getElementById("reportReturn").textContent=`${(totalPL/start*100).toFixed(2)}%`;
+  if(document.getElementById("reportRuns")) document.getElementById("reportRuns").textContent=runs;
+  if(document.getElementById("reportTrades")) document.getElementById("reportTrades").textContent=totalTrades;
+  if(document.getElementById("reportWinRows")) document.getElementById("reportWinRows").textContent=`${winningRows}/${runs}`;
+  if(document.getElementById("reportWorstDD")) document.getElementById("reportWorstDD").textContent=`$${worstDD.toFixed(2)}`;
+}
+
+function clearLedger(){
+  ledger=[];
+  saveLedger();
+  renderLedger();
+  renderDetail(null);
+  renderAccount();
+}
+
+function saveLedger(){
+  localStorage.setItem("mmg_v23b_ledger",JSON.stringify(ledger));
+}
+
+function loadLedger(){
+  try{
+    ledger=JSON.parse(localStorage.getItem("mmg_v23b_ledger")||localStorage.getItem("mmg_v21_ledger")||"[]");
+  }catch(e){ledger=[]}
+  renderLedger();
+}
+
+function renderDetail(rep){
+  if(!rep){
+    ["detailTicker","detailNet","detailWR","detailPF"].forEach(id=>{if(document.getElementById(id))document.getElementById(id).textContent="—"});
+    if(document.getElementById("tradeLog"))document.getElementById("tradeLog").innerHTML="";
+    drawChart([0,0]);
+    return;
+  }
+  document.getElementById("detailTicker").textContent=rep.ticker;
+  document.getElementById("detailNet").textContent=`$${rep.net.toFixed(2)}`;
+  document.getElementById("detailWR").textContent=`${(rep.wr*100).toFixed(1)}%`;
+  document.getElementById("detailPF").textContent=rep.pf.toFixed(2);
+  document.getElementById("tradeLog").innerHTML=rep.trades.map((t,i)=>`
+    <tr>
+      <td>${i+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td>
+      <td>${t.r.toFixed(2)}</td>
+      <td style="color:${t.pl>=0?'var(--green)':'var(--red)'}">$${t.pl.toFixed(2)}</td>
+      <td>${t.exitReason} | ${t.why}</td>
+    </tr>`).join("");
+  drawChart(rep.equityCurve);
+}
+
+function showTab(name){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("active"));
+  document.getElementById(name).classList.add("active");
+  const btns=[...document.querySelectorAll(".tabbtn")];
+  if(name==="scanner")btns[0].classList.add("active");
+  if(name==="backtest")btns[1].classList.add("active");
+  if(name==="report")btns[2].classList.add("active");
+  if(name==="account")btns[3].classList.add("active");
+  if(name==="account"||name==="report")renderAccount();
 }
 
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
