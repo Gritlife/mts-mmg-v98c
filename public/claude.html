@@ -1,1 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MTS V26 — Adaptive Backtest</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #050a14;
+  --bg2:    #080f1e;
+  --bg3:    #0b1526;
+  --border: #152035;
+  --glow:   #1a3055;
+  --cyan:   #00c8f0;
+  --green:  #00e87a;
+  --red:    #ff3a55;
+  --gold:   #ffcc44;
+  --purple: #9966ff;
+  --orange: #ff8800;
+  --dim:    #3a5570;
+  --mid:    #5a7898;
+  --text:   #c8dff5;
+  --mono:   'Share Tech Mono', monospace;
+  --ui:     'Rajdhani', sans-serif;
+  --head:   'Orbitron', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.hdr {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--glow);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: var(--head); font-size: 15px; font-weight: 900; color: var(--cyan); letter-spacing: 3px; text-shadow: 0 0 16px rgba(0,200,240,0.4); }
+.logo span { color: var(--dim); font-size: 11px; margin-left: 6px; }
+.hdr-badge {
+  font-family: var(--head); font-size: 8px; letter-spacing: 2px;
+  padding: 5px 10px; border-radius: 2px;
+  border: 1px solid var(--gold); color: var(--gold);
+  background: rgba(255,204,68,0.08);
+}
+
+/* ── STEP NAV ── */
+.step-nav {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.step-nav::-webkit-scrollbar { display: none; }
+.step {
+  font-family: var(--head); font-size: 8px; letter-spacing: 1.5px;
+  padding: 11px 14px; white-space: nowrap; cursor: pointer;
+  color: var(--dim); border-bottom: 2px solid transparent;
+  transition: all 0.2s; flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px;
+}
+.step .snum {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--border); color: var(--dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; flex-shrink: 0;
+}
+.step.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+.step.active .snum { background: var(--cyan); color: var(--bg); }
+.step.done { color: var(--green); }
+.step.done .snum { background: var(--green); color: var(--bg); }
+
+/* ── PAGES ── */
+.page { display: none; padding: 16px 14px 90px; }
+.page.active { display: block; animation: fin 0.22s ease; }
+@keyframes fin { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── SECTION LABEL ── */
+.slabel {
+  font-family: var(--head); font-size: 8px; letter-spacing: 3px;
+  color: var(--dim); margin: 18px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.slabel::before { content:''; width:3px; height:12px; background:var(--cyan); border-radius:1px; flex-shrink:0; }
+.slabel::after  { content:''; flex:1; height:1px; background:var(--border); }
+
+/* ── CARD ── */
+.card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 14px; margin-bottom: 12px;
+  position: relative; overflow: hidden;
+}
+.card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg,transparent,rgba(0,200,240,0.2),transparent);
+}
+.card-title {
+  font-family: var(--head); font-size: 8px; letter-spacing: 2px;
+  color: var(--mid); margin-bottom: 12px;
+}
+
+/* ── STAT ROW 2-col ── */
+.stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.sbox {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 12px 14px; position: relative; overflow: hidden;
+}
+.sbox::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; }
+.sbox.c { border-color:rgba(0,200,240,0.25); } .sbox.c::after { background:linear-gradient(90deg,transparent,var(--cyan),transparent); }
+.sbox.g { border-color:rgba(0,232,122,0.25); } .sbox.g::after { background:linear-gradient(90deg,transparent,var(--green),transparent); }
+.sbox.r { border-color:rgba(255,58,85,0.25);  } .sbox.r::after { background:linear-gradient(90deg,transparent,var(--red),transparent); }
+.sbox.o { border-color:rgba(255,204,68,0.25); } .sbox.o::after { background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+.sbox.p { border-color:rgba(153,102,255,0.25);} .sbox.p::after { background:linear-gradient(90deg,transparent,var(--purple),transparent); }
+.sbox .lbl { font-family:var(--head); font-size:7px; letter-spacing:2px; color:var(--dim); margin-bottom:5px; }
+.sbox .val { font-family:var(--mono); font-size:20px; line-height:1; }
+.sbox.c .val{color:var(--cyan);} .sbox.g .val{color:var(--green);} .sbox.r .val{color:var(--red);} .sbox.o .val{color:var(--gold);} .sbox.p .val{color:var(--purple);}
+.sbox .sub { font-size:10px; color:var(--mid); margin-top:3px; }
+
+/* ── CONTROLS ── */
+.cg { margin-bottom: 12px; }
+.ctrl-lbl { font-family:var(--head); font-size:7px; letter-spacing:2px; color:var(--dim); margin-bottom:5px; display:block; }
+.ctrl-input {
+  background:var(--bg); border:1px solid var(--border); border-radius:3px;
+  color:var(--text); padding:9px 12px; font-family:var(--mono); font-size:13px;
+  width:100%; outline:none; -webkit-appearance:none; transition:border-color 0.2s;
+}
+.ctrl-input:focus { border-color:var(--cyan); }
+.ctrl-select {
+  background:var(--bg); border:1px solid var(--border); border-radius:3px;
+  color:var(--text); padding:9px 12px; font-family:var(--ui); font-size:13px;
+  width:100%; outline:none; cursor:pointer; -webkit-appearance:none; transition:border-color 0.2s;
+}
+.ctrl-select:focus { border-color:var(--cyan); }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* ── SLIDER ── */
+.sl-wrap { display:flex; align-items:center; gap:10px; }
+.sl-input { flex:1; -webkit-appearance:none; height:3px; background:var(--border); border-radius:2px; outline:none; }
+.sl-input::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; background:var(--cyan); border-radius:50%; cursor:pointer; box-shadow:0 0 8px rgba(0,200,240,0.5); }
+.sl-val { font-family:var(--mono); font-size:13px; color:var(--cyan); min-width:32px; text-align:right; }
+
+/* ── TOGGLE GROUP ── */
+.tg { display:flex; background:var(--bg); border:1px solid var(--border); border-radius:3px; overflow:hidden; }
+.topt { flex:1; padding:8px 4px; font-family:var(--head); font-size:8px; letter-spacing:1px; text-align:center; cursor:pointer; color:var(--dim); border-right:1px solid var(--border); transition:all 0.2s; }
+.topt:last-child { border-right:none; }
+.topt.active { background:rgba(0,200,240,0.08); color:var(--cyan); }
+
+/* ── REALISM ── */
+.real-group { display:flex; gap:8px; }
+.rbadge { flex:1; text-align:center; font-family:var(--head); font-size:9px; letter-spacing:1.5px; padding:8px 4px; border-radius:3px; cursor:pointer; border:1px solid var(--border); color:var(--dim); transition:all 0.2s; }
+.rbadge.active.normal { border-color:var(--green); color:var(--green); background:rgba(0,232,122,0.08); }
+.rbadge.active.strict { border-color:var(--gold);  color:var(--gold);  background:rgba(255,204,68,0.08); }
+.rbadge.active.harsh  { border-color:var(--red);   color:var(--red);   background:rgba(255,58,85,0.08); }
+
+/* ── PERSONALITY CHECKBOXES ── */
+.ptag { display:inline-block; font-size:9px; font-weight:600; padding:2px 6px; border-radius:2px; letter-spacing:0.5px; }
+.pt-safe { background:rgba(0,200,240,0.1);   color:var(--cyan);   border:1px solid rgba(0,200,240,0.3); }
+.pt-trend{ background:rgba(0,232,122,0.1);   color:var(--green);  border:1px solid rgba(0,232,122,0.3); }
+.pt-exp  { background:rgba(255,204,68,0.1);  color:var(--gold);   border:1px solid rgba(255,204,68,0.3); }
+.pt-agg  { background:rgba(255,58,85,0.1);   color:var(--red);    border:1px solid rgba(255,58,85,0.3); }
+.pt-trap { background:rgba(153,102,255,0.1); color:var(--purple); border:1px solid rgba(153,102,255,0.3); }
+.pt-rev  { background:rgba(255,136,0,0.1);   color:var(--orange); border:1px solid rgba(255,136,0,0.3); }
+.pt-run  { background:rgba(0,160,220,0.1);   color:#44aaee;       border:1px solid rgba(0,160,220,0.3); }
+
+/* ── KILL SWITCH ── */
+.ks { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border); }
+.ks:last-child { border-bottom:none; }
+.ks-info .kn { font-family:var(--head); font-size:9px; letter-spacing:1.5px; color:var(--mid); }
+.ks-info .kv { font-family:var(--mono); font-size:12px; color:var(--red); margin-top:2px; }
+.ktog { width:38px; height:20px; background:rgba(255,58,85,0.1); border:1px solid rgba(255,58,85,0.3); border-radius:10px; cursor:pointer; position:relative; transition:background 0.2s; flex-shrink:0; }
+.ktog.on { background:rgba(255,58,85,0.2); border-color:var(--red); box-shadow:0 0 8px rgba(255,58,85,0.25); }
+.ktog::after { content:''; position:absolute; top:3px; left:3px; width:12px; height:12px; background:var(--dim); border-radius:50%; transition:all 0.2s; }
+.ktog.on::after { left:21px; background:var(--red); }
+
+/* ── PROGRESS ── */
+.prog-wrap { background:var(--border); height:5px; border-radius:3px; overflow:hidden; margin-top:5px; }
+.prog-fill  { height:100%; border-radius:3px; transition:width 0.6s; }
+
+/* ── BAR ROW ── */
+.brow { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid rgba(21,32,53,0.6); }
+.brow:last-child { border-bottom:none; }
+.brow-lbl { font-size:11px; color:var(--mid); width:100px; flex-shrink:0; }
+.brow-bar { flex:1; }
+.brow-val { font-family:var(--mono); font-size:12px; min-width:52px; text-align:right; }
+
+/* ── CHART ── */
+.chart-wrap { background:var(--bg); border:1px solid var(--border); border-radius:3px; padding:10px; margin-bottom:12px; height:140px; position:relative; overflow:hidden; }
+.chart-wrap svg { width:100%; height:100%; }
+
+/* ── BUTTONS ── */
+.btn { font-family:var(--head); font-size:10px; letter-spacing:2px; padding:11px 20px; border:1px solid; border-radius:3px; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+.btn-p    { background:var(--cyan);   border-color:var(--cyan);   color:var(--bg); }
+.btn-p:active { opacity:0.8; }
+.btn-g    { background:var(--green);  border-color:var(--green);  color:var(--bg); }
+.btn-s    { background:transparent;   border-color:var(--glow);   color:var(--mid); }
+.btn-full { width:100%; margin-top:14px; padding:13px; }
+.btn-row  { display:flex; gap:8px; margin-top:14px; }
+
+/* ── REGIME STRIP ── */
+.regime-strip { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:12px; }
+.ritem { background:var(--bg3); border:1px solid var(--border); border-radius:3px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.2s; }
+.ritem.active { border-color:var(--cyan); background:rgba(0,200,240,0.06); }
+.ritem .rn { font-family:var(--head); font-size:7px; letter-spacing:1.5px; color:var(--dim); margin-bottom:3px; }
+.ritem.active .rn { color:var(--cyan); }
+.ritem .rt { font-family:var(--mono); font-size:13px; }
+.ritem .rth { font-size:9px; color:var(--dim); margin-top:1px; }
+
+/* ── TRADE LOG ── */
+.tlog-item { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(21,32,53,0.6); }
+.tlog-item:last-child { border-bottom:none; }
+.tl-ticker { font-family:var(--head); font-size:13px; color:var(--cyan); }
+.tl-meta   { font-size:9px; color:var(--dim); margin-top:2px; }
+.tl-pnl    { font-family:var(--mono); font-size:13px; text-align:right; }
+.tl-pct    { font-size:9px; text-align:right; margin-top:1px; }
+.pos  { color:var(--green); }
+.neg  { color:var(--red); }
+
+/* ── SUMMARY ROW ── */
+.sum-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(21,32,53,0.6); }
+.sum-row:last-child { border-bottom:none; }
+.sum-lbl { font-family:var(--head); font-size:8px; letter-spacing:1.5px; color:var(--mid); }
+.sum-val { font-family:var(--mono); font-size:13px; }
+
+/* ── ALERT ── */
+.alert-box { background:rgba(255,58,85,0.07); border:1px solid rgba(255,58,85,0.25); border-radius:3px; padding:10px 12px; font-family:var(--head); font-size:8px; letter-spacing:1.5px; color:var(--red); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.info-box  { background:rgba(0,200,240,0.06); border:1px solid rgba(0,200,240,0.2);  border-radius:3px; padding:10px 12px; font-size:11px; color:var(--mid); margin-bottom:12px; line-height:1.5; }
+
+/* ── WATERMARK ── */
+.wm { position:fixed; bottom:12px; right:14px; font-family:var(--head); font-size:7px; letter-spacing:2px; color:var(--border); pointer-events:none; }
+
+/* ── BOTTOM NAV BTNS ── */
+.nav-btns { display:flex; gap:10px; margin-top:20px; }
+.nav-btns .btn { flex:1; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="logo">MTS <span>V26</span></div>
+  <div class="hdr-badge">ADAPTIVE BACKTEST</div>
+</div>
+
+<!-- STEP NAV -->
+<div class="step-nav">
+  <div class="step active" onclick="goStep(0)"><span class="snum">1</span>SETUP</div>
+  <div class="step" onclick="goStep(1)"><span class="snum">2</span>REGIME</div>
+  <div class="step" onclick="goStep(2)"><span class="snum">3</span>PERSONALITY</div>
+  <div class="step" onclick="goStep(3)"><span class="snum">4</span>RISK</div>
+  <div class="step" onclick="goStep(4)"><span class="snum">5</span>REALISM</div>
+  <div class="step" onclick="goStep(5)"><span class="snum">6</span>RUN</div>
+  <div class="step" onclick="goStep(6)"><span class="snum">7</span>RESULTS</div>
+</div>
+
+<!-- ════════════ STEP 1 — SETUP ════════════ -->
+<div id="step-0" class="page active">
+  <div class="info-box">Configure your backtest parameters. Each step builds the V26 adaptive engine layer by layer.</div>
+
+  <div class="slabel">DATE RANGE</div>
+  <div class="card">
+    <div class="g2">
+      <div class="cg"><label class="ctrl-lbl">START DATE</label><input type="date" class="ctrl-input" value="2024-01-01"></div>
+      <div class="cg"><label class="ctrl-lbl">END DATE</label><input type="date" class="ctrl-input" value="2024-12-31"></div>
+    </div>
+  </div>
+
+  <div class="slabel">CAPITAL & UNIVERSE</div>
+  <div class="card">
+    <div class="cg"><label class="ctrl-lbl">STARTING CAPITAL ($)</label><input type="number" class="ctrl-input" value="100000" placeholder="100000"></div>
+    <div class="cg"><label class="ctrl-lbl">SCAN UNIVERSE</label>
+      <select class="ctrl-select">
+        <option>DOW + S&P 500 + RUSSELL 2000</option>
+        <option>S&P 500 Only</option>
+        <option>Dow Jones Only</option>
+        <option>Russell 2000 Only</option>
+        <option>Custom Watchlist</option>
+      </select>
+    </div>
+    <div class="cg"><label class="ctrl-lbl">SESSION BIAS</label>
+      <select class="ctrl-select">
+        <option>All Sessions (Open + Midday + Power Hour)</option>
+        <option>Open Only — Aggressive</option>
+        <option>Power Hour Only — Momentum</option>
+        <option>Midday + Power Hour</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="slabel">TRADE SIZING</div>
+  <div class="card">
+    <div class="cg"><label class="ctrl-lbl">MAX TRADES PER SESSION</label>
+      <div class="sl-wrap"><input type="range" class="sl-input" min="1" max="20" value="12" oninput="this.nextElementSibling.textContent=this.value"><span class="sl-val">12</span></div>
+    </div>
+    <div class="cg"><label class="ctrl-lbl">ALLOCATION MODE</label>
+      <div class="tg">
+        <div class="topt active" onclick="tog(this)">EQUAL</div>
+        <div class="topt" onclick="tog(this)">SCORE WT</div>
+        <div class="topt" onclick="tog(this)">CONF WT</div>
+        <div class="topt" onclick="tog(this)">VOL WT</div>
+      </div>
+    </div>
+    <div class="cg"><label class="ctrl-lbl">MIN AI CONFIDENCE THRESHOLD (%)</label>
+      <div class="sl-wrap"><input type="range" class="sl-input" min="40" max="95" value="65" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="sl-val">65%</span></div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" disabled>◀ BACK</button>
+    <button class="btn btn-p" onclick="nextStep(0)">NEXT: REGIME ▶</button>
+  </div>
+</div>
+
+<!-- ════════════ STEP 2 — REGIME ════════════ -->
+<div id="step-1" class="page">
+  <div class="info-box">Select which market regimes to include. The engine adapts trade count and score threshold automatically per regime.</div>
+
+  <div class="slabel">ACTIVE REGIMES</div>
+  <div class="regime-strip">
+    <div class="ritem active" onclick="this.classList.toggle('active')">
+      <div class="rn">EXPANSION</div><div class="rt">10–15</div><div class="rth">55+ score</div>
+    </div>
+    <div class="ritem active" onclick="this.classList.toggle('active')">
+      <div class="rn">TREND</div><div class="rt">6–10</div><div class="rth">60+ score</div>
+    </div>
+    <div class="ritem active" onclick="this.classList.toggle('active')">
+      <div class="rn">MIXED</div><div class="rt">3–6</div><div class="rth">68+ score</div>
+    </div>
+    <div class="ritem" onclick="this.classList.toggle('active')">
+      <div class="rn">CHOP</div><div class="rt">0–3</div><div class="rth">78+ score</div>
+    </div>
+    <div class="ritem" onclick="this.classList.toggle('active')">
+      <div class="rn">DEFENSIVE</div><div class="rt">0–2</div><div class="rth">85+ score</div>
+    </div>
+    <div class="ritem" onclick="this.classList.toggle('active')">
+      <div class="rn">NO HUNT</div><div class="rt">0</div><div class="rth">95+ score</div>
+    </div>
+  </div>
+
+  <div class="slabel">ADAPTIVE SCORE THRESHOLDS</div>
+  <div class="card">
+    <div class="card-title">OVERRIDE THRESHOLDS (OPTIONAL)</div>
+    <div class="g2">
+      <div class="cg"><label class="ctrl-lbl">EXPANSION MIN SCORE</label><input type="number" class="ctrl-input" value="55" min="0" max="100"></div>
+      <div class="cg"><label class="ctrl-lbl">TREND MIN SCORE</label><input type="number" class="ctrl-input" value="60" min="0" max="100"></div>
+    </div>
+    <div class="g2">
+      <div class="cg"><label class="ctrl-lbl">MIXED MIN SCORE</label><input type="number" class="ctrl-input" value="68" min="0" max="100"></div>
+      <div class="cg"><label class="ctrl-lbl">CHOP MIN SCORE</label><input type="number" class="ctrl-input" value="78" min="0" max="100"></div>
+    </div>
+  </div>
+
+  <div class="slabel">REGIME DETECTION INPUTS</div>
+  <div class="card">
+    <div class="cg"><label class="ctrl-lbl">SPY TREND WEIGHT</label>
+      <div class="sl-wrap"><input type="range" class="sl-input" min="0" max="100" value="40" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="sl-val">40%</span></div>
+    </div>
+    <div class="cg"><label class="ctrl-lbl">QQQ TREND WEIGHT</label>
+      <div class="sl-wrap"><input type="range" class="sl-input" min="0" max="100" value="30" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="sl-val">30%</span></div>
+    </div>
+    <div class="cg"><label class="ctrl-lbl">BREADTH WEIGHT</label>
+      <div class="sl-wrap"><input type="range" class="sl-input" min="0" max="100" value="30" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="sl-val">30%</span></div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="prevStep(1)">◀ BACK</button>
+    <button class="btn btn-p" onclick="nextStep(1)">NEXT: PERSONALITY ▶</button>
+  </div>
+</div>
+
+<!-- ════════════ STEP 3 — PERSONALITY ════════════ -->
+<div id="step-2" class="page">
+  <div class="info-box">Choose which personalities vote in your backtest. Each has a different strategy, weight, and regime compatibility. More active personalities = more signals but more conflicts.</div>
+
+  <div class="slabel">ACTIVE PERSONALITIES</div>
+  <div class="card">
+    <div style="display:flex; flex-direction:column; gap:10px;">
+
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" checked style="accent-color:var(--cyan);width:16px;height:16px">
+          <div><span class="ptag pt-safe">SAFE HUNT</span><div style="font-size:9px;color:var(--dim);margin-top:2px">Low risk · High persistence · Regime: all</div></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--green)">W: 0.85</span>
+      </label>
+
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" checked style="accent-color:var(--cyan);width:16px;height:16px">
+          <div><span class="ptag pt-trend">TREND RIDER</span><div style="font-size:9px;color:var(--dim);margin-top:2px">Momentum following · Best in TREND + EXPANSION</div></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--green)">W: 0.78</span>
+      </label>
+
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" checked style="accent-color:var(--cyan);width:16px;height:16px">
+          <div><span class="ptag pt-exp">EXPANSION HUNTER</span><div style="font-size:9px;color:var(--dim);margin-top:2px">Breakout specialist · Highest avg return</div></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--green)">W: 0.91</span>
+      </label>
+
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" checked style="accent-color:var(--cyan);width:16px;height:16px">
+          <div><span class="ptag pt-agg">AGGRESSIVE HUNT</span><div style="font-size:9px;color:var(--dim);margin-top:2px">High volatility · High reward · High risk</div></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--gold)">W: 0.74</span>
+      </label>
+
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" checked style="accent-color:var(--cyan);width:16px;height:16px">
+          <div><span class="ptag pt-trap">MM TRAP HUNTER</span><div style="font-size:9px;color:var(--dim);margin-top:2px">Fade manipulation · Best in CHOP + MIXED</div></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--gold)">W: 0.62</span>
+      </label>
+
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" style="accent-color:var(--cyan);width:16px;height:16px">
+          <div><span class="ptag pt-rev">REVERSAL SNIPER</span><div style="font-size:9px;color:var(--dim);margin-top:2px">Counter-trend · Selective · Low frequency</div></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--mid)">W: 0.58</span>
+      </label>
+
+      <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" checked style="accent-color:var(--cyan);width:16px;height:16px">
+          <div><span class="ptag pt-run">RUNNER PYRAMID</span><div style="font-size:9px;color:var(--dim);margin-top:2px">Scale-in winners · Best in EXPANSION</div></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--green)">W: 0.82</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="slabel">CONFLICT PROTECTION</div>
+  <div class="card">
+    <div class="cg"><label class="ctrl-lbl">MAX PERSONALITY CONFLICTS ALLOWED</label>
+      <div class="tg">
+        <div class="topt active" onclick="tog(this)">0 — STRICT</div>
+        <div class="topt" onclick="tog(this)">1 — NORMAL</div>
+        <div class="topt" onclick="tog(this)">2 — LOOSE</div>
+      </div>
+    </div>
+    <div class="cg"><label class="ctrl-lbl">MIN VOTES TO TRADE</label>
+      <div class="tg">
+        <div class="topt" onclick="tog(this)">2+</div>
+        <div class="topt active" onclick="tog(this)">3+</div>
+        <div class="topt" onclick="tog(this)">4+</div>
+        <div class="topt" onclick="tog(this)">5+</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="prevStep(2)">◀ BACK</button>
+    <button class="btn btn-p" onclick="nextStep(2)">NEXT: RISK ▶</button>
+  </div>
+</div>
+
+<!-- ════════════ STEP 4 — RISK ════════════ -->
+<div id="step-3" class="page">
+  <div class="info-box">Set kill switches and correlation protection. These protect account survival and prevent overexposure.</div>
+
+  <div class="slabel">KILL SWITCHES</div>
+  <div class="card">
+    <div class="ks">
+      <div class="ks-info"><div class="kn">MAX DAILY DRAWDOWN</div><div class="kv">-$2,500 / -5%</div></div>
+      <div class="ktog on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="ks">
+      <div class="ks-info"><div class="kn">MAX CONSECUTIVE LOSSES</div><div class="kv">3 in a row → HALT</div></div>
+      <div class="ktog on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="ks">
+      <div class="ks-info"><div class="kn">VOLATILITY SPIKE PROTECTION</div><div class="kv">VIX > 30 → NO HUNT</div></div>
+      <div class="ktog on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="ks">
+      <div class="ks-info"><div class="kn">EXPOSURE LIMIT</div><div class="kv">Max 80% capital deployed</div></div>
+      <div class="ktog on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="ks">
+      <div class="ks-info"><div class="kn">AUTO NO-HUNT ACTIVATION</div><div class="kv">Trap > 70% + neg breadth</div></div>
+      <div class="ktog" onclick="this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="slabel">CORRELATION PROTECTION</div>
+  <div class="card">
+    <div class="cg"><label class="ctrl-lbl">MAX TRADES — SAME SECTOR</label>
+      <div class="tg">
+        <div class="topt" onclick="tog(this)">1</div>
+        <div class="topt active" onclick="tog(this)">2</div>
+        <div class="topt" onclick="tog(this)">3</div>
+      </div>
+    </div>
+    <div class="cg"><label class="ctrl-lbl">MAX SECTOR ALLOCATION (%)</label>
+      <div class="sl-wrap"><input type="range" class="sl-input" min="10" max="50" value="30" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="sl-val">30%</span></div>
+    </div>
+    <div class="cg"><label class="ctrl-lbl">MAX CORRELATED EXPOSURE (%)</label>
+      <div class="sl-wrap"><input type="range" class="sl-input" min="20" max="80" value="50" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="sl-val">50%</span></div>
+    </div>
+  </div>
+
+  <div class="slabel">DAILY LOSS LIMIT</div>
+  <div class="card">
+    <div class="g2">
+      <div class="cg"><label class="ctrl-lbl">MAX LOSS PER TRADE ($)</label><input type="number" class="ctrl-input" value="500"></div>
+      <div class="cg"><label class="ctrl-lbl">MAX DAILY LOSS ($)</label><input type="number" class="ctrl-input" value="2500"></div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="prevStep(3)">◀ BACK</button>
+    <button class="btn btn-p" onclick="nextStep(3)">NEXT: REALISM ▶</button>
+  </div>
+</div>
+
+<!-- ════════════ STEP 5 — REALISM ════════════ -->
+<div id="step-4" class="page">
+  <div class="info-box">Realism layer simulates real-world trading friction. HARSH mode includes market shocks, failed fills, and spread penalties.</div>
+
+  <div class="slabel">REALISM MODE</div>
+  <div class="card">
+    <div class="cg">
+      <div class="real-group">
+        <div class="rbadge normal active" onclick="setR(this,'normal')">NORMAL</div>
+        <div class="rbadge strict" onclick="setR(this,'strict')">STRICT</div>
+        <div class="rbadge harsh" onclick="setR(this,'harsh')">HARSH</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slabel">FRICTION PARAMETERS</div>
+  <div class="card">
+    <div class="g2">
+      <div class="cg"><label class="ctrl-lbl">SLIPPAGE (bps)</label><input type="number" class="ctrl-input" value="5"></div>
+      <div class="cg"><label class="ctrl-lbl">SPREAD PENALTY ($)</label><input type="number" class="ctrl-input" value="0.02" step="0.01"></div>
+    </div>
+    <div class="g2">
+      <div class="cg"><label class="ctrl-lbl">FILL DELAY (ms)</label><input type="number" class="ctrl-input" value="150"></div>
+      <div class="cg"><label class="ctrl-lbl">FAILED FILL RATE (%)</label><input type="number" class="ctrl-input" value="3"></div>
+    </div>
+  </div>
+
+  <div class="slabel">SHOCK EVENTS</div>
+  <div class="card">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" style="accent-color:var(--red);width:16px;height:16px"><div><div style="font-family:var(--head);font-size:9px;letter-spacing:1.5px;color:var(--mid)">MARKET SHOCK EVENTS</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Random black swan days</div></div></label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" style="accent-color:var(--red);width:16px;height:16px"><div><div style="font-family:var(--head);font-size:9px;letter-spacing:1.5px;color:var(--mid)">VOLATILITY SHOCK</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Sudden IV spike simulation</div></div></label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" style="accent-color:var(--red);width:16px;height:16px"><div><div style="font-family:var(--head);font-size:9px;letter-spacing:1.5px;color:var(--mid)">SECTOR SHOCK</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Correlated sector collapse</div></div></label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--red);width:16px;height:16px"><div><div style="font-family:var(--head);font-size:9px;letter-spacing:1.5px;color:var(--mid)">FAILED FILLS</div><div style="font-size:9px;color:var(--dim);margin-top:1px">Realistic fill rejection</div></div></label>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="prevStep(4)">◀ BACK</button>
+    <button class="btn btn-p" onclick="nextStep(4)">NEXT: REVIEW & RUN ▶</button>
+  </div>
+</div>
+
+<!-- ════════════ STEP 6 — RUN ════════════ -->
+<div id="step-5" class="page">
+  <div class="slabel">CONFIGURATION SUMMARY</div>
+  <div class="card">
+    <div class="sum-row"><span class="sum-lbl">DATE RANGE</span><span class="sum-val" style="color:var(--cyan)">Jan 1 – Dec 31, 2024</span></div>
+    <div class="sum-row"><span class="sum-lbl">CAPITAL</span><span class="sum-val" style="color:var(--cyan)">$100,000</span></div>
+    <div class="sum-row"><span class="sum-lbl">UNIVERSE</span><span class="sum-val" style="color:var(--text);font-size:11px">DOW + S&P + RUSSELL</span></div>
+    <div class="sum-row"><span class="sum-lbl">ACTIVE REGIMES</span><span class="sum-val" style="color:var(--green)">EXP + TREND + MIXED</span></div>
+    <div class="sum-row"><span class="sum-lbl">PERSONALITIES</span><span class="sum-val" style="color:var(--green)">6 of 7 active</span></div>
+    <div class="sum-row"><span class="sum-lbl">MIN VOTES</span><span class="sum-val" style="color:var(--cyan)">3+</span></div>
+    <div class="sum-row"><span class="sum-lbl">REALISM MODE</span><span class="sum-val" style="color:var(--green)">NORMAL</span></div>
+    <div class="sum-row"><span class="sum-lbl">KILL SWITCHES</span><span class="sum-val" style="color:var(--red)">4 ACTIVE</span></div>
+    <div class="sum-row"><span class="sum-lbl">MAX TRADES/SESSION</span><span class="sum-val" style="color:var(--cyan)">12</span></div>
+    <div class="sum-row"><span class="sum-lbl">ALLOCATION</span><span class="sum-val" style="color:var(--cyan)">EQUAL</span></div>
+  </div>
+
+  <div class="slabel">AI CONFIDENCE FORMULA PREVIEW</div>
+  <div class="card" style="font-family:var(--mono);font-size:11px;color:var(--mid);line-height:2;">
+    <div>AI = (</div>
+    <div style="padding-left:16px">score × <span style="color:var(--cyan)">0.40</span></div>
+    <div style="padding-left:16px">+ personalityAlignment × <span style="color:var(--cyan)">0.20</span></div>
+    <div style="padding-left:16px">+ regimeQuality × <span style="color:var(--cyan)">0.15</span></div>
+    <div style="padding-left:16px">+ symbolDNA × <span style="color:var(--cyan)">0.10</span></div>
+    <div style="padding-left:16px">+ (100 − trapRisk) × <span style="color:var(--cyan)">0.15</span></div>
+    <div>)</div>
+  </div>
+
+  <button class="btn btn-g btn-full" id="run-btn" onclick="runBacktest()">▶ RUN V26 ADAPTIVE BACKTEST</button>
+
+  <!-- PROGRESS (hidden until run) -->
+  <div id="progress-section" style="display:none;margin-top:16px;">
+    <div class="card">
+      <div class="card-title">RUNNING BACKTEST ENGINE</div>
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:10px;color:var(--mid)">Scanner Engine</span><span id="p1-lbl" style="font-family:var(--mono);font-size:10px;color:var(--green)">✓</span></div>
+        <div class="prog-wrap"><div class="prog-fill" id="p1" style="width:0%;background:var(--green)"></div></div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:10px;color:var(--mid)">Regime Detection</span><span id="p2-lbl" style="font-family:var(--mono);font-size:10px;color:var(--dim)">—</span></div>
+        <div class="prog-wrap"><div class="prog-fill" id="p2" style="width:0%;background:var(--cyan)"></div></div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:10px;color:var(--mid)">Personality Voting</span><span id="p3-lbl" style="font-family:var(--mono);font-size:10px;color:var(--dim)">—</span></div>
+        <div class="prog-wrap"><div class="prog-fill" id="p3" style="width:0%;background:var(--gold)"></div></div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:10px;color:var(--mid)">AI Confidence Engine</span><span id="p4-lbl" style="font-family:var(--mono);font-size:10px;color:var(--dim)">—</span></div>
+        <div class="prog-wrap"><div class="prog-fill" id="p4" style="width:0%;background:var(--purple)"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:10px;color:var(--mid)">Realism + Risk Layer</span><span id="p5-lbl" style="font-family:var(--mono);font-size:10px;color:var(--dim)">—</span></div>
+        <div class="prog-wrap"><div class="prog-fill" id="p5" style="width:0%;background:var(--red)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-btns" style="margin-top:16px;">
+    <button class="btn btn-s" onclick="prevStep(5)">◀ BACK</button>
+  </div>
+</div>
+
+<!-- ════════════ STEP 7 — RESULTS ════════════ -->
+<div id="step-6" class="page">
+
+  <div class="slabel">BACKTEST SUMMARY</div>
+  <div class="stat-row">
+    <div class="sbox g"><div class="lbl">TOTAL RETURN</div><div class="val">+38.4%</div><div class="sub">$138,421 final</div></div>
+    <div class="sbox c"><div class="lbl">WIN RATE</div><div class="val">68.2%</div><div class="sub">341 / 500 trades</div></div>
+    <div class="sbox r"><div class="lbl">MAX DRAWDOWN</div><div class="val">-8.4%</div><div class="sub">-$8,406</div></div>
+    <div class="sbox o"><div class="lbl">SHARPE RATIO</div><div class="val">2.14</div><div class="sub">Risk-adjusted</div></div>
+  </div>
+  <div class="stat-row">
+    <div class="sbox p"><div class="lbl">PROFIT FACTOR</div><div class="val">2.44</div><div class="sub">Gross P/L ratio</div></div>
+    <div class="sbox c"><div class="lbl">AVG WIN</div><div class="val">+4.2%</div><div class="sub">Per trade</div></div>
+    <div class="sbox r"><div class="lbl">AVG LOSS</div><div class="val">-1.8%</div><div class="sub">Per trade</div></div>
+    <div class="sbox g"><div class="lbl">BEST DAY</div><div class="val">+$6.1K</div><div class="sub">Jan 18, 2024</div></div>
+  </div>
+
+  <div class="slabel">EQUITY CURVE</div>
+  <div class="chart-wrap">
+    <svg viewBox="0 0 340 110" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="eg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#00c8f0" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#00c8f0" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="28" x2="340" y2="28" stroke="#152035" stroke-width="0.5"/>
+      <line x1="0" y1="56" x2="340" y2="56" stroke="#152035" stroke-width="0.5"/>
+      <line x1="0" y1="84" x2="340" y2="84" stroke="#152035" stroke-width="0.5"/>
+      <path d="M0,95 L40,88 L80,78 L120,68 L160,73 L200,55 L240,40 L280,26 L340,10 L340,110 L0,110Z" fill="url(#eg)"/>
+      <polyline points="0,95 40,88 80,78 120,68 160,73 200,55 240,40 280,26 340,10" fill="none" stroke="#00c8f0" stroke-width="1.8" stroke-linejoin="round"/>
+      <circle cx="160" cy="73" r="3.5" fill="#ff3a55" opacity="0.9"/>
+      <text x="164" y="70" fill="#ff3a55" font-size="7" font-family="Share Tech Mono">MAX DD</text>
+    </svg>
+  </div>
+
+  <div class="slabel">REGIME PERFORMANCE</div>
+  <div class="card">
+    <div class="brow"><span class="brow-lbl" style="color:var(--green)">EXPANSION</span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:89%;background:var(--green)"></div></div></div><span class="brow-val" style="color:var(--green)">+24.1%</span></div>
+    <div class="brow"><span class="brow-lbl" style="color:var(--cyan)">TREND</span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:72%;background:var(--cyan)"></div></div></div><span class="brow-val" style="color:var(--cyan)">+11.8%</span></div>
+    <div class="brow"><span class="brow-lbl" style="color:var(--gold)">MIXED</span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:38%;background:var(--gold)"></div></div></div><span class="brow-val" style="color:var(--gold)">+3.2%</span></div>
+    <div class="brow"><span class="brow-lbl" style="color:var(--red)">CHOP</span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:15%;background:var(--red)"></div></div></div><span class="brow-val" style="color:var(--red)">-0.7%</span></div>
+  </div>
+
+  <div class="slabel">PERSONALITY PERFORMANCE</div>
+  <div class="card">
+    <div class="brow"><span class="brow-lbl"><span class="ptag pt-exp" style="font-size:8px">EXPANSION</span></span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:91%;background:var(--gold)"></div></div></div><span class="brow-val" style="color:var(--gold)">+42.1%</span></div>
+    <div class="brow"><span class="brow-lbl"><span class="ptag pt-run" style="font-size:8px">RUNNER</span></span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:84%;background:var(--green)"></div></div></div><span class="brow-val" style="color:var(--green)">+38.4%</span></div>
+    <div class="brow"><span class="brow-lbl"><span class="ptag pt-trend" style="font-size:8px">TREND</span></span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:74%;background:var(--cyan)"></div></div></div><span class="brow-val" style="color:var(--cyan)">+28.2%</span></div>
+    <div class="brow"><span class="brow-lbl"><span class="ptag pt-safe" style="font-size:8px">SAFE HUNT</span></span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:62%;background:#44aaee)"></div></div></div><span class="brow-val" style="color:#44aaee">+22.1%</span></div>
+    <div class="brow"><span class="brow-lbl"><span class="ptag pt-trap" style="font-size:8px">MM TRAP</span></span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:48%;background:var(--purple)"></div></div></div><span class="brow-val" style="color:var(--purple)">+14.8%</span></div>
+    <div class="brow"><span class="brow-lbl"><span class="ptag pt-agg" style="font-size:8px">AGGRESSIVE</span></span><div class="brow-bar"><div class="prog-wrap"><div class="prog-fill" style="width:38%;background:var(--red)"></div></div></div><span class="brow-val" style="color:var(--red)">+8.2%</span></div>
+  </div>
+
+  <div class="slabel">TRADE LOG — TOP TRADES</div>
+  <div class="card">
+    <div class="tlog-item">
+      <div><div class="tl-ticker">NVDA</div><div class="tl-meta">Jan 8 · LONG · EXPANSION</div></div>
+      <div><div class="tl-pnl pos">+$5,460</div><div class="tl-pct pos">+5.10%</div></div>
+    </div>
+    <div class="tlog-item">
+      <div><div class="tl-ticker">META</div><div class="tl-meta">Jan 11 · LONG · RUNNER</div></div>
+      <div><div class="tl-pnl pos">+$4,900</div><div class="tl-pct pos">+6.55%</div></div>
+    </div>
+    <div class="tlog-item">
+      <div><div class="tl-ticker">NVDA</div><div class="tl-meta">Jan 18 · LONG · EXPANSION</div></div>
+      <div><div class="tl-pnl pos">+$2,620</div><div class="tl-pct pos">+5.29%</div></div>
+    </div>
+    <div class="tlog-item">
+      <div><div class="tl-ticker">MSFT</div><div class="tl-meta">Jan 16 · LONG · TREND</div></div>
+      <div><div class="tl-pnl pos">+$2,940</div><div class="tl-pct pos">+3.93%</div></div>
+    </div>
+    <div class="tlog-item">
+      <div><div class="tl-ticker">TSLA</div><div class="tl-meta">Jan 10 · LONG · AGGRESSIVE</div></div>
+      <div><div class="tl-pnl neg">-$1,520</div><div class="tl-pct neg">-3.05%</div></div>
+    </div>
+    <div class="tlog-item">
+      <div><div class="tl-ticker">AMD</div><div class="tl-meta">Jan 12 · SHORT · MM TRAP</div></div>
+      <div><div class="tl-pnl pos">+$1,320</div><div class="tl-pct pos">+4.06%</div></div>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn btn-s" onclick="prevStep(6)">◀ BACK</button>
+    <button class="btn btn-p" onclick="goStep(0)">⟳ NEW BACKTEST</button>
+  </div>
+</div>
+
+<div class="wm">MTS V26 · CLAUDE.HTML</div>
+
+<script>
+let currentStep = 0;
+
+function goStep(n) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + n).classList.add('active');
+  document.querySelectorAll('.step')[n].classList.add('active');
+  currentStep = n;
+  window.scrollTo(0, 0);
+}
+
+function nextStep(n) {
+  // Mark current as done
+  document.querySelectorAll('.step')[n].classList.add('done');
+  goStep(n + 1);
+}
+
+function prevStep(n) {
+  goStep(n - 1);
+}
+
+function tog(el) {
+  el.closest('.tg').querySelectorAll('.topt').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setR(el, mode) {
+  el.closest('.real-group').querySelectorAll('.rbadge').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function runBacktest() {
+  const btn = document.getElementById('run-btn');
+  btn.textContent = '⟳ RUNNING...';
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+
+  document.getElementById('progress-section').style.display = 'block';
+
+  const steps = [
+    { bar:'p1', lbl:'p1-lbl', delay:400,  label:'✓', color:'var(--green)' },
+    { bar:'p2', lbl:'p2-lbl', delay:900,  label:'✓', color:'var(--cyan)' },
+    { bar:'p3', lbl:'p3-lbl', delay:1500, label:'✓', color:'var(--gold)' },
+    { bar:'p4', lbl:'p4-lbl', delay:2100, label:'✓', color:'var(--purple)' },
+    { bar:'p5', lbl:'p5-lbl', delay:2700, label:'✓', color:'var(--red)' },
+  ];
+
+  steps.forEach(s => {
+    setTimeout(() => {
+      document.getElementById(s.bar).style.width = '100%';
+      document.getElementById(s.lbl).textContent = s.label;
+      document.getElementById(s.lbl).style.color = s.color;
+    }, s.delay);
+  });
+
+  setTimeout(() => {
+    // Mark step 6 as done and go to results
+    document.querySelectorAll('.step')[5].classList.add('done');
+    goStep(6);
+    btn.textContent = '▶ RUN V26 ADAPTIVE BACKTEST';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    document.getElementById('progress-section').style.display = 'none';
+    // Reset progress bars for next run
+    ['p1','p2','p3','p4','p5'].forEach(id => {
+      document.getElementById(id).style.width = '0%';
+    });
+    ['p1-lbl','p2-lbl','p3-lbl','p4-lbl','p5-lbl'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+      document.getElementById(id).style.color = 'var(--dim)';
+    });
+  }, 3200);
+}
+</script>
+</body>
+</html>
 
