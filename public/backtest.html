@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V23B — Live P&L Report + Account Summary</title>
+<title>MMG V24 — Auto Trade Simulation Engine</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -15,7 +15,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica
 header{padding:18px;background:#0b1118;border-bottom:1px solid var(--line)}
 h1{margin:0 0 6px;font-size:22px}
 .sub{color:var(--muted);font-size:13px;line-height:1.45}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:10px;background:#071018;position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line)}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding:10px;background:#071018;position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line)}
 .tabbtn{padding:11px 6px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:800;font-size:14px}
 .tabbtn.active{background:linear-gradient(135deg,#2196f3,#2ecc71);border:0}
 main{padding:12px}
@@ -35,7 +35,7 @@ button.danger{background:linear-gradient(135deg,#ff5c5c,#ff9f43)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.grid4{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
 .metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
 .metric .k{color:var(--muted);font-size:12px}
 .metric .v{font-size:21px;margin-top:6px;font-weight:800}
@@ -60,7 +60,7 @@ tr.clickable:hover{background:#182637}
 .ledgerTable th,.ledgerTable td{font-size:12px;padding:7px 5px}
 .compactHide{display:table-cell}
 @media(max-width:760px){
-  .tabs{grid-template-columns:repeat(4,1fr);gap:5px}
+  .tabs{grid-template-columns:repeat(5,1fr);gap:5px}
   .tabbtn{font-size:12px;padding:10px 3px}
   .three{grid-template-columns:1fr}
   .grid4{grid-template-columns:repeat(2,1fr)}
@@ -72,15 +72,16 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V23B — Live P&L Report + Account Summary</h1>
+  <h1>MMG V24 — Auto Trade Simulation Engine</h1>
   <div class="sub">
-    V23B fixes live P&L accounting. Report ledger updates account summary in real time, with optional Accepted-only accounting.
+    V24 adds simulation-only auto trading: top ranked setups, max trades per session, capital allocation, daily P/L, and 20-trading-day testing.
   </div>
 </header>
 
 <nav class="tabs">
   <button class="tabbtn active" onclick="showTab('scanner')">Scanner</button>
   <button class="tabbtn" onclick="showTab('backtest')">Backtest</button>
+  <button class="tabbtn" onclick="showTab('simulation')">Sim</button>
   <button class="tabbtn" onclick="showTab('report')">Report</button>
   <button class="tabbtn" onclick="showTab('account')">Account</button>
 </nav>
@@ -316,6 +317,77 @@ tr.clickable:hover{background:#182637}
       <table>
         <thead><tr><th>#</th><th>Time</th><th>Dir</th><th>Regime</th><th>Mode</th><th>R</th><th>P/L</th><th>Why</th></tr></thead>
         <tbody id="tradeLog"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<section id="simulation" class="tab">
+  <div class="card">
+    <h2>V24 Auto Trade Simulation</h2>
+    <div class="note">
+      Simulation only. No broker connection. This tests the auto-trade rules before paper trading.
+    </div>
+
+    <div class="two">
+      <div><label>Simulation Starting Capital</label><input id="simStartCapital" type="number" value="10000"/></div>
+      <div><label>Max Trades Per Session</label><input id="simMaxTrades" type="number" value="10"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Minimum Scanner Score</label><input id="simMinScore" type="number" value="60"/></div>
+      <div><label>Capital Allocation</label><select id="simAllocation"><option value="equal">100% Equal Split</option><option value="score">100% Score Weighted</option></select></div>
+    </div>
+
+    <div class="two">
+      <div><label>Simulation Start Date</label><input id="simStartDate" type="date" value="2025-01-01"/></div>
+      <div><label>Simulation End Date</label><input id="simEndDate" type="date" value="2025-02-01"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Trading Days Limit</label><input id="simDaysLimit" type="number" value="20"/></div>
+      <div><label>Daily Loss Stop %</label><input id="simDailyLossStop" type="number" value="3" step="0.1"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Use Universe</label><select id="simUniverseSelect"><option value="scanner">Current Scanner List</option><option value="dow30">Dow Jones 30</option><option value="sp500core">S&P 500 Core Starter</option><option value="russellcore">Russell 2000 Core Starter</option></select></div>
+      <div><label>Execution Type</label><select id="simExecution"><option value="v23">V23 Multi-Personality</option><option value="v22">V22 Profit Hunt</option></select></div>
+    </div>
+
+    <div class="flexBtns">
+      <button onclick="runAutoSimulation()">Run V24 Simulation</button>
+      <button class="danger" onclick="clearSimulation()">Clear Simulation</button>
+    </div>
+
+    <div id="simulationStatus" class="status warn">Ready. This will simulate auto-selection and trade allocation only.</div>
+  </div>
+
+  <div class="card">
+    <h2>Simulation Summary</h2>
+    <div class="grid">
+      <div class="metric"><div class="k">Start Capital</div><div class="v" id="simStartOut">—</div></div>
+      <div class="metric"><div class="k">Ending Balance</div><div class="v" id="simEndOut">—</div></div>
+      <div class="metric"><div class="k">Total P/L</div><div class="v" id="simPLOut">—</div></div>
+      <div class="metric"><div class="k">Return %</div><div class="v" id="simReturnOut">—</div></div>
+    </div>
+    <div class="grid">
+      <div class="metric"><div class="k">Sessions</div><div class="v" id="simSessionsOut">—</div></div>
+      <div class="metric"><div class="k">Total Trades</div><div class="v" id="simTradesOut">—</div></div>
+      <div class="metric"><div class="k">Win Rate</div><div class="v" id="simWROut">—</div></div>
+      <div class="metric"><div class="k">Max DD</div><div class="v" id="simDDOut">—</div></div>
+    </div>
+    <canvas id="simChart" width="1000" height="240"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>Daily Simulation Ledger</h2>
+    <div class="tablewrap">
+      <table class="ledgerTable">
+        <thead>
+          <tr><th>Day</th><th>Date</th><th>Picks</th><th>P/L</th><th>Bal</th><th>WR</th><th class="compactHide">Top Picks</th></tr>
+        </thead>
+        <tbody id="simLedger"></tbody>
       </table>
     </div>
   </div>
@@ -1206,6 +1278,219 @@ function showTab(name){
   if(name==="report")btns[2].classList.add("active");
   if(name==="account")btns[3].classList.add("active");
   if(name==="account"||name==="report")renderAccount();
+}
+
+
+/* ===== V24 PATCH: Auto Trade Simulation Engine ===== */
+
+let simResults=[];
+
+function showTab(name){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("active"));
+  document.getElementById(name).classList.add("active");
+  const btns=[...document.querySelectorAll(".tabbtn")];
+  if(name==="scanner")btns[0].classList.add("active");
+  if(name==="backtest")btns[1].classList.add("active");
+  if(name==="simulation")btns[2].classList.add("active");
+  if(name==="report")btns[3].classList.add("active");
+  if(name==="account")btns[4].classList.add("active");
+  if(name==="account"||name==="report")renderAccount();
+}
+
+function simSetStatus(msg,type="warn"){
+  const el=document.getElementById("simulationStatus");
+  if(!el)return;
+  el.textContent=msg;
+  el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");
+}
+
+function getTradingDatesFromBars(bars,limit){
+  const set=new Set();
+  for(const b of bars){
+    const d=new Date(b.rawTime);
+    const key=d.toISOString().slice(0,10);
+    set.add(key);
+  }
+  return [...set].sort().slice(0,limit);
+}
+
+function barsForDate(bars,dateKey){
+  return bars.filter(b=>new Date(b.rawTime).toISOString().slice(0,10)===dateKey);
+}
+
+function makeTempBarsThroughDate(bars,dateKey){
+  const end=new Date(dateKey+"T23:59:59Z").getTime();
+  return bars.filter(b=>b.rawTime<=end);
+}
+
+function getSimUniverse(){
+  const mode=document.getElementById("simUniverseSelect").value;
+  if(mode==="scanner" && scannerCache && scannerCache.results && scannerCache.results.length){
+    return scannerCache.results.map(r=>r.ticker);
+  }
+  if(typeof PRESETS!=="undefined" && PRESETS[mode]) return PRESETS[mode].slice(0, +(document.getElementById("maxSymbols").value||30));
+  return getUniverse();
+}
+
+async function runAutoSimulation(){
+  try{
+    clearSimulation(false);
+    const starting=+document.getElementById("simStartCapital").value||10000;
+    const maxTrades=+document.getElementById("simMaxTrades").value||10;
+    const minScore=+document.getElementById("simMinScore").value||60;
+    const daysLimit=+document.getElementById("simDaysLimit").value||20;
+    const dailyLossStopPct=+document.getElementById("simDailyLossStop").value||3;
+    const allocMode=document.getElementById("simAllocation").value;
+    const universe=getSimUniverse();
+
+    if(!universe.length) throw new Error("No universe selected.");
+    simSetStatus(`Loading data for ${universe.length} symbols...`,"warn");
+
+    const benchTicker=document.getElementById("rsBenchmark").value;
+    let bench=[];
+    if(benchTicker!=="OFF") bench=await fetchPolygonBars(benchTicker);
+
+    const allBars={};
+    for(let i=0;i<universe.length;i++){
+      const t=universe[i];
+      simSetStatus(`Loading ${i+1}/${universe.length}: ${t}`,"warn");
+      try{ allBars[t]=await fetchPolygonBars(t); }catch(e){ allBars[t]=[]; }
+    }
+
+    const firstBars=Object.values(allBars).find(x=>x&&x.length);
+    if(!firstBars) throw new Error("No usable bar data loaded.");
+    const tradingDates=getTradingDatesFromBars(firstBars,daysLimit);
+
+    let balance=starting;
+    let equityCurve=[starting];
+    let totalWins=0,totalTrades=0;
+    let peak=starting,maxDD=0;
+    simResults=[];
+
+    for(let d=0; d<tradingDates.length; d++){
+      const dateKey=tradingDates[d];
+      simSetStatus(`Simulating day ${d+1}/${tradingDates.length}: ${dateKey}`,"warn");
+
+      let candidates=[];
+      for(const t of universe){
+        const bars=allBars[t]||[];
+        if(bars.length<90)continue;
+        const through=makeTempBarsThroughDate(bars,dateKey);
+        if(through.length<90)continue;
+        const r=analyzeLatest(t,through,(benchTicker===t)?[]:bench);
+        if(r.score>=minScore && r.dir!=="BALANCE" && r.dir!=="ERR"){
+          candidates.push(r);
+        }
+      }
+
+      candidates.sort((a,b)=>b.score-a.score);
+      const picks=candidates.slice(0,maxTrades);
+      let dayPL=0,dayWins=0,dayTrades=0;
+      const dailyLossLimit=balance*(dailyLossStopPct/100);
+
+      const scoreSum=picks.reduce((s,p)=>s+Math.max(1,p.score),0)||1;
+
+      for(const p of picks){
+        const bars=allBars[p.ticker]||[];
+        const dayBars=barsForDate(bars,dateKey);
+        if(dayBars.length<2)continue;
+
+        const entry=dayBars[0].open || dayBars[0].close;
+        const exit=dayBars[dayBars.length-1].close;
+        const dirMult=p.dir==="LONG"?1:-1;
+        const rawMove=((exit-entry)*dirMult)/entry;
+
+        const allocation = allocMode==="score"
+          ? balance*(p.score/scoreSum)
+          : balance/(picks.length||1);
+
+        // Confidence adjusts realized exposure but never exceeds allocated capital.
+        const confidenceFactor=Math.max(0.35, Math.min(1.15, (p.score/70)));
+        let pl=allocation*rawMove*confidenceFactor;
+
+        // Simple simulated protective loss cap per position.
+        const maxPositionLoss=allocation*0.012;
+        if(pl < -maxPositionLoss) pl=-maxPositionLoss;
+
+        dayPL+=pl;
+        dayTrades++;
+        totalTrades++;
+        if(pl>0){dayWins++;totalWins++;}
+
+        if(dayPL <= -dailyLossLimit){
+          break;
+        }
+      }
+
+      balance+=dayPL;
+      equityCurve.push(balance);
+      peak=Math.max(peak,balance);
+      maxDD=Math.max(maxDD,peak-balance);
+
+      simResults.push({
+        day:d+1,date:dateKey,picks:picks.length,pl:dayPL,balance,wr:dayTrades?dayWins/dayTrades:0,
+        tickers:picks.map(p=>`${p.ticker}:${p.score}`).join(", ")
+      });
+    }
+
+    renderSimulation({starting,balance,totalPL:balance-starting,days:tradingDates.length,totalTrades,wr:totalTrades?totalWins/totalTrades:0,maxDD,equityCurve});
+    simSetStatus(`Simulation complete. ${tradingDates.length} sessions, ${totalTrades} simulated trades.`,"good");
+  }catch(err){
+    simSetStatus(`Simulation failed.\n\n${err.message}`,"bad");
+    console.error(err);
+  }
+}
+
+function renderSimulation(summary){
+  document.getElementById("simStartOut").textContent=`$${summary.starting.toFixed(2)}`;
+  document.getElementById("simEndOut").textContent=`$${summary.balance.toFixed(2)}`;
+  document.getElementById("simPLOut").textContent=`$${summary.totalPL.toFixed(2)}`;
+  document.getElementById("simReturnOut").textContent=`${(summary.totalPL/summary.starting*100).toFixed(2)}%`;
+  document.getElementById("simSessionsOut").textContent=summary.days;
+  document.getElementById("simTradesOut").textContent=summary.totalTrades;
+  document.getElementById("simWROut").textContent=`${(summary.wr*100).toFixed(1)}%`;
+  document.getElementById("simDDOut").textContent=`$${summary.maxDD.toFixed(2)}`;
+
+  document.getElementById("simLedger").innerHTML=simResults.map(r=>`
+    <tr>
+      <td>${r.day}</td><td>${r.date}</td><td>${r.picks}</td>
+      <td style="font-weight:800;color:${r.pl>=0?'var(--green)':'var(--red)'}">$${r.pl.toFixed(2)}</td>
+      <td>$${r.balance.toFixed(2)}</td>
+      <td>${(r.wr*100).toFixed(0)}%</td>
+      <td class="compactHide">${r.tickers}</td>
+    </tr>`).join("");
+
+  drawSimChart(summary.equityCurve);
+}
+
+function drawSimChart(points){
+  const c=document.getElementById("simChart"),ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle="#294055";ctx.lineWidth=1;
+  for(let x=0;x<c.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
+  for(let y=0;y<c.height;y+=55){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
+  if(!points||points.length<2)return;
+  const min=Math.min(...points),max=Math.max(...points);
+  const pad=Math.max((max-min)*.15, Math.max(10, Math.abs(points[0])*.005));
+  ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();
+  points.forEach((p,i)=>{
+    const x=i/(points.length-1)*c.width;
+    const y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.fillStyle="#edf4fb";ctx.font="14px Arial";
+  ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24);
+}
+
+function clearSimulation(resetStatus=true){
+  simResults=[];
+  ["simStartOut","simEndOut","simPLOut","simReturnOut","simSessionsOut","simTradesOut","simWROut","simDDOut"].forEach(id=>document.getElementById(id).textContent="—");
+  document.getElementById("simLedger").innerHTML="";
+  const c=document.getElementById("simChart");
+  if(c){const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);}
+  if(resetStatus)simSetStatus("Simulation cleared.","warn");
 }
 
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
