@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V24 — Auto Trade Simulation Engine</title>
+<title>MMG V25 — Realistic Auto Trade Simulation</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,9 +72,9 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V24 — Auto Trade Simulation Engine</h1>
+  <h1>MMG V25 — Realistic Auto Trade Simulation</h1>
   <div class="sub">
-    V24 adds simulation-only auto trading: top ranked setups, max trades per session, capital allocation, daily P/L, and 20-trading-day testing.
+    V25 adds realistic simulation controls: adjustable capital, adjustable trading-day quantity, slippage, spread, fill delay, daily loss stop, and losing-streak kill switch.
   </div>
 </header>
 
@@ -325,19 +325,24 @@ tr.clickable:hover{background:#182637}
 
 <section id="simulation" class="tab">
   <div class="card">
-    <h2>V24 Auto Trade Simulation</h2>
+    <h2>V25 Realistic Auto Trade Simulation</h2>
     <div class="note">
       Simulation only. No broker connection. This tests the auto-trade rules before paper trading.
     </div>
 
     <div class="two">
-      <div><label>Simulation Starting Capital</label><input id="simStartCapital" type="number" value="10000"/></div>
-      <div><label>Max Trades Per Session</label><input id="simMaxTrades" type="number" value="10"/></div>
+      <div><label>Capital Amount</label><input id="simStartCapital" type="number" value="10000"/></div>
+      <div><label>Trading Days Quantity</label><input id="simDaysLimit" type="number" value="20"/></div>
     </div>
 
     <div class="two">
+      <div><label>Max Trades Per Session</label><input id="simMaxTrades" type="number" value="10"/></div>
       <div><label>Minimum Scanner Score</label><input id="simMinScore" type="number" value="60"/></div>
-      <div><label>Capital Allocation</label><select id="simAllocation"><option value="equal">100% Equal Split</option><option value="score">100% Score Weighted</option></select></div>
+    </div>
+
+    <div class="two">
+      <div><label>Capital Allocation</label><select id="simAllocation"><option value="equal">100% Equal Split</option><option value="score">100% Score Weighted</option><option value="confidence">100% Confidence Weighted</option></select></div>
+      <div><label>Daily Loss Stop %</label><input id="simDailyLossStop" type="number" value="3" step="0.1"/></div>
     </div>
 
     <div class="two">
@@ -345,9 +350,21 @@ tr.clickable:hover{background:#182637}
       <div><label>Simulation End Date</label><input id="simEndDate" type="date" value="2025-02-01"/></div>
     </div>
 
+    <h2 style="margin-top:18px">V25 Realism Layer</h2>
+
     <div class="two">
-      <div><label>Trading Days Limit</label><input id="simDaysLimit" type="number" value="20"/></div>
-      <div><label>Daily Loss Stop %</label><input id="simDailyLossStop" type="number" value="3" step="0.1"/></div>
+      <div><label>Slippage % Per Trade</label><input id="simSlippagePct" type="number" value="0.05" step="0.01"/></div>
+      <div><label>Spread/Friction %</label><input id="simSpreadPct" type="number" value="0.04" step="0.01"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Fill Delay Penalty %</label><input id="simFillDelayPct" type="number" value="0.03" step="0.01"/></div>
+      <div><label>Max Losses In A Row / Day</label><input id="simMaxLossStreak" type="number" value="3"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Market Shock Penalty</label><select id="simShock"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Realism Level</label><select id="simRealism"><option value="normal">Normal</option><option value="strict">Strict</option><option value="harsh">Harsh</option></select></div>
     </div>
 
     <div class="two">
@@ -356,7 +373,7 @@ tr.clickable:hover{background:#182637}
     </div>
 
     <div class="flexBtns">
-      <button onclick="runAutoSimulation()">Run V24 Simulation</button>
+      <button onclick="runAutoSimulation()">Run V25 Simulation</button>
       <button class="danger" onclick="clearSimulation()">Clear Simulation</button>
     </div>
 
@@ -1491,6 +1508,179 @@ function clearSimulation(resetStatus=true){
   const c=document.getElementById("simChart");
   if(c){const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);}
   if(resetStatus)simSetStatus("Simulation cleared.","warn");
+}
+
+
+/* ===== V25 PATCH: Realistic Auto Trade Simulation ===== */
+
+async function runAutoSimulation(){
+  try{
+    clearSimulation(false);
+
+    const starting=+document.getElementById("simStartCapital").value||10000;
+    const maxTrades=+document.getElementById("simMaxTrades").value||10;
+    const minScore=+document.getElementById("simMinScore").value||60;
+    const daysLimit=+document.getElementById("simDaysLimit").value||20;
+    const dailyLossStopPct=+document.getElementById("simDailyLossStop").value||3;
+    const allocMode=document.getElementById("simAllocation").value;
+    const slippagePct=(+document.getElementById("simSlippagePct").value||0)/100;
+    const spreadPct=(+document.getElementById("simSpreadPct").value||0)/100;
+    const fillDelayPct=(+document.getElementById("simFillDelayPct").value||0)/100;
+    const maxLossStreak=+document.getElementById("simMaxLossStreak").value||3;
+    const shockOn=document.getElementById("simShock").value==="on";
+    const realism=document.getElementById("simRealism").value;
+    const universe=getSimUniverse();
+
+    if(!universe.length) throw new Error("No universe selected.");
+    simSetStatus(`Loading data for ${universe.length} symbols...`,"warn");
+
+    const benchTicker=document.getElementById("rsBenchmark").value;
+    let bench=[];
+    if(benchTicker!=="OFF") bench=await fetchPolygonBars(benchTicker);
+
+    const allBars={};
+    for(let i=0;i<universe.length;i++){
+      const t=universe[i];
+      simSetStatus(`Loading ${i+1}/${universe.length}: ${t}`,"warn");
+      try{ allBars[t]=await fetchPolygonBars(t); }catch(e){ allBars[t]=[]; }
+    }
+
+    const firstBars=Object.values(allBars).find(x=>x&&x.length);
+    if(!firstBars) throw new Error("No usable bar data loaded.");
+    const tradingDates=getTradingDatesFromBars(firstBars,daysLimit);
+
+    let balance=starting;
+    let equityCurve=[starting];
+    let totalWins=0,totalTrades=0,totalLosses=0;
+    let peak=starting,maxDD=0;
+    simResults=[];
+
+    const realismMult = realism==="harsh" ? 1.8 : realism==="strict" ? 1.35 : 1.0;
+
+    for(let d=0; d<tradingDates.length; d++){
+      const dateKey=tradingDates[d];
+      simSetStatus(`Simulating day ${d+1}/${tradingDates.length}: ${dateKey}`,"warn");
+
+      let candidates=[];
+      for(const t of universe){
+        const bars=allBars[t]||[];
+        if(bars.length<90)continue;
+        const through=makeTempBarsThroughDate(bars,dateKey);
+        if(through.length<90)continue;
+        const r=analyzeLatest(t,through,(benchTicker===t)?[]:bench);
+        if(r.score>=minScore && r.dir!=="BALANCE" && r.dir!=="ERR"){
+          candidates.push(r);
+        }
+      }
+
+      candidates.sort((a,b)=>b.score-a.score);
+      const picks=candidates.slice(0,maxTrades);
+      let dayPL=0,dayWins=0,dayTrades=0,dayLossStreak=0,kill=false;
+      const dailyLossLimit=balance*(dailyLossStopPct/100);
+
+      const scoreSum=picks.reduce((s,p)=>s+Math.max(1,p.score),0)||1;
+      const confSum=picks.reduce((s,p)=>s+Math.max(1,p.confidence||p.score||1),0)||1;
+
+      for(const p of picks){
+        if(kill)break;
+        const bars=allBars[p.ticker]||[];
+        const dayBars=barsForDate(bars,dateKey);
+        if(dayBars.length<2)continue;
+
+        // Fill delay: enter after first bar when possible, not perfect open.
+        const entryBarIndex = dayBars.length>2 ? 1 : 0;
+        const entryBase=dayBars[entryBarIndex].open || dayBars[entryBarIndex].close;
+        const exit=dayBars[dayBars.length-1].close;
+        const dirMult=p.dir==="LONG"?1:-1;
+
+        // Slippage/spread/fill friction worsen entry and exit.
+        const totalFriction=(slippagePct+spreadPct+fillDelayPct)*realismMult;
+        const frictionMove=totalFriction*2; // entry + exit
+        let rawMove=((exit-entryBase)*dirMult)/entryBase;
+        rawMove -= frictionMove;
+
+        let allocation;
+        if(allocMode==="score") allocation=balance*(p.score/scoreSum);
+        else if(allocMode==="confidence") allocation=balance*((p.confidence||p.score)/confSum);
+        else allocation=balance/(picks.length||1);
+
+        // Position exposure dampening by confidence; still uses full balance across selected trades.
+        const confidenceFactor=Math.max(0.30, Math.min(1.10, ((p.confidence||p.score)/70)));
+        let pl=allocation*rawMove*confidenceFactor;
+
+        // Shock penalty on unstable days / low WR setup. Deterministic pseudo-shock based on day and ticker.
+        if(shockOn){
+          const shockSeed=(dateKey.charCodeAt(8)+dateKey.charCodeAt(9)+p.ticker.charCodeAt(0)+p.ticker.length)%11;
+          if(shockSeed===0 || (realism==="harsh" && shockSeed<=1)){
+            pl -= allocation*0.004*realismMult;
+          }
+        }
+
+        // Protective loss cap per position, less forgiving than V24.
+        const maxPositionLoss=allocation*(0.012*realismMult);
+        if(pl < -maxPositionLoss) pl=-maxPositionLoss;
+
+        dayPL+=pl;
+        dayTrades++;
+        totalTrades++;
+
+        if(pl>0){
+          dayWins++;
+          totalWins++;
+          dayLossStreak=0;
+        }else if(pl<0){
+          totalLosses++;
+          dayLossStreak++;
+        }
+
+        if(dayPL <= -dailyLossLimit){
+          kill=true;
+        }
+        if(dayLossStreak>=maxLossStreak){
+          kill=true;
+        }
+      }
+
+      balance+=dayPL;
+      equityCurve.push(balance);
+      peak=Math.max(peak,balance);
+      maxDD=Math.max(maxDD,peak-balance);
+
+      simResults.push({
+        day:d+1,date:dateKey,picks:picks.length,pl:dayPL,balance,wr:dayTrades?dayWins/dayTrades:0,
+        tickers:picks.map(p=>`${p.ticker}:${p.score}:${p.personality||""}`).join(", "),
+        killed: kill ? "YES" : "NO"
+      });
+    }
+
+    renderSimulation({starting,balance,totalPL:balance-starting,days:tradingDates.length,totalTrades,wr:totalTrades?totalWins/totalTrades:0,maxDD,equityCurve,totalLosses});
+    simSetStatus(`V25 simulation complete. ${tradingDates.length} sessions, ${totalTrades} simulated trades. Realism: ${realism}.`,"good");
+  }catch(err){
+    simSetStatus(`Simulation failed.\n\n${err.message}`,"bad");
+    console.error(err);
+  }
+}
+
+function renderSimulation(summary){
+  document.getElementById("simStartOut").textContent=`$${summary.starting.toFixed(2)}`;
+  document.getElementById("simEndOut").textContent=`$${summary.balance.toFixed(2)}`;
+  document.getElementById("simPLOut").textContent=`$${summary.totalPL.toFixed(2)}`;
+  document.getElementById("simReturnOut").textContent=`${(summary.totalPL/summary.starting*100).toFixed(2)}%`;
+  document.getElementById("simSessionsOut").textContent=summary.days;
+  document.getElementById("simTradesOut").textContent=summary.totalTrades;
+  document.getElementById("simWROut").textContent=`${(summary.wr*100).toFixed(1)}%`;
+  document.getElementById("simDDOut").textContent=`$${summary.maxDD.toFixed(2)}`;
+
+  document.getElementById("simLedger").innerHTML=simResults.map(r=>`
+    <tr>
+      <td>${r.day}</td><td>${r.date}</td><td>${r.picks}</td>
+      <td style="font-weight:800;color:${r.pl>=0?'var(--green)':'var(--red)'}">$${r.pl.toFixed(2)}</td>
+      <td>$${r.balance.toFixed(2)}</td>
+      <td>${(r.wr*100).toFixed(0)}%</td>
+      <td class="compactHide">${r.killed==="YES"?"KILL | ":""}${r.tickers}</td>
+    </tr>`).join("");
+
+  drawSimChart(summary.equityCurve);
 }
 
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
