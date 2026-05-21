@@ -1,17 +1,38 @@
 <!-- ===================================================== -->
-<!-- MMG V26 — OPTIONS OVERLAY ENGINE -->
-<!-- V25 + OPTIONS TAB EVOLUTION -->
+<!-- MMG V25 — REALISTIC AUTO TRADE SIMULATION -->
+<!-- OFFICIAL STABLE BASELINE -->
 <!-- ===================================================== -->
+
+<!--
+IMPORTANT:
+This is the OFFICIAL LOCKED V25 BASELINE.
+
+Doctrine:
+- Never overwrite V25.
+- All future versions branch from V25.
+- V26+ must preserve operational modules.
+
+Core Modules:
+- Polygon historical data
+- Scanner engine
+- Backtest engine
+- Simulation engine
+- Realism layer
+- Live P/L ledger
+- Account summary
+- Multi-personality framework
+-->
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
 <title>
-MMG V26 — Options Overlay Engine
+MMG V25 — Realistic Auto Trade Simulation
 </title>
 
 <style>
@@ -41,8 +62,8 @@ body{
 
 header{
   padding:18px;
-  border-bottom:1px solid var(--line);
   background:#0f1722;
+  border-bottom:1px solid var(--line);
 }
 
 h1{
@@ -57,7 +78,7 @@ h1{
 
 .tabs{
   display:grid;
-  grid-template-columns:repeat(6,1fr);
+  grid-template-columns:repeat(5,1fr);
   border-bottom:1px solid var(--line);
 }
 
@@ -93,13 +114,6 @@ h1{
   margin-bottom:16px;
 }
 
-.two{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin-bottom:12px;
-}
-
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
@@ -113,14 +127,21 @@ h1{
 }
 
 .k{
-  font-size:12px;
   color:var(--muted);
+  font-size:12px;
 }
 
 .v{
   margin-top:6px;
   font-size:22px;
   font-weight:bold;
+}
+
+.two{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:12px;
 }
 
 .tableWrap{
@@ -180,6 +201,24 @@ button:hover{
   opacity:.9;
 }
 
+.status{
+  margin-top:12px;
+  padding:10px;
+  border-radius:8px;
+}
+
+.good{
+  background:rgba(70,209,125,.12);
+}
+
+.warn{
+  background:rgba(255,209,102,.12);
+}
+
+.bad{
+  background:rgba(255,107,107,.12);
+}
+
 .note{
   color:#91a8c3;
   line-height:1.5;
@@ -198,11 +237,11 @@ button:hover{
 <header>
 
 <h1>
-MMG V26 — Options Overlay Engine
+MMG V25 — Realistic Auto Trade Simulation
 </h1>
 
 <div class="sub">
-V25 Stable Core + Options Overlay + Premium Simulation + Contract Intelligence
+Scanner • Backtest • Simulation • Realism Layer • P/L Ledger • Account Engine
 </div>
 
 </header>
@@ -219,10 +258,6 @@ Scanner
 
 <button class="tabBtn" onclick="showTab('backtest')">
 Backtest
-</button>
-
-<button class="tabBtn" onclick="showTab('options')">
-Options
 </button>
 
 <button class="tabBtn" onclick="showTab('simulation')">
@@ -242,44 +277,37 @@ Account
 <div class="container">
 
 <!-- ===================================================== -->
-<!-- OPTIONS TAB -->
+<!-- SCANNER TAB -->
 <!-- ===================================================== -->
 
-<section id="options" class="tab">
+<section id="scanner" class="tab active">
 
 <div class="card">
 
 <h2>
-Options Overlay Controls
+Scanner Controls
 </h2>
 
 <div class="two">
 
 <div>
+
 <label>
-Options Strategy
+Universe
 </label>
 
 <select>
 
 <option>
-Adaptive
+S&P 500
 </option>
 
 <option>
-Calls Only
+Dow Jones
 </option>
 
 <option>
-Puts Only
-</option>
-
-<option>
-Debit Spreads
-</option>
-
-<option>
-Credit Spreads
+Russell 2000
 </option>
 
 </select>
@@ -287,11 +315,12 @@ Credit Spreads
 </div>
 
 <div>
+
 <label>
-Minimum AI Confidence
+Minimum Score
 </label>
 
-<input type="number" value="70"/>
+<input type="number" value="60"/>
 
 </div>
 
@@ -300,22 +329,31 @@ Minimum AI Confidence
 <div class="two">
 
 <div>
+
 <label>
-Delta Range
+Trade Personality
 </label>
 
 <select>
 
 <option>
-0.30 - 0.60
+AI Adaptive
 </option>
 
 <option>
-0.20 - 0.40
+Safe Hunt
 </option>
 
 <option>
-0.50 - 0.80
+Trend Rider
+</option>
+
+<option>
+Expansion Hunter
+</option>
+
+<option>
+MM Trap Hunter
 </option>
 
 </select>
@@ -323,94 +361,27 @@ Delta Range
 </div>
 
 <div>
+
 <label>
-DTE Range
+Max Symbols
 </label>
 
-<select>
-
-<option>
-7 - 14
-</option>
-
-<option>
-14 - 30
-</option>
-
-<option>
-30 - 45
-</option>
-
-</select>
-
-</div>
-
-</div>
-
-<div class="two">
-
-<div>
-<label>
-IV Rank
-</label>
-
-<select>
-
-<option>
-30 - 70
-</option>
-
-<option>
-20 - 50
-</option>
-
-<option>
-50 - 90
-</option>
-
-</select>
-
-</div>
-
-<div>
-<label>
-Spread Quality
-</label>
-
-<select>
-
-<option>
-Tight Only
-</option>
-
-<option>
-Medium
-</option>
-
-<option>
-Any
-</option>
-
-</select>
+<input type="number" value="25"/>
 
 </div>
 
 </div>
 
 <button>
-Run Options Overlay
+Run Scanner
 </button>
 
 </div>
 
-<!-- ===================================================== -->
-<!-- OPTIONS RESULTS -->
-<!-- ===================================================== -->
-
 <div class="card">
 
 <h2>
-Options Candidates
+Scanner Results
 </h2>
 
 <div class="tableWrap">
@@ -426,23 +397,11 @@ Ticker
 </th>
 
 <th>
-Contract
+Score
 </th>
 
 <th>
-Delta
-</th>
-
-<th>
-IV
-</th>
-
-<th>
-DTE
-</th>
-
-<th>
-Spread
+Direction
 </th>
 
 <th>
@@ -450,11 +409,15 @@ Personality
 </th>
 
 <th>
-AI%
+Trap
 </th>
 
 <th>
-Options Score
+RS
+</th>
+
+<th>
+Status
 </th>
 
 </tr>
@@ -469,24 +432,12 @@ Options Score
 NVDA
 </td>
 
-<td>
-145C
-</td>
-
 <td class="green">
-0.42
+91
 </td>
 
 <td>
-58
-</td>
-
-<td>
-14
-</td>
-
-<td class="green">
-Tight
+LONG
 </td>
 
 <td>
@@ -494,11 +445,15 @@ Expansion Hunter
 </td>
 
 <td>
-88
+38
+</td>
+
+<td>
+84
 </td>
 
 <td class="green">
-92
+ACTIVE
 </td>
 
 </tr>
@@ -506,79 +461,63 @@ Expansion Hunter
 <tr>
 
 <td>
-AMZN
-</td>
-
-<td>
-220P
+AAPL
 </td>
 
 <td class="yellow">
-0.37
+72
+</td>
+
+<td>
+LONG
+</td>
+
+<td>
+Safe Hunt
+</td>
+
+<td>
+42
+</td>
+
+<td>
+71
+</td>
+
+<td class="yellow">
+WATCH
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+MRK
+</td>
+
+<td class="red">
+58
+</td>
+
+<td>
+SHORT
+</td>
+
+<td>
+Trap Hunter
+</td>
+
+<td>
+74
 </td>
 
 <td>
 44
 </td>
 
-<td>
-21
-</td>
-
-<td class="green">
-Tight
-</td>
-
-<td>
-Trend Rider
-</td>
-
-<td>
-81
-</td>
-
-<td class="yellow">
-79
-</td>
-
-</tr>
-
-<tr>
-
-<td>
-TSLA
-</td>
-
-<td>
-330C
-</td>
-
 <td class="red">
-0.61
-</td>
-
-<td>
-78
-</td>
-
-<td>
-7
-</td>
-
-<td class="yellow">
-Medium
-</td>
-
-<td>
-Aggressive Hunt
-</td>
-
-<td>
-72
-</td>
-
-<td class="yellow">
-74
+AVOID
 </td>
 
 </tr>
@@ -591,51 +530,84 @@ Aggressive Hunt
 
 </div>
 
+</section>
+
 <!-- ===================================================== -->
-<!-- OPTIONS PREMIUM SIM -->
+<!-- BACKTEST TAB -->
 <!-- ===================================================== -->
+
+<section id="backtest" class="tab">
 
 <div class="card">
 
 <h2>
-Options Premium Simulation
+Backtest Controls
 </h2>
 
-<div class="note">
+<div class="two">
 
-Underlying Move
-× Delta
-× IV Expansion
-× Gamma Pressure
-=
-Estimated Premium Change
+<div>
+
+<label>
+Ticker
+</label>
+
+<input type="text" value="NVDA"/>
 
 </div>
 
-<br/>
+<div>
+
+<label>
+Timeframe
+</label>
+
+<select>
+
+<option>
+5m
+</option>
+
+<option>
+15m
+</option>
+
+<option>
+1H
+</option>
+
+<option>
+4H
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+<button>
+Run Backtest
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>
+Backtest Summary
+</h2>
 
 <div class="grid">
 
 <div class="metric">
 
 <div class="k">
-Underlying Move
-</div>
-
-<div class="v green">
-+2.4%
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Delta Effect
+Trades
 </div>
 
 <div class="v">
-0.42
+170
 </div>
 
 </div>
@@ -643,11 +615,11 @@ Delta Effect
 <div class="metric">
 
 <div class="k">
-IV Expansion
+Win Rate
 </div>
 
 <div class="v green">
-+14%
+69.7%
 </div>
 
 </div>
@@ -655,11 +627,23 @@ IV Expansion
 <div class="metric">
 
 <div class="k">
-Estimated Premium
+Profit
 </div>
 
 <div class="v green">
-+37%
++15.7%
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Max DD
+</div>
+
+<div class="v red">
+$564
 </div>
 
 </div>
@@ -667,50 +651,230 @@ Estimated Premium
 </div>
 
 </div>
+
+</section>
 
 <!-- ===================================================== -->
-<!-- OPTIONS DOCTRINE -->
+<!-- SIMULATION TAB -->
 <!-- ===================================================== -->
+
+<section id="simulation" class="tab">
 
 <div class="card">
 
 <h2>
-Options Doctrine
+Simulation Controls
 </h2>
 
-<div class="note">
+<div class="two">
 
-CALLS:
-<br/>
-- LONG direction
-<br/>
-- AI Confidence > 70
-<br/>
-- Expansion / Trend regime
-<br/>
-- Trap Risk Low
-<br/><br/>
+<div>
 
-PUTS:
-<br/>
-- SHORT direction
-<br/>
-- AI Confidence > 70
-<br/>
-- Defensive / Reversal regime
-<br/>
-- Trap Confirmation
-<br/><br/>
+<label>
+Capital Amount
+</label>
 
-AVOID:
-<br/>
-- CHOP
-<br/>
-- Conflicting personalities
-<br/>
-- Wide spreads
-<br/>
-- Low liquidity contracts
+<input type="number" value="10000"/>
+
+</div>
+
+<div>
+
+<label>
+Trading Days Quantity
+</label>
+
+<input type="number" value="20"/>
+
+</div>
+
+</div>
+
+<div class="two">
+
+<div>
+
+<label>
+Max Trades Per Session
+</label>
+
+<input type="number" value="10"/>
+
+</div>
+
+<div>
+
+<label>
+Allocation Mode
+</label>
+
+<select>
+
+<option>
+Equal
+</option>
+
+<option>
+Score Weighted
+</option>
+
+<option>
+Confidence Weighted
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+<div class="two">
+
+<div>
+
+<label>
+Slippage %
+</label>
+
+<input type="number" value="0.05"/>
+
+</div>
+
+<div>
+
+<label>
+Spread/Friction %
+</label>
+
+<input type="number" value="0.04"/>
+
+</div>
+
+</div>
+
+<div class="two">
+
+<div>
+
+<label>
+Fill Delay %
+</label>
+
+<input type="number" value="0.03"/>
+
+</div>
+
+<div>
+
+<label>
+Realism Level
+</label>
+
+<select>
+
+<option>
+Normal
+</option>
+
+<option>
+Strict
+</option>
+
+<option>
+Harsh
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+<button>
+Run Simulation
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>
+Simulation Summary
+</h2>
+
+<div class="grid">
+
+<div class="metric">
+
+<div class="k">
+Start Capital
+</div>
+
+<div class="v">
+$10,000
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Ending Balance
+</div>
+
+<div class="v green">
+$11,570
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Return
+</div>
+
+<div class="v green">
++15.7%
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Win Rate
+</div>
+
+<div class="v">
+69.7%
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Trades
+</div>
+
+<div class="v">
+170
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Max DD
+</div>
+
+<div class="v red">
+$564
+</div>
+
+</div>
 
 </div>
 
@@ -719,52 +883,187 @@ AVOID:
 </section>
 
 <!-- ===================================================== -->
-<!-- PLACEHOLDER TABS -->
+<!-- REPORT TAB -->
 <!-- ===================================================== -->
-
-<section id="scanner" class="tab active">
-<div class="card">
-<h2>Scanner</h2>
-<div class="note">
-Use V25 stable scanner engine.
-</div>
-</div>
-</section>
-
-<section id="backtest" class="tab">
-<div class="card">
-<h2>Backtest</h2>
-<div class="note">
-Use V25 stable backtest engine.
-</div>
-</div>
-</section>
-
-<section id="simulation" class="tab">
-<div class="card">
-<h2>Simulation</h2>
-<div class="note">
-Use V25 stable simulation engine.
-</div>
-</div>
-</section>
 
 <section id="report" class="tab">
+
 <div class="card">
-<h2>Report</h2>
-<div class="note">
-Use V25 stable reporting engine.
+
+<h2>
+Daily Simulation Ledger
+</h2>
+
+<div class="tableWrap">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+Day
+</th>
+
+<th>
+Date
+</th>
+
+<th>
+P/L
+</th>
+
+<th>
+Balance
+</th>
+
+<th>
+WR
+</th>
+
+<th>
+Top Picks
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td>
+1
+</td>
+
+<td>
+2025-01-03
+</td>
+
+<td class="green">
++$412
+</td>
+
+<td>
+$10,412
+</td>
+
+<td>
+80%
+</td>
+
+<td>
+NVDA, AMZN, META
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+2
+</td>
+
+<td>
+2025-01-04
+</td>
+
+<td class="red">
+-$74
+</td>
+
+<td>
+$10,338
+</td>
+
+<td>
+40%
+</td>
+
+<td>
+AAPL, JPM
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
 </div>
+
 </div>
+
 </section>
 
+<!-- ===================================================== -->
+<!-- ACCOUNT TAB -->
+<!-- ===================================================== -->
+
 <section id="account" class="tab">
+
 <div class="card">
-<h2>Account</h2>
-<div class="note">
-Use V25 stable account engine.
+
+<h2>
+Account Summary
+</h2>
+
+<div class="grid">
+
+<div class="metric">
+
+<div class="k">
+Balance
 </div>
+
+<div class="v">
+$11,570
 </div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Exposure
+</div>
+
+<div class="v">
+72%
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Heat
+</div>
+
+<div class="v yellow">
+MED
+</div>
+
+</div>
+
+<div class="metric">
+
+<div class="k">
+Daily DD Limit
+</div>
+
+<div class="v red">
+3%
+</div>
+
+</div>
+
+</div>
+
+</div>
+
 </section>
 
 </div>
