@@ -1,1095 +1,1689 @@
-<!-- ===================================================== -->
-<!-- MMG V25 — REALISTIC AUTO TRADE SIMULATION -->
-<!-- OFFICIAL STABLE BASELINE -->
-<!-- ===================================================== -->
-
-<!--
-IMPORTANT:
-This is the OFFICIAL LOCKED V25 BASELINE.
-
-Doctrine:
-- Never overwrite V25.
-- All future versions branch from V25.
-- V26+ must preserve operational modules.
-
-Core Modules:
-- Polygon historical data
-- Scanner engine
-- Backtest engine
-- Simulation engine
-- Realism layer
-- Live P/L ledger
-- Account summary
-- Multi-personality framework
--->
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
-<title>
-MMG V25 — Realistic Auto Trade Simulation
-</title>
-
+<title>MMG V25 — Realistic Auto Trade Simulation</title>
 <style>
-
-/* ===================================================== */
-/* GLOBAL */
-/* ===================================================== */
-
 :root{
-  --bg:#081018;
-  --card:#101a26;
-  --line:#223246;
-  --text:#edf4fb;
-  --muted:#8aa2bd;
-  --green:#46d17d;
-  --red:#ff6b6b;
-  --yellow:#ffd166;
-  --blue:#4ea8ff;
+  --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
+  --line:#294055;--green:#2ecc71;--red:#ff5c5c;--yellow:#f1c40f;--blue:#37a2ff;
+  --purple:#b47cff;--orange:#ff9f43;--cyan:#36d1dc;--dark:#080e15;
 }
-
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:Arial,sans-serif;
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+header{padding:18px;background:#0b1118;border-bottom:1px solid var(--line)}
+h1{margin:0 0 6px;font-size:22px}
+.sub{color:var(--muted);font-size:13px;line-height:1.45}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding:10px;background:#071018;position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line)}
+.tabbtn{padding:11px 6px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:800;font-size:14px}
+.tabbtn.active{background:linear-gradient(135deg,#2196f3,#2ecc71);border:0}
+main{padding:12px}
+.tab{display:none}
+.tab.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:14px;box-shadow:0 8px 24px rgba(0,0,0,.26)}
+h2{margin:0 0 12px;font-size:18px}
+label{display:block;color:var(--muted);font-size:13px;margin:12px 0 5px}
+input,select,textarea,button{
+  width:100%;border-radius:10px;border:1px solid var(--line);background:var(--dark);color:var(--text);
+  padding:11px;font-size:15px
 }
-
-header{
-  padding:18px;
-  background:#0f1722;
-  border-bottom:1px solid var(--line);
+textarea{min-height:92px;font-family:Consolas,monospace}
+button{border:0;background:linear-gradient(135deg,#2196f3,#2ecc71);font-weight:800;color:white;margin-top:12px;cursor:pointer}
+button.secondary{background:#162331;border:1px solid var(--line)}
+button.danger{background:linear-gradient(135deg,#ff5c5c,#ff9f43)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.grid4{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.metric .k{color:var(--muted);font-size:12px}
+.metric .v{font-size:21px;margin-top:6px;font-weight:800}
+.status{margin-top:12px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--dark);color:var(--muted);font-size:13px;line-height:1.45;white-space:pre-wrap}
+.good{border-color:rgba(46,204,113,.7);color:#bdf7d5}
+.bad{border-color:rgba(255,92,92,.7);color:#ffd0d0}
+.warn{border-color:rgba(241,196,15,.7);color:#fff0b3}
+.note{color:var(--muted);font-size:12px;line-height:1.45;margin-top:10px}
+canvas{width:100%;height:240px;background:#071018;border:1px solid var(--line);border-radius:12px}
+.tablewrap{max-height:620px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);background:#0b1118;position:sticky;top:0}
+tr.clickable{cursor:pointer}
+tr.clickable:hover{background:#182637}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+.green{background:var(--green);color:#06140b}.red{background:var(--red);color:#1a0505}
+.yellow{background:var(--yellow);color:#161100}.blue{background:var(--blue);color:#06101b}
+.purple{background:var(--purple);color:#12071b}.orange{background:var(--orange);color:#160d03}
+.cyan{background:var(--cyan);color:#041314}.gray{background:#39495a;color:#e3eef8}
+.flexBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ledgerTable th,.ledgerTable td{font-size:12px;padding:7px 5px}
+.compactHide{display:table-cell}
+@media(max-width:760px){
+  .tabs{grid-template-columns:repeat(5,1fr);gap:5px}
+  .tabbtn{font-size:12px;padding:10px 3px}
+  .three{grid-template-columns:1fr}
+  .grid4{grid-template-columns:repeat(2,1fr)}
+  .compactHide{display:none}
+  .ledgerTable th,.ledgerTable td{font-size:11px;padding:7px 4px}
+  .metric .v{font-size:20px}
 }
-
-h1{
-  margin:0;
-  font-size:24px;
-}
-
-.sub{
-  margin-top:8px;
-  color:var(--muted);
-}
-
-.tabs{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  border-bottom:1px solid var(--line);
-}
-
-.tabBtn{
-  border:none;
-  background:#0f1722;
-  color:white;
-  padding:14px;
-  cursor:pointer;
-}
-
-.tabBtn.active{
-  background:#1d3043;
-}
-
-.container{
-  padding:16px;
-}
-
-.tab{
-  display:none;
-}
-
-.tab.active{
-  display:block;
-}
-
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:16px;
-  margin-bottom:16px;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:12px;
-}
-
-.metric{
-  background:#162332;
-  border-radius:10px;
-  padding:12px;
-}
-
-.k{
-  color:var(--muted);
-  font-size:12px;
-}
-
-.v{
-  margin-top:6px;
-  font-size:22px;
-  font-weight:bold;
-}
-
-.two{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin-bottom:12px;
-}
-
-.tableWrap{
-  overflow:auto;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-
-th,td{
-  padding:10px;
-  border-bottom:1px solid var(--line);
-  text-align:left;
-  font-size:14px;
-}
-
-th{
-  color:#7fd0ff;
-}
-
-.green{
-  color:var(--green);
-  font-weight:bold;
-}
-
-.red{
-  color:var(--red);
-  font-weight:bold;
-}
-
-.yellow{
-  color:var(--yellow);
-  font-weight:bold;
-}
-
-select,input{
-  width:100%;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid var(--line);
-  background:#132030;
-  color:white;
-}
-
-button{
-  padding:12px 16px;
-  border:none;
-  border-radius:8px;
-  background:#234a6a;
-  color:white;
-  cursor:pointer;
-}
-
-button:hover{
-  opacity:.9;
-}
-
-.status{
-  margin-top:12px;
-  padding:10px;
-  border-radius:8px;
-}
-
-.good{
-  background:rgba(70,209,125,.12);
-}
-
-.warn{
-  background:rgba(255,209,102,.12);
-}
-
-.bad{
-  background:rgba(255,107,107,.12);
-}
-
-.note{
-  color:#91a8c3;
-  line-height:1.5;
-}
-
 </style>
-
 </head>
-
 <body>
-
-<!-- ===================================================== -->
-<!-- HEADER -->
-<!-- ===================================================== -->
-
 <header>
-
-<h1>
-MMG V25 — Realistic Auto Trade Simulation
-</h1>
-
-<div class="sub">
-Scanner • Backtest • Simulation • Realism Layer • P/L Ledger • Account Engine
-</div>
-
+  <h1>MMG V25 — Realistic Auto Trade Simulation</h1>
+  <div class="sub">
+    V25 adds realistic simulation controls: adjustable capital, adjustable trading-day quantity, slippage, spread, fill delay, daily loss stop, and losing-streak kill switch.
+  </div>
 </header>
 
-<!-- ===================================================== -->
-<!-- TABS -->
-<!-- ===================================================== -->
+<nav class="tabs">
+  <button class="tabbtn active" onclick="showTab('scanner')">Scanner</button>
+  <button class="tabbtn" onclick="showTab('backtest')">Backtest</button>
+  <button class="tabbtn" onclick="showTab('simulation')">Sim</button>
+  <button class="tabbtn" onclick="showTab('report')">Report</button>
+  <button class="tabbtn" onclick="showTab('account')">Account</button>
+</nav>
 
-<div class="tabs">
-
-<button class="tabBtn active" onclick="showTab('scanner')">
-Scanner
-</button>
-
-<button class="tabBtn" onclick="showTab('backtest')">
-Backtest
-</button>
-
-<button class="tabBtn" onclick="showTab('simulation')">
-Simulation
-</button>
-
-<button class="tabBtn" onclick="showTab('report')">
-Report
-</button>
-
-<button class="tabBtn" onclick="showTab('account')">
-Account
-</button>
-
-</div>
-
-<div class="container">
-
-<!-- ===================================================== -->
-<!-- SCANNER TAB -->
-<!-- ===================================================== -->
-
+<main>
 <section id="scanner" class="tab active">
-
-<div class="card">
-
-<h2>
-Scanner Controls
-</h2>
-
-<div class="two">
-
-<div>
-
-<label>
-Universe
-</label>
-
-<select>
-
-<option>
-S&P 500
-</option>
-
-<option>
-Dow Jones
-</option>
-
-<option>
-Russell 2000
-</option>
-
-</select>
-
-</div>
-
-<div>
-
-<label>
-Minimum Score
-</label>
-
-<input type="number" value="60"/>
-
-</div>
-
-</div>
-
-<div class="two">
-
-<div>
-
-<label>
-Trade Personality
-</label>
-
-<select>
-
-<option>
-AI Adaptive
-</option>
-
-<option>
-Safe Hunt
-</option>
-
-<option>
-Trend Rider
-</option>
-
-<option>
-Expansion Hunter
-</option>
-
-<option>
-MM Trap Hunter
-</option>
-
-</select>
-
-</div>
-
-<div>
-
-<label>
-Max Symbols
-</label>
-
-<input type="number" value="25"/>
-
-</div>
-
-</div>
-
-<button>
-Run Scanner
-</button>
-
-</div>
-
-<div class="card">
-
-<h2>
-Scanner Results
-</h2>
-
-<div class="tableWrap">
-
-<table>
-
-<thead>
-
-<tr>
-
-<th>
-Ticker
-</th>
-
-<th>
-Score
-</th>
-
-<th>
-Direction
-</th>
-
-<th>
-Personality
-</th>
-
-<th>
-Trap
-</th>
-
-<th>
-RS
-</th>
-
-<th>
-Status
-</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-<tr>
-
-<td>
-NVDA
-</td>
-
-<td class="green">
-91
-</td>
-
-<td>
-LONG
-</td>
-
-<td>
-Expansion Hunter
-</td>
-
-<td>
-38
-</td>
-
-<td>
-84
-</td>
-
-<td class="green">
-ACTIVE
-</td>
-
-</tr>
-
-<tr>
-
-<td>
-AAPL
-</td>
-
-<td class="yellow">
-72
-</td>
-
-<td>
-LONG
-</td>
-
-<td>
-Safe Hunt
-</td>
-
-<td>
-42
-</td>
-
-<td>
-71
-</td>
-
-<td class="yellow">
-WATCH
-</td>
-
-</tr>
-
-<tr>
-
-<td>
-MRK
-</td>
-
-<td class="red">
-58
-</td>
-
-<td>
-SHORT
-</td>
-
-<td>
-Trap Hunter
-</td>
-
-<td>
-74
-</td>
-
-<td>
-44
-</td>
-
-<td class="red">
-AVOID
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-</div>
-
-</div>
-
+  <div class="card">
+    <h2>Scanner Setup</h2>
+
+    <label>Polygon API Key</label>
+    <input id="apiKey" type="password" placeholder="Paste your Polygon API key"/>
+
+    <div class="two">
+      <div>
+        <label>Universe Selection</label>
+        <select id="universeSelect" onchange="loadUniversePreset()">
+          <option value="dow30">Dow Jones 30</option>
+          <option value="sp500core">S&P 500 Core Starter</option>
+          <option value="russellcore">Russell 2000 Core Starter</option>
+          <option value="custom">Custom Watchlist</option>
+        </select>
+      </div>
+      <div>
+        <label>Max Symbols Per Scan</label>
+        <input id="maxSymbols" type="number" value="30"/>
+      </div>
+    </div>
+
+    <label>Universe / Watchlist</label>
+    <textarea id="universe"></textarea>
+
+    <div class="three">
+      <div><label>Multiplier</label><input id="multiplier" type="number" value="15"/></div>
+      <div><label>Timespan</label><select id="timespan"><option value="minute">minute</option><option value="hour">hour</option><option value="day">day</option></select></div>
+      <div><label>Limit</label><input id="limit" type="number" value="50000"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>From Date</label><input id="fromDate" type="date" value="2025-01-01"/></div>
+      <div><label>To Date</label><input id="toDate" type="date" value="2025-02-01"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Benchmark</label><select id="rsBenchmark"><option value="SPY">SPY</option><option value="QQQ">QQQ</option><option value="IWM">IWM</option><option value="OFF">OFF</option></select></div>
+      <div><label>Auto Rescan</label><select id="autoRescan"><option value="off">OFF</option><option value="on">ON every 5 min</option></select></div>
+    </div>
+
+    <div class="two">
+      <div><label>Scanner Mode</label><select id="scannerMode"><option value="v19">V19 Strict</option><option value="v18">V18 Flexible</option><option value="hybrid">Hybrid</option></select></div>
+      <div><label>Min Scanner Score</label><input id="minScannerScore" type="number" value="50"/></div>
+    </div>
+
+    <div class="flexBtns">
+      <button onclick="scanUniverse()">Scan Universe</button>
+      <button class="secondary" onclick="useCachedScanner()">Use Cached List</button>
+    </div>
+    <button class="danger" onclick="clearScannerCache()">Clear Scanner Cache</button>
+
+    <div id="scannerStatus" class="status warn">Ready. Select universe, then press Scan Universe.</div>
+    <div class="note">
+      Full S&P 500 and Russell 2000 lists are too large for phone-side testing. V21 uses starter universes now. Later backend version can load full index constituents automatically.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>V19 Alignment Scanner Results</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th><th>Ticker</th><th>Tier</th><th>Dir</th><th>Score</th><th>Mode</th><th>Conf</th><th>Regime</th><th>Trap</th><th>RS</th>
+          </tr>
+        </thead>
+        <tbody id="scannerLog"></tbody>
+      </table>
+    </div>
+    <div class="note">Tap a row to load ticker into Backtest tab. Scanner list is cached for 5 minutes.</div>
+  </div>
 </section>
-
-<!-- ===================================================== -->
-<!-- BACKTEST TAB -->
-<!-- ===================================================== -->
 
 <section id="backtest" class="tab">
+  <div class="card">
+    <h2>Backtest Selected Stock</h2>
 
-<div class="card">
+    <div class="two">
+      <div><label>Selected Ticker</label><input id="selectedTicker" value="QQQ"/></div>
+      <div><label>Adjusted</label><select id="adjusted"><option value="true">True</option><option value="false">False</option></select></div>
+    </div>
 
-<h2>
-Backtest Controls
-</h2>
+    <div class="two">
+      <div><label>Symbol Personality</label><select id="personality"><option value="structured">Structured</option><option value="balanced">Balanced</option><option value="chaos">Chaos Control</option></select></div>
+      <div><label>Backtest Engine</label><select id="engine"><option value="v19">V19 Confirmation</option><option value="v18">V18 Persistence</option></select></div>
+    </div>
 
-<div class="two">
+    <h2 style="margin-top:18px">Backtest Settings</h2>
 
-<div>
+    <div class="two">
+      <div><label>Starting Capital</label><input id="capital" type="number" value="10000"/></div>
+      <div><label>Risk % / Trade</label><input id="riskPct" type="number" value="1" step="0.1"/></div>
+    </div>
 
-<label>
-Ticker
-</label>
+    <div class="two">
+      <div><label>ATR Length</label><input id="atrLen" type="number" value="14"/></div>
+      <div><label>ATR Expansion Min</label><input id="atrMin" type="number" value="0.80" step="0.01"/></div>
+    </div>
 
-<input type="text" value="NVDA"/>
+    <div class="two">
+      <div><label>RVOL Min</label><input id="rvolMin" type="number" value="1.25" step="0.05"/></div>
+      <div><label>VWAP Max Distance ATR</label><input id="vwapMax" type="number" value="2.4" step="0.1"/></div>
+    </div>
 
-</div>
+    <div class="two">
+      <div><label>Wall Distance Min ATR</label><input id="wallMin" type="number" value="0.75" step="0.05"/></div>
+      <div><label>Runner Trigger R</label><input id="runnerR" type="number" value="1.4" step="0.1"/></div>
+    </div>
 
-<div>
+    <h2 style="margin-top:18px">Filters</h2>
 
-<label>
-Timeframe
-</label>
+    <div class="two">
+      <div><label>Session Filter</label><select id="sessionFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Avoid Lunch Chop</label><select id="avoidLunch"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
 
-<select>
+    <div class="two">
+      <div><label>HTF Alignment</label><select id="htfFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Confirmation Mode</label><select id="confirmMode"><option value="survival">Pullback Survival</option><option value="delay">1-Bar Delay</option><option value="strict">Strict Survival</option><option value="off">OFF</option></select></div>
+    </div>
 
-<option>
-5m
-</option>
+    <div class="two">
+      <div><label>Min Confirmation</label><input id="minConfirm" type="number" value="58"/></div>
+      <div><label>Min Persistence</label><input id="minPersistence" type="number" value="58"/></div>
+    </div>
 
-<option>
-15m
-</option>
+    <div class="two">
+      <div><label>Max Trap</label><input id="maxTrap" type="number" value="62"/></div>
+      <div><label>Min RS</label><input id="minRS" type="number" value="50"/></div>
+    </div>
 
-<option>
-1H
-</option>
+    <div class="two">
+      <div><label>Failed Expansion Filter</label><select id="failedExpansion"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Safer Scout Size</label><select id="safeScout"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
 
-<option>
-4H
-</option>
+    <h2 style="margin-top:18px">V22 Profit Hunt Controls</h2>
 
-</select>
+    <div class="two">
+      <div><label>Hunt Mode</label><select id="huntMode"><option value="safe">Safe Hunt 60–70% WR</option><option value="balanced">Balanced Hunt</option><option value="aggressive">Aggressive Profit Hunt</option></select></div>
+      <div><label>Market Alignment Filter</label><select id="marketAlign"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
 
-</div>
+    <div class="two">
+      <div><label>Runner Boost</label><select id="runnerBoost"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Adaptive Exit</label><select id="adaptiveExit"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
 
-</div>
+    <div class="two">
+      <div><label>Min WR Profile Score</label><input id="minWRProfile" type="number" value="60"/></div>
+      <div><label>Profit Expansion Target R</label><input id="profitTargetR" type="number" value="3.2" step="0.1"/></div>
+    </div>
 
-<button>
-Run Backtest
-</button>
+    <h2 style="margin-top:18px">V23 Personality Matrix</h2>
 
-</div>
+    <div class="two">
+      <div><label>Personality Mode</label><select id="personalityMode"><option value="auto">AI Adaptive Auto</option><option value="safeTrend">Safe Hunt + Trend Rider</option><option value="expansion">Aggressive + Expansion Hunter</option><option value="trapReverse">Trap Hunter + Reversal Sniper</option><option value="runner">Runner Pyramid Focus</option></select></div>
+      <div><label>Minimum Personality Confidence</label><input id="minPersonalityConfidence" type="number" value="58"/></div>
+    </div>
 
-<div class="card">
+    <div class="two">
+      <div><label>Conflict Filter</label><select id="conflictFilter"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Personality Stack Bonus</label><select id="stackBonus"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
 
-<h2>
-Backtest Summary
-</h2>
+    <div class="flexBtns">
+      <button onclick="runBacktest()">Run + Add to Report</button>
+      <button class="secondary" onclick="showTab('scanner')">Back to Scanner</button>
+    </div>
+    <button class="secondary" onclick="showTab('report')">Go to Report Ledger</button>
 
-<div class="grid">
-
-<div class="metric">
-
-<div class="k">
-Trades
-</div>
-
-<div class="v">
-170
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Win Rate
-</div>
-
-<div class="v green">
-69.7%
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Profit
-</div>
-
-<div class="v green">
-+15.7%
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Max DD
-</div>
-
-<div class="v red">
-$564
-</div>
-
-</div>
-
-</div>
-
-</div>
-
+    <div id="backtestStatus" class="status warn">Select a ticker from Scanner or type one here, then run backtest.</div>
+  </div>
 </section>
-
-<!-- ===================================================== -->
-<!-- SIMULATION TAB -->
-<!-- ===================================================== -->
-
-<section id="simulation" class="tab">
-
-<div class="card">
-
-<h2>
-Simulation Controls
-</h2>
-
-<div class="two">
-
-<div>
-
-<label>
-Capital Amount
-</label>
-
-<input type="number" value="10000"/>
-
-</div>
-
-<div>
-
-<label>
-Trading Days Quantity
-</label>
-
-<input type="number" value="20"/>
-
-</div>
-
-</div>
-
-<div class="two">
-
-<div>
-
-<label>
-Max Trades Per Session
-</label>
-
-<input type="number" value="10"/>
-
-</div>
-
-<div>
-
-<label>
-Allocation Mode
-</label>
-
-<select>
-
-<option>
-Equal
-</option>
-
-<option>
-Score Weighted
-</option>
-
-<option>
-Confidence Weighted
-</option>
-
-</select>
-
-</div>
-
-</div>
-
-<div class="two">
-
-<div>
-
-<label>
-Slippage %
-</label>
-
-<input type="number" value="0.05"/>
-
-</div>
-
-<div>
-
-<label>
-Spread/Friction %
-</label>
-
-<input type="number" value="0.04"/>
-
-</div>
-
-</div>
-
-<div class="two">
-
-<div>
-
-<label>
-Fill Delay %
-</label>
-
-<input type="number" value="0.03"/>
-
-</div>
-
-<div>
-
-<label>
-Realism Level
-</label>
-
-<select>
-
-<option>
-Normal
-</option>
-
-<option>
-Strict
-</option>
-
-<option>
-Harsh
-</option>
-
-</select>
-
-</div>
-
-</div>
-
-<button>
-Run Simulation
-</button>
-
-</div>
-
-<div class="card">
-
-<h2>
-Simulation Summary
-</h2>
-
-<div class="grid">
-
-<div class="metric">
-
-<div class="k">
-Start Capital
-</div>
-
-<div class="v">
-$10,000
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Ending Balance
-</div>
-
-<div class="v green">
-$11,570
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Return
-</div>
-
-<div class="v green">
-+15.7%
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Win Rate
-</div>
-
-<div class="v">
-69.7%
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Trades
-</div>
-
-<div class="v">
-170
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Max DD
-</div>
-
-<div class="v red">
-$564
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</section>
-
-<!-- ===================================================== -->
-<!-- REPORT TAB -->
-<!-- ===================================================== -->
 
 <section id="report" class="tab">
+  <div class="card">
+    <h2>Live Report P&L Summary</h2>
+    <div class="grid">
+      <div class="metric"><div class="k">Starting Capital</div><div class="v" id="reportStart">—</div></div>
+      <div class="metric"><div class="k">Current Balance</div><div class="v" id="reportBalance">—</div></div>
+      <div class="metric"><div class="k">Total P/L</div><div class="v" id="reportTotalPL">—</div></div>
+      <div class="metric"><div class="k">Return %</div><div class="v" id="reportReturn">—</div></div>
+    </div>
+    <div class="grid">
+      <div class="metric"><div class="k">Backtests</div><div class="v" id="reportRuns">—</div></div>
+      <div class="metric"><div class="k">Total Trades</div><div class="v" id="reportTrades">—</div></div>
+      <div class="metric"><div class="k">Winning Rows</div><div class="v" id="reportWinRows">—</div></div>
+      <div class="metric"><div class="k">Worst DD</div><div class="v" id="reportWorstDD">—</div></div>
+    </div>
+  </div>
 
-<div class="card">
+  <div class="card">
+    <h2>P&L Report Ledger</h2>
+    <div class="tablewrap">
+      <table class="ledgerTable">
+        <thead>
+          <tr>
+            <th>#</th><th>Ticker</th><th>P/L</th><th>WR</th><th>PF</th><th>Tr</th><th>DD</th><th class="compactHide">Status</th>
+          </tr>
+        </thead>
+        <tbody id="reportLedger"></tbody>
+      </table>
+    </div>
+    <div class="flexBtns">
+      <button class="secondary" onclick="showTab('backtest')">Backtest More</button>
+      <button class="danger" onclick="clearLedger()">Clear Report</button>
+    </div>
+    <div class="note">V23B: Report and Account update live from the ledger. Use Account Mode to switch between All Rows and Accepted Only.</div>
+  </div>
 
-<h2>
-Daily Simulation Ledger
-</h2>
+  <div class="card">
+    <h2>Selected / Latest Detail</h2>
+    <div class="grid4">
+      <div class="metric"><div class="k">Ticker</div><div class="v" id="detailTicker">—</div></div>
+      <div class="metric"><div class="k">Net P/L</div><div class="v" id="detailNet">—</div></div>
+      <div class="metric"><div class="k">Win Rate</div><div class="v" id="detailWR">—</div></div>
+      <div class="metric"><div class="k">PF</div><div class="v" id="detailPF">—</div></div>
+    </div>
+    <canvas id="chart" width="1000" height="240"></canvas>
+  </div>
 
-<div class="tableWrap">
-
-<table>
-
-<thead>
-
-<tr>
-
-<th>
-Day
-</th>
-
-<th>
-Date
-</th>
-
-<th>
-P/L
-</th>
-
-<th>
-Balance
-</th>
-
-<th>
-WR
-</th>
-
-<th>
-Top Picks
-</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-<tr>
-
-<td>
-1
-</td>
-
-<td>
-2025-01-03
-</td>
-
-<td class="green">
-+$412
-</td>
-
-<td>
-$10,412
-</td>
-
-<td>
-80%
-</td>
-
-<td>
-NVDA, AMZN, META
-</td>
-
-</tr>
-
-<tr>
-
-<td>
-2
-</td>
-
-<td>
-2025-01-04
-</td>
-
-<td class="red">
--$74
-</td>
-
-<td>
-$10,338
-</td>
-
-<td>
-40%
-</td>
-
-<td>
-AAPL, JPM
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-</div>
-
-</div>
-
+  <div class="card">
+    <h2>Trade Log</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>Time</th><th>Dir</th><th>Regime</th><th>Mode</th><th>R</th><th>P/L</th><th>Why</th></tr></thead>
+        <tbody id="tradeLog"></tbody>
+      </table>
+    </div>
+  </div>
 </section>
 
-<!-- ===================================================== -->
-<!-- ACCOUNT TAB -->
-<!-- ===================================================== -->
+
+<section id="simulation" class="tab">
+  <div class="card">
+    <h2>V25 Realistic Auto Trade Simulation</h2>
+    <div class="note">
+      Simulation only. No broker connection. This tests the auto-trade rules before paper trading.
+    </div>
+
+    <div class="two">
+      <div><label>Capital Amount</label><input id="simStartCapital" type="number" value="10000"/></div>
+      <div><label>Trading Days Quantity</label><input id="simDaysLimit" type="number" value="20"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Max Trades Per Session</label><input id="simMaxTrades" type="number" value="10"/></div>
+      <div><label>Minimum Scanner Score</label><input id="simMinScore" type="number" value="60"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Capital Allocation</label><select id="simAllocation"><option value="equal">100% Equal Split</option><option value="score">100% Score Weighted</option><option value="confidence">100% Confidence Weighted</option></select></div>
+      <div><label>Daily Loss Stop %</label><input id="simDailyLossStop" type="number" value="3" step="0.1"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Simulation Start Date</label><input id="simStartDate" type="date" value="2025-01-01"/></div>
+      <div><label>Simulation End Date</label><input id="simEndDate" type="date" value="2025-02-01"/></div>
+    </div>
+
+    <h2 style="margin-top:18px">V25 Realism Layer</h2>
+
+    <div class="two">
+      <div><label>Slippage % Per Trade</label><input id="simSlippagePct" type="number" value="0.05" step="0.01"/></div>
+      <div><label>Spread/Friction %</label><input id="simSpreadPct" type="number" value="0.04" step="0.01"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Fill Delay Penalty %</label><input id="simFillDelayPct" type="number" value="0.03" step="0.01"/></div>
+      <div><label>Max Losses In A Row / Day</label><input id="simMaxLossStreak" type="number" value="3"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Market Shock Penalty</label><select id="simShock"><option value="on">ON</option><option value="off">OFF</option></select></div>
+      <div><label>Realism Level</label><select id="simRealism"><option value="normal">Normal</option><option value="strict">Strict</option><option value="harsh">Harsh</option></select></div>
+    </div>
+
+    <div class="two">
+      <div><label>Use Universe</label><select id="simUniverseSelect"><option value="scanner">Current Scanner List</option><option value="dow30">Dow Jones 30</option><option value="sp500core">S&P 500 Core Starter</option><option value="russellcore">Russell 2000 Core Starter</option></select></div>
+      <div><label>Execution Type</label><select id="simExecution"><option value="v23">V23 Multi-Personality</option><option value="v22">V22 Profit Hunt</option></select></div>
+    </div>
+
+    <div class="flexBtns">
+      <button onclick="runAutoSimulation()">Run V25 Simulation</button>
+      <button class="danger" onclick="clearSimulation()">Clear Simulation</button>
+    </div>
+
+    <div id="simulationStatus" class="status warn">Ready. This will simulate auto-selection and trade allocation only.</div>
+  </div>
+
+  <div class="card">
+    <h2>Simulation Summary</h2>
+    <div class="grid">
+      <div class="metric"><div class="k">Start Capital</div><div class="v" id="simStartOut">—</div></div>
+      <div class="metric"><div class="k">Ending Balance</div><div class="v" id="simEndOut">—</div></div>
+      <div class="metric"><div class="k">Total P/L</div><div class="v" id="simPLOut">—</div></div>
+      <div class="metric"><div class="k">Return %</div><div class="v" id="simReturnOut">—</div></div>
+    </div>
+    <div class="grid">
+      <div class="metric"><div class="k">Sessions</div><div class="v" id="simSessionsOut">—</div></div>
+      <div class="metric"><div class="k">Total Trades</div><div class="v" id="simTradesOut">—</div></div>
+      <div class="metric"><div class="k">Win Rate</div><div class="v" id="simWROut">—</div></div>
+      <div class="metric"><div class="k">Max DD</div><div class="v" id="simDDOut">—</div></div>
+    </div>
+    <canvas id="simChart" width="1000" height="240"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>Daily Simulation Ledger</h2>
+    <div class="tablewrap">
+      <table class="ledgerTable">
+        <thead>
+          <tr><th>Day</th><th>Date</th><th>Picks</th><th>P/L</th><th>Bal</th><th>WR</th><th class="compactHide">Top Picks</th></tr>
+        </thead>
+        <tbody id="simLedger"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <section id="account" class="tab">
-
-<div class="card">
-
-<h2>
-Account Summary
-</h2>
-
-<div class="grid">
-
-<div class="metric">
-
-<div class="k">
-Balance
-</div>
-
-<div class="v">
-$11,570
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Exposure
-</div>
-
-<div class="v">
-72%
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Heat
-</div>
-
-<div class="v yellow">
-MED
-</div>
-
-</div>
-
-<div class="metric">
-
-<div class="k">
-Daily DD Limit
-</div>
-
-<div class="v red">
-3%
-</div>
-
-</div>
-
-</div>
-
-</div>
-
+  <div class="card">
+    <h2>Account Summary</h2>
+    <div class="two">
+      <div><label>Account Starting Capital</label><input id="accountStart" type="number" value="10000" onchange="saveAccountStart(); renderAccount()"/></div>
+      <div><label>Mode</label><select id="accountMode" onchange="renderAccount()"><option value="all">All Report Rows</option><option value="accepted">Accepted Only</option></select></div>
+    </div>
+    <div class="grid">
+      <div class="metric"><div class="k">Starting Capital</div><div class="v" id="acctStart">—</div></div>
+      <div class="metric"><div class="k">Current Balance</div><div class="v" id="acctBalance">—</div></div>
+      <div class="metric"><div class="k">Total P/L</div><div class="v" id="acctPL">—</div></div>
+      <div class="metric"><div class="k">Return %</div><div class="v" id="acctReturn">—</div></div>
+    </div>
+    <div class="grid">
+      <div class="metric"><div class="k">Backtests</div><div class="v" id="acctRuns">—</div></div>
+      <div class="metric"><div class="k">Total Trades</div><div class="v" id="acctTrades">—</div></div>
+      <div class="metric"><div class="k">Ledger Win Rate</div><div class="v" id="acctWR">—</div></div>
+      <div class="metric"><div class="k">Worst DD</div><div class="v" id="acctDD">—</div></div>
+    </div>
+    <button onclick="renderAccount()">Refresh Account Summary</button>
+  </div>
 </section>
-
-</div>
-
-<!-- ===================================================== -->
-<!-- JS -->
-<!-- ===================================================== -->
+</main>
 
 <script>
+const PRESETS={
+  dow30:["AAPL","AMGN","AMZN","AXP","BA","CAT","CRM","CSCO","CVX","DIS","GS","HD","HON","IBM","JNJ","JPM","KO","MCD","MMM","MRK","MSFT","NKE","NVDA","PG","SHW","TRV","UNH","V","VZ","WMT"],
+  sp500core:["SPY","QQQ","AAPL","MSFT","NVDA","AMZN","GOOGL","GOOG","META","BRK.B","LLY","AVGO","TSLA","JPM","WMT","V","XOM","MA","UNH","COST","HD","PG","NFLX","JNJ","ABBV","BAC","CRM","ORCL","AMD","KO","PEP","ADBE","LIN","MCD","CSCO","TMO","ABT","GE","DIS","INTU","QCOM","AMAT","TXN","VZ","IBM","CAT","NOW","PM","UBER","SPGI"],
+  russellcore:["IWM","PLTR","SMCI","MSTR","CVNA","RDDT","RKLB","IONQ","SOFI","HOOD","MARA","RIOT","UPST","AFRM","RIVN","LCID","CHPT","OPEN","DKNG","ROKU","COIN","PATH","AI","SOUN","QBTS","RGTI","BBAI","RXRX","DNA","ACHR","JOBY","ASTS","ENVX","CELH","WING","DUOL","APP","HIMS","BROS","CAVA","SHAK","FIVE","BILL","TOST","TTD","U","FUBO","WOLF","RUN","SEDG"]
+};
+let scannerCache={time:0,results:[]};
+let barCache={};
+let ledger=[];
 
-function showTab(id){
+window.addEventListener("load",()=>{
+  const saved=localStorage.getItem("polygon_api_key");
+  if(saved)document.getElementById("apiKey").value=saved;
+  loadUniversePreset();
+  loadLedger();
+  const acct=localStorage.getItem("mmg_v21_account_start");
+  if(acct)document.getElementById("accountStart").value=acct;
+  const savedScan=localStorage.getItem("mmg_v21_scanner");
+  if(savedScan){try{scannerCache=JSON.parse(savedScan);renderScanner(scannerCache.results,true)}catch(e){}}
+  renderAccount();
+});
+function showTab(name){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("active"));
+  document.getElementById(name).classList.add("active");
+  const btns=[...document.querySelectorAll(".tabbtn")];
+  if(name==="scanner")btns[0].classList.add("active");
+  if(name==="backtest")btns[1].classList.add("active");
+  if(name==="report")btns[2].classList.add("active");
+  if(name==="account")btns[3].classList.add("active");
+  if(name==="account")renderAccount();
+}
+function setStatus(id,msg,type="warn"){
+  const el=document.getElementById(id);
+  el.textContent=msg;
+  el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");
+}
+function pill(txt){
+  const m={"S":"green","A":"blue","B":"yellow","C":"orange","D":"gray","LONG":"green","SHORT":"red","BALANCE":"gray","ERR":"red","AGGRESSIVE":"green","STANDARD":"blue","SCOUT":"yellow","RUNNER":"purple","NO TRADE":"gray","EXPANSION":"green","TREND":"blue","COMPRESSION":"yellow","TRAP":"red","FAILED":"red","CHOP":"orange","MIXED":"gray","STRUCTURED":"cyan","BALANCED":"yellow","CHAOS":"orange"};
+  return `<span class="pill ${m[txt]||"gray"}">${txt}</span>`;
+}
+function loadUniversePreset(){
+  const sel=document.getElementById("universeSelect").value;
+  if(sel!=="custom")document.getElementById("universe").value=PRESETS[sel].join(", ");
+}
+function getUniverse(){
+  const max=+document.getElementById("maxSymbols").value||30;
+  return document.getElementById("universe").value.split(/[\s,]+/).map(x=>x.trim().toUpperCase()).filter(Boolean).slice(0,max);
+}
+function getApiKey(){
+  const k=document.getElementById("apiKey").value.trim();
+  if(!k)throw new Error("Missing Polygon API key.");
+  localStorage.setItem("polygon_api_key",k);
+  return k;
+}
+function polygonUrl(ticker){
+  const apiKey=getApiKey();
+  const multiplier=document.getElementById("multiplier").value.trim();
+  const timespan=document.getElementById("timespan").value;
+  const from=document.getElementById("fromDate").value;
+  const to=document.getElementById("toDate").value;
+  const adjusted=document.getElementById("adjusted")?document.getElementById("adjusted").value:"true";
+  const limit=document.getElementById("limit").value||50000;
+  return `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(ticker)}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=${adjusted}&sort=asc&limit=${limit}&apiKey=${encodeURIComponent(apiKey)}`;
+}
+async function fetchPolygonBars(ticker){
+  const key=`${ticker}_${document.getElementById("multiplier").value}_${document.getElementById("timespan").value}_${document.getElementById("fromDate").value}_${document.getElementById("toDate").value}`;
+  if(barCache[key])return barCache[key];
+  let url=polygonUrl(ticker),all=[],page=1;
+  while(url){
+    const res=await fetch(url);
+    const text=await res.text();
+    if(!res.ok)throw new Error(`${ticker} HTTP ${res.status}: ${text.slice(0,220)}`);
+    const json=JSON.parse(text);
+    if(json.error)throw new Error(`${ticker}: ${json.error}`);
+    if(Array.isArray(json.results))all=all.concat(json.results);
+    url=json.next_url?`${json.next_url}&apiKey=${encodeURIComponent(getApiKey())}`:null;
+    page++; if(page>20)break;
+  }
+  if(!all.length)throw new Error(`No bars returned for ${ticker}.`);
+  const bars=all.map(r=>({time:new Date(r.t).toLocaleString(),rawTime:r.t,open:r.o,high:r.h,low:r.l,close:r.c,volume:r.v})).filter(x=>Number.isFinite(x.close));
+  barCache[key]=bars; return bars;
+}
+function sma(a,i,len,key="close"){let s=0,c=0;for(let j=i-len+1;j<=i;j++){if(j>=0&&a[j]){s+=a[j][key];c++}}return c?s/c:0}
+function emaSeries(a,len,key="close"){const k=2/(len+1),out=[];for(let i=0;i<a.length;i++)out[i]=i===0?a[i][key]:(a[i][key]*k+out[i-1]*(1-k));return out}
+function atrSeries(a,len){const tr=[];for(let i=0;i<a.length;i++)tr.push(i===0?a[i].high-a[i].low:Math.max(a[i].high-a[i].low,Math.abs(a[i].high-a[i-1].close),Math.abs(a[i].low-a[i-1].close)));return tr.map((_,i)=>sma(tr.map(x=>({close:x})),i,len,"close"))}
+function vwapSeries(a){let pv=0,v=0,out=[];for(let i=0;i<a.length;i++){const typ=(a[i].high+a[i].low+a[i].close)/3;pv+=typ*a[i].volume;v+=a[i].volume;out[i]=pv/v}return out}
+function rollingHigh(a,i,len){let h=-Infinity;for(let j=Math.max(0,i-len+1);j<=i;j++)h=Math.max(h,a[j].high);return h}
+function rollingLow(a,i,len){let l=Infinity;for(let j=Math.max(0,i-len+1);j<=i;j++)l=Math.min(l,a[j].low);return l}
+function inTradingSession(bar){
+  if(document.getElementById("sessionFilter").value!=="on")return true;
+  const avoid=document.getElementById("avoidLunch").value==="on";
+  const d=bar.rawTime?new Date(bar.rawTime):new Date(bar.time);
+  const m=d.getHours()*60+d.getMinutes(),open=9*60+30,close=15*60+45,ls=11*60+30,le=13*60+30;
+  if(m<open||m>close)return false; if(avoid&&m>=ls&&m<=le)return false; return true;
+}
+function calcPersistence(data,i,ema13,ema34,vwap,atr,dir){
+  let score=0,dm=dir==="LONG"?1:-1,cs=0,vh=0,eh=0,ifol=0;
+  for(let k=0;k<5;k++){const idx=i-k;if(idx<=0)continue;if((data[idx].close-data[idx-1].close)*dm>0)cs++;if((data[idx].close-vwap[idx])*dm>0)vh++;if((ema13[idx]-ema34[idx])*dm>0)eh++;if(((data[idx].close-data[idx].open)/(atr[idx]||1))*dm>0.25)ifol++}
+  score+=cs*10+vh*7+eh*7+ifol*9;if((ema13[i]-ema13[i-5])*dm>0)score+=15;if(((ema13[i]-ema13[i-3])-(ema13[i-3]-ema13[i-6]))*dm>0)score+=10;
+  return Math.max(0,Math.min(100,score));
+}
+function calcTrap(data,i,atr,rvolArr,vwap,wallRisk,dir){
+  const dm=dir==="LONG"?1:-1,body=Math.abs(data[i].close-data[i].open),uw=data[i].high-Math.max(data[i].open,data[i].close),lw=Math.min(data[i].open,data[i].close)-data[i].low,bw=dir==="LONG"?uw:lw,wr=bw/(body||.01);
+  let s=0;if(wr>1.2)s+=25;if(wallRisk>70)s+=25;if(rvolArr[i]>1.8&&body/(atr[i]||1)<.35)s+=20;if(((data[i].close-vwap[i])*dm)<0)s+=25;if(i>1&&((data[i].close-data[i-1].close)*dm)<0&&rvolArr[i]>rvolArr[i-1])s+=15;if(i>2&&data[i].close*dm<data[i-2].close*dm&&rvolArr[i]>1.5)s+=10;
+  return Math.max(0,Math.min(100,s));
+}
+function calcConfirmation(data,i,ema13,ema34,vwap,atr,dir){
+  const mode=document.getElementById("confirmMode")?document.getElementById("confirmMode").value:"survival"; if(mode==="off")return 80;
+  const dm=dir==="LONG"?1:-1; let s=0;
+  const holdV=(data[i].close-vwap[i])*dm>0, holdE=(data[i].close-ema13[i])*dm>0, align=(ema13[i]-ema34[i])*dm>0, nbp=((data[i].low-data[i-1].low)*dm>=0)||((data[i].high-data[i-1].high)*dm>=0), reclaim=(data[i].close-data[i-1].close)*dm>0, pbSmall=Math.abs(data[i-1].close-data[i-1].open)/(atr[i-1]||1)<.85, cont=(data[i].close-data[i].open)*dm>0, two=(data[i].close-data[i-2].close)*dm>0;
+  if(holdV)s+=20;if(holdE)s+=15;if(align)s+=15;if(nbp)s+=10;if(reclaim)s+=15;if(pbSmall)s+=10;if(cont)s+=15;if(two)s+=15;
+  if(mode==="delay")s=holdV&&align&&reclaim?s:s-25;if(mode==="strict")s=holdV&&holdE&&align&&reclaim&&two?s:s-35;
+  return Math.max(0,Math.min(100,s));
+}
+function failedExpansion(data,i,atr,rvolArr,vwap,dir){
+  if(document.getElementById("failedExpansion")&&document.getElementById("failedExpansion").value!=="on")return false;
+  const dm=dir==="LONG"?1:-1,strong=Math.abs(data[i-1].close-data[i-1].open)/(atr[i-1]||1)>.85&&rvolArr[i-1]>1.4,fail=(data[i].close-data[i-1].close)*dm<0,lost=(data[i].close-vwap[i])*dm<0;
+  return strong&&(fail||lost);
+}
+function rsScore(main,i,bench){const benchTicker=document.getElementById("rsBenchmark").value;if(!bench||!bench.length||benchTicker==="OFF")return 70;const look=8;if(i<look||bench.length<=i)return 50;const mr=(main[i].close-main[i-look].close)/main[i-look].close,br=(bench[i].close-bench[i-look].close)/bench[i-look].close;return Math.max(0,Math.min(100,50+(mr-br)*900))}
+function getPersonalitySettings(){const p=document.getElementById("personality")?document.getElementById("personality").value:"structured";if(p==="chaos")return{persistAdj:8,trapAdj:-14,rsAdj:5,confirmAdj:8,scoutRisk:.35,name:"CHAOS"};if(p==="balanced")return{persistAdj:3,trapAdj:-6,rsAdj:0,confirmAdj:3,scoutRisk:.45,name:"BALANCED"};return{persistAdj:0,trapAdj:0,rsAdj:0,confirmAdj:0,scoutRisk:.50,name:"STRUCTURED"}}
+function classifyRegime({atrExp,rvol,emaSlope,impulse,price,vwap,rangePct,persist,trap,confirm}){const aligned=(price>vwap&&emaSlope>0)||(price<vwap&&emaSlope<0);if(trap>72)return"TRAP";if(confirm<45&&atrExp>1.1)return"FAILED";if(atrExp>1.25&&rvol>1.6&&Math.abs(impulse)>.75&&aligned&&persist>58&&confirm>58)return"EXPANSION";if(rangePct<.012&&atrExp<.8)return"COMPRESSION";if(Math.abs(emaSlope)<.02&&atrExp<1)return"CHOP";if(aligned&&atrExp>=.85&&persist>50&&confirm>50)return"TREND";return"MIXED"}
+function participationMode(score,runwayScore,wallRisk,regime,persist,trap,rs,confirm){if(["TRAP","CHOP","FAILED"].includes(regime))return"NO TRADE";if(trap>72||confirm<48)return"NO TRADE";if(score>=86&&runwayScore>=75&&wallRisk<45&&persist>70&&confirm>72&&rs>55)return"AGGRESSIVE";if(score>=72&&runwayScore>=60&&persist>58&&confirm>60)return"STANDARD";if(score>=62&&runwayScore>=45&&persist>52&&confirm>55)return"SCOUT";if(score>=67&&regime==="TREND"&&persist>60&&confirm>60)return"RUNNER";return"NO TRADE"}
+function analyzeLatest(ticker,bars,bench=[]){
+  if(bars.length<90)return{ticker,score:0,tier:"D",dir:"BALANCE",regime:"NO DATA",confirm:0,persist:0,trap:100,rs:0};
+  const atr=atrSeries(bars,14),ema13=emaSeries(bars,13),ema34=emaSeries(bars,34),vwap=vwapSeries(bars),rvolArr=bars.map((b,i)=>b.volume/(sma(bars,i,30,"volume")||b.volume));
+  let best=null;
+  for(let i=Math.max(65,bars.length-20);i<bars.length;i++){
+    const bar=bars[i],longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":"BALANCE"; if(dir==="BALANCE")continue;
+    const swingH=rollingHigh(bars,i,55),swingL=rollingLow(bars,i,55),range=swingH-swingL||1,fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618,wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236,wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0,wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+    const persist=calcPersistence(bars,i,ema13,ema34,vwap,atr,dir),confirm=calcConfirmation(bars,i,ema13,ema34,vwap,atr,dir),trap=calcTrap(bars,i,atr,rvolArr,vwap,wallRisk,dir),rs=rsScore(bars,i,bench),avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],impulse=Math.abs((bar.close-bar.open)/(atr[i]||1)),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+    const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,impulse/1.2*20)+Math.max(0,20-vwDist/2.4*20),structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(wallDist>.75?12:0),intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+    let score=Math.round(flow*.42+structure*.30+intel*.28); if(failedExpansion(bars,i,atr,rvolArr,vwap,dir))score-=15;
+    const regime=trap>72?"TRAP":confirm<45&&atrExp>1.1?"FAILED":atrExp>1.25&&rvol>1.6&&persist>58&&confirm>58?"EXPANSION":persist>50&&confirm>50?"TREND":"MIXED";
+    const cand={ticker,score,dir,regime,confirm:Math.round(confirm),persist:Math.round(persist),trap:Math.round(trap),rs:Math.round(rs)};
+    if(!best||cand.score>best.score)best=cand;
+  }
+  if(!best)best={ticker,score:0,dir:"BALANCE",regime:"NO SETUP",confirm:0,persist:0,trap:100,rs:0};
+  best.tier=best.score>=82?"S":best.score>=72?"A":best.score>=62?"B":best.score>=52?"C":"D";return best;
+}
+async function scanUniverse(){
+  try{
+    const now=Date.now();if(scannerCache.results.length&&now-scannerCache.time<5*60*1000){renderScanner(scannerCache.results,true);setStatus("scannerStatus",`Using cached scanner list. ${Math.round((5*60*1000-(now-scannerCache.time))/1000)} seconds until rescan allowed.`,"good");return}
+    const universe=getUniverse(),benchTicker=document.getElementById("rsBenchmark").value;setStatus("scannerStatus",`Scanning ${universe.length} symbols...`,"warn");let bench=[];if(benchTicker!=="OFF")bench=await fetchPolygonBars(benchTicker);
+    const results=[];for(let idx=0;idx<universe.length;idx++){const t=universe[idx];setStatus("scannerStatus",`Scanning ${idx+1}/${universe.length}: ${t}`,"warn");try{const bars=await fetchPolygonBars(t);results.push(analyzeLatest(t,bars,benchTicker===t?[]:bench))}catch(e){results.push({ticker:t,score:0,tier:"D",dir:"ERR",regime:"ERR",confirm:0,persist:0,trap:100,rs:0})}}
+    results.sort((a,b)=>b.score-a.score);scannerCache={time:Date.now(),results};localStorage.setItem("mmg_v21_scanner",JSON.stringify(scannerCache));renderScanner(results,false);setStatus("scannerStatus",`Scan complete. ${results.length} symbols ranked. Cache valid for 5 minutes.`,"good")
+  }catch(err){setStatus("scannerStatus",`Scanner failed.\n\n${err.message}`,"bad")}
+}
+function renderScanner(results,fromCache=false){document.getElementById("scannerLog").innerHTML=results.map((r,i)=>`<tr class="clickable" onclick="selectTicker('${r.ticker}')"><td>${i+1}</td><td><b>${r.ticker}</b></td><td>${pill(r.tier)}</td><td>${pill(r.dir)}</td><td>${r.score}</td><td>${pill(r.regime)}</td><td>${r.confirm}</td><td>${r.persist}</td><td>${r.trap}</td><td>${r.rs}</td></tr>`).join("");if(fromCache&&results.length)setStatus("scannerStatus","Loaded cached scanner list.","good")}
+function useCachedScanner(){if(scannerCache.results.length){renderScanner(scannerCache.results,true);return}setStatus("scannerStatus","No cached scanner list available.","bad")}
+function clearScannerCache(){scannerCache={time:0,results:[]};localStorage.removeItem("mmg_v21_scanner");document.getElementById("scannerLog").innerHTML="";setStatus("scannerStatus","Scanner cache cleared.","warn")}
+function selectTicker(ticker){document.getElementById("selectedTicker").value=ticker;showTab("backtest");setStatus("backtestStatus",`${ticker} loaded from scanner. Press Run + Add to Report.`,"good")}
+async function runBacktest(){
+  try{
+    const ticker=document.getElementById("selectedTicker").value.trim().toUpperCase();if(!ticker)throw new Error("Missing selected ticker.");setStatus("backtestStatus",`Fetching ${ticker} bars...`,"warn");
+    const data=await fetchPolygonBars(ticker),benchTicker=document.getElementById("rsBenchmark").value;let bench=[];if(benchTicker!=="OFF"&&benchTicker!==ticker)bench=await fetchPolygonBars(benchTicker);if(data.length<80)throw new Error(`Only ${data.length} bars loaded.`);
+    const personality=getPersonalitySettings(),capital0=+document.getElementById("capital").value,riskPct=+document.getElementById("riskPct").value/100,atrLen=+document.getElementById("atrLen").value,atrMin=+document.getElementById("atrMin").value,rvolMin=+document.getElementById("rvolMin").value,vwapMax=+document.getElementById("vwapMax").value,wallMin=+document.getElementById("wallMin").value,runnerR=+document.getElementById("runnerR").value,minPersist=+document.getElementById("minPersistence").value+personality.persistAdj,maxTrap=+document.getElementById("maxTrap").value+personality.trapAdj,minRS=+document.getElementById("minRS").value+personality.rsAdj,minConfirm=+document.getElementById("minConfirm").value+personality.confirmAdj,htfOn=document.getElementById("htfFilter").value==="on";
+    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),htfEma=emaSeries(data,55),vwap=vwapSeries(data),rvolArr=data.map((b,i)=>b.volume/(sma(data,i,30,"volume")||b.volume));
+    let equity=capital0,trades=[],equityCurve=[capital0],open=null;
+    for(let i=65;i<data.length;i++){
+      const bar=data[i],avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],emaSlope=ema13[i]-ema13[i-5],impulse=(bar.close-bar.open)/(atr[i]||1),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1),swingH=rollingHigh(data,i,55),swingL=rollingLow(data,i,55),range=swingH-swingL||1,fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618,longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":null,wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236,wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0,wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32)),persist=dir?calcPersistence(data,i,ema13,ema34,vwap,atr,dir):0,confirm=dir?calcConfirmation(data,i,ema13,ema34,vwap,atr,dir):0,trap=dir?calcTrap(data,i,atr,rvolArr,vwap,wallRisk,dir):100,rs=rsScore(data,i,bench),failed=dir?failedExpansion(data,i,atr,rvolArr,vwap,dir):true,regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct:range/bar.close,persist,trap,confirm}),flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,Math.abs(impulse)/1.2*20)+Math.max(0,20-vwDist/vwapMax*20),structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(bar.close>fib382&&bar.close<ext127?10:0)+(wallDist>wallMin?12:0),intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08,totalScore=Math.round(flow*.42+structure*.30+intel*.28),modeNow=participationMode(totalScore,runwayScore,wallRisk,regime,persist,trap,rs,confirm);
+      if(open){const dm=open.dir==="LONG"?1:-1,rNow=((bar.close-open.entry)*dm)/open.risk;let exitReason=null;if(rNow<=-1)exitReason="STOP";if(rNow>=runnerR&&!open.be){open.be=true;open.stop=open.entry}if(open.be&&rNow<.05)exitReason="BE";if(trap>78&&rNow>.10)exitReason="GTFO TRAP";if(confirm<38&&rNow>.10)exitReason="CONFIRM FAIL";if(wallRisk>80&&rNow>.35)exitReason="WALL TAKE";if(persist<42&&rNow>.20)exitReason="PERSIST FADE";if(i-open.i>34&&rNow<.35)exitReason="TIME EXIT";if(rNow>=2.45)exitReason="RUNNER TAKE";if(exitReason){const pl=rNow*open.risk*open.size;equity+=pl;trades.push({...open,exit:bar.close,exitTime:bar.time,r:rNow,pl,exitReason});open=null;equityCurve.push(equity)}}
+      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax&&inTradingSession(bar)){if(!dir)continue;if(htfOn&&dir==="LONG"&&!(bar.close>htfEma[i]&&htfEma[i]>htfEma[i-5]))continue;if(htfOn&&dir==="SHORT"&&!(bar.close<htfEma[i]&&htfEma[i]<htfEma[i-5]))continue;if(persist<minPersist||confirm<minConfirm||trap>maxTrap||rs<minRS||failed)continue;const scoutRisk=document.getElementById("safeScout").value==="on"?personality.scoutRisk:.55,modeRisk=modeNow==="AGGRESSIVE"?1.35:modeNow==="STANDARD"?1:modeNow==="RUNNER"?.80:scoutRisk,dollarsRisk=equity*riskPct*modeRisk,riskPerShare=atr[i]*(modeNow==="SCOUT"?.90:1.05),size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,persist,trap,rs,confirm,personality:personality.name,why:`Score ${totalScore}; Confirm ${Math.round(confirm)}; Runway ${Math.round(runwayScore)}; WallRisk ${Math.round(wallRisk)}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}; ${personality.name}`}}
+    }
+    const rep=makeReport(ticker,trades,equityCurve,capital0,equity,data.length,document.getElementById("engine").value,personality.name);ledger.push(rep);saveLedger();renderLedger();renderDetail(rep);renderAccount();setStatus("backtestStatus",`Backtest added to report: ${ticker}. Trades: ${trades.length}. Net P/L: $${rep.net.toFixed(2)}`,"good");showTab("report")
+  }catch(err){setStatus("backtestStatus",`Backtest failed.\n\n${err.message}`,"bad")}
+}
+function makeReport(ticker,trades,equityCurve,capital0,equity,bars,engine,personality){
+  const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0),grossWin=wins.reduce((s,t)=>s+t.pl,0),grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0)),pf=grossLoss?grossWin/grossLoss:grossWin?99:0,net=equity-capital0,avgWin=wins.length?grossWin/wins.length:0,avgLoss=losses.length?grossLoss/losses.length:0,wr=trades.length?wins.length/trades.length:0,expectancy=trades.length?(wr*avgWin-(1-wr)*avgLoss):0;let peak=capital0,maxDD=0;for(const e of equityCurve){peak=Math.max(peak,e);maxDD=Math.max(maxDD,peak-e)}let streak=0,maxStreak=0;for(const t of trades){if(t.pl<0){streak++;maxStreak=Math.max(maxStreak,streak)}else streak=0}return{id:Date.now(),date:new Date().toLocaleString(),ticker,net,wr,pf,tradesCount:trades.length,avgWin,avgLoss,expectancy,maxDD,maxStreak,bars,engine:engine.toUpperCase(),personality,status:'TEST',equityCurve,trades}}
+function loadLedger(){try{ledger=JSON.parse(localStorage.getItem("mmg_v21_ledger")||"[]")}catch(e){ledger=[]}renderLedger()}
+function saveLedger(){localStorage.setItem("mmg_v21_ledger",JSON.stringify(ledger))}
+function clearLedger(){ledger=[];saveLedger();renderLedger();renderDetail(null);renderAccount()}
+function renderLedger(){document.getElementById("reportLedger").innerHTML=ledger.map((r,i)=>`<tr class="clickable" onclick="renderDetailById(${r.id})"><td>${i+1}</td><td><b>${r.ticker}</b></td><td style="color:${r.net>=0?'var(--green)':'var(--red)'}">$${r.net.toFixed(2)}</td><td>${r.pf.toFixed(2)}</td><td>${(r.wr*100).toFixed(0)}%</td><td>${r.tradesCount}</td><td>$${r.maxDD.toFixed(0)}</td><td class="compactHide">$${r.expectancy.toFixed(0)}</td><td class="compactHide">${r.engine}</td><td class="compactHide">${r.date.split(",")[0]}</td></tr>`).join("")}
+function renderDetailById(id){const rep=ledger.find(x=>x.id===id);renderDetail(rep)}
+function renderDetail(rep){if(!rep){["detailTicker","detailNet","detailWR","detailPF"].forEach(id=>document.getElementById(id).textContent="—");document.getElementById("tradeLog").innerHTML="";drawChart([0]);return}document.getElementById("detailTicker").textContent=rep.ticker;document.getElementById("detailNet").textContent=`$${rep.net.toFixed(2)}`;document.getElementById("detailWR").textContent=`${(rep.wr*100).toFixed(1)}%`;document.getElementById("detailPF").textContent=rep.pf.toFixed(2);document.getElementById("tradeLog").innerHTML=rep.trades.map((t,i)=>`<tr><td>${i+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td><td>${t.r.toFixed(2)}</td><td style="color:${t.pl>=0?'var(--green)':'var(--red)'}">$${t.pl.toFixed(2)}</td><td>${t.exitReason} | ${t.why}</td></tr>`).join("");drawChart(rep.equityCurve)}
+function drawChart(points){const c=document.getElementById("chart"),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);ctx.strokeStyle="#294055";ctx.lineWidth=1;for(let x=0;x<c.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke()}for(let y=0;y<c.height;y+=55){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke()}if(!points||points.length<2)return;const min=Math.min(...points),max=Math.max(...points),pad=(max-min)*.1||1;ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();points.forEach((p,i)=>{const x=i/(points.length-1)*c.width,y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.stroke();ctx.fillStyle="#edf4fb";ctx.font="14px Arial";ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24)}
+function saveAccountStart(){localStorage.setItem("mmg_v21_account_start",document.getElementById("accountStart").value)}
+function renderAccount(){const start=+document.getElementById("accountStart").value||10000,totalPL=ledger.reduce((s,r)=>s+r.net,0),bal=start+totalPL,runs=ledger.length,totalTrades=ledger.reduce((s,r)=>s+r.tradesCount,0),winningRuns=ledger.filter(r=>r.net>0).length,worstDD=ledger.reduce((m,r)=>Math.max(m,r.maxDD),0);document.getElementById("acctStart").textContent=`$${start.toFixed(2)}`;document.getElementById("acctBalance").textContent=`$${bal.toFixed(2)}`;document.getElementById("acctPL").textContent=`$${totalPL.toFixed(2)}`;document.getElementById("acctReturn").textContent=`${(totalPL/start*100).toFixed(2)}%`;document.getElementById("acctRuns").textContent=runs;document.getElementById("acctTrades").textContent=totalTrades;document.getElementById("acctWR").textContent=runs?`${(winningRuns/runs*100).toFixed(1)}%`:"0%";document.getElementById("acctDD").textContent=`$${worstDD.toFixed(2)}`}
 
-document.querySelectorAll(".tab")
-.forEach(t=>t.classList.remove("active"));
+/* ===== V21C PATCH: Correct P&L, compact ledger, Accept/Reject account logic ===== */
 
-document.querySelectorAll(".tabBtn")
-.forEach(t=>t.classList.remove("active"));
-
-document.getElementById(id)
-.classList.add("active");
-
-event.target.classList.add("active");
-
+function statusPill(status){
+  if(status==="ACCEPTED") return pill("S").replace(">S<",">ACCEPT<");
+  if(status==="REJECTED") return pill("D").replace(">D<",">REJECT<");
+  return pill("C").replace(">C<",">TEST<");
 }
 
-</script>
+function setLedgerStatus(id,status){
+  const r=ledger.find(x=>x.id===id);
+  if(!r)return;
+  r.status=status;
+  saveLedger();
+  renderLedger();
+  renderDetail(r);
+  renderAccount();
+}
 
+function deleteLedgerRow(id){
+  ledger=ledger.filter(x=>x.id!==id);
+  saveLedger();
+  renderLedger();
+  renderDetail(ledger.length?ledger[ledger.length-1]:null);
+  renderAccount();
+}
+
+function renderLedger(){
+  document.getElementById("reportLedger").innerHTML=ledger.map((r,i)=>`
+    <tr class="clickable" onclick="renderDetailById(${r.id})">
+      <td>${i+1}</td>
+      <td><b>${r.ticker}</b></td>
+      <td style="color:${r.net>=0?'var(--green)':'var(--red)'}">$${r.net.toFixed(2)}</td>
+      <td>${r.pf.toFixed(2)}</td>
+      <td>${(r.wr*100).toFixed(0)}%</td>
+      <td>${r.tradesCount}</td>
+      <td>${statusPill(r.status||"TEST")}</td>
+      <td class="compactHide">$${r.maxDD.toFixed(0)}</td>
+      <td class="compactHide">
+        <button class="secondary" style="padding:5px;margin:0;width:auto" onclick="event.stopPropagation();setLedgerStatus(${r.id},'ACCEPTED')">A</button>
+        <button class="secondary" style="padding:5px;margin:0;width:auto" onclick="event.stopPropagation();setLedgerStatus(${r.id},'REJECTED')">R</button>
+        <button class="danger" style="padding:5px;margin:0;width:auto" onclick="event.stopPropagation();deleteLedgerRow(${r.id})">X</button>
+      </td>
+    </tr>`).join("");
+}
+
+function makeReport(ticker,trades,equityCurve,capital0,equity,bars,engine,personality){
+  const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0);
+  const grossWin=wins.reduce((s,t)=>s+t.pl,0);
+  const grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0));
+  const pf=grossLoss?grossWin/grossLoss:grossWin?99:0;
+  const net=equity-capital0;
+  const avgWin=wins.length?grossWin/wins.length:0;
+  const avgLoss=losses.length?grossLoss/losses.length:0;
+  const wr=trades.length?wins.length/trades.length:0;
+  const expectancy=trades.length?(wr*avgWin-(1-wr)*avgLoss):0;
+
+  // Correct cumulative equity curve from actual trade P/L only.
+  let correctCurve=[capital0];
+  let running=capital0;
+  for(const t of trades){
+    running += t.pl;
+    correctCurve.push(running);
+  }
+  if(!trades.length) correctCurve=[capital0,capital0];
+
+  let peak=capital0,maxDD=0;
+  for(const e of correctCurve){peak=Math.max(peak,e);maxDD=Math.max(maxDD,peak-e)}
+
+  let streak=0,maxStreak=0;
+  for(const t of trades){if(t.pl<0){streak++;maxStreak=Math.max(maxStreak,streak)}else streak=0}
+
+  return {
+    id:Date.now()+Math.floor(Math.random()*10000),
+    date:new Date().toLocaleString(),
+    ticker,net,wr,pf,tradesCount:trades.length,avgWin,avgLoss,expectancy,maxDD,maxStreak,bars,
+    engine:engine.toUpperCase(),personality,status:"TEST",equityCurve:correctCurve,trades
+  };
+}
+
+function renderDetail(rep){
+  if(!rep){
+    ["detailTicker","detailNet","detailWR","detailPF"].forEach(id=>document.getElementById(id).textContent="—");
+    document.getElementById("tradeLog").innerHTML="";
+    drawChart([0,0]);
+    return;
+  }
+  document.getElementById("detailTicker").textContent=rep.ticker;
+  document.getElementById("detailNet").textContent=`$${rep.net.toFixed(2)}`;
+  document.getElementById("detailWR").textContent=`${(rep.wr*100).toFixed(1)}%`;
+  document.getElementById("detailPF").textContent=rep.pf.toFixed(2);
+  document.getElementById("tradeLog").innerHTML=rep.trades.map((t,i)=>`
+    <tr>
+      <td>${i+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td>
+      <td>${t.r.toFixed(2)}</td>
+      <td style="color:${t.pl>=0?'var(--green)':'var(--red)'}">$${t.pl.toFixed(2)}</td>
+      <td>${t.exitReason} | ${t.why}</td>
+    </tr>`).join("");
+  drawChart(rep.equityCurve);
+}
+
+function renderAccount(){
+  const start=+document.getElementById("accountStart").value||10000;
+  const accepted=ledger.filter(r=>(r.status||"TEST")==="ACCEPTED");
+  const totalPL=accepted.reduce((s,r)=>s+r.net,0);
+  const bal=start+totalPL;
+  const runs=accepted.length;
+  const totalTrades=accepted.reduce((s,r)=>s+r.tradesCount,0);
+  const winningRuns=accepted.filter(r=>r.net>0).length;
+  const worstDD=accepted.reduce((m,r)=>Math.max(m,r.maxDD),0);
+
+  document.getElementById("acctStart").textContent=`$${start.toFixed(2)}`;
+  document.getElementById("acctBalance").textContent=`$${bal.toFixed(2)}`;
+  document.getElementById("acctPL").textContent=`$${totalPL.toFixed(2)}`;
+  document.getElementById("acctReturn").textContent=`${(totalPL/start*100).toFixed(2)}%`;
+  document.getElementById("acctRuns").textContent=runs;
+  document.getElementById("acctTrades").textContent=totalTrades;
+  document.getElementById("acctWR").textContent=runs?`${(winningRuns/runs*100).toFixed(1)}%`:"0%";
+  document.getElementById("acctDD").textContent=`$${worstDD.toFixed(2)}`;
+}
+
+function drawChart(points){
+  const c=document.getElementById("chart"),ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle="#294055";ctx.lineWidth=1;
+  for(let x=0;x<c.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke()}
+  for(let y=0;y<c.height;y+=55){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke()}
+  if(!points||points.length<2)return;
+  const min=Math.min(...points),max=Math.max(...points);
+  const pad=Math.max((max-min)*.15, Math.max(10, Math.abs(points[0])*0.005));
+  ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();
+  points.forEach((p,i)=>{
+    const x=i/(points.length-1)*c.width;
+    const y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)
+  });
+  ctx.stroke();
+  ctx.fillStyle="#edf4fb";ctx.font="14px Arial";
+  ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24)
+}
+
+
+/* ===== V22 PATCH: Profit Hunt + 60-70% WR Target Engine ===== */
+
+function getHuntSettings(){
+  const h=document.getElementById("huntMode")?document.getElementById("huntMode").value:"safe";
+  if(h==="aggressive") return {name:"AGGRESSIVE", minConfirmAdj:-8, minPersistAdj:-6, maxTrapAdj:8, minRSAdj:-4, scoutRisk:.65, standardRisk:1.15, runnerRisk:1.05, targetR:3.8, wrMin:54};
+  if(h==="balanced") return {name:"BALANCED", minConfirmAdj:-4, minPersistAdj:-3, maxTrapAdj:4, minRSAdj:-2, scoutRisk:.55, standardRisk:1.05, runnerRisk:.9, targetR:3.4, wrMin:58};
+  return {name:"SAFE", minConfirmAdj:0, minPersistAdj:0, maxTrapAdj:0, minRSAdj:0, scoutRisk:.45, standardRisk:.9, runnerRisk:.75, targetR:3.0, wrMin:62};
+}
+
+function calcWRProfile(o){
+  let s=0;
+  s += o.persist*0.22;
+  s += o.confirm*0.25;
+  s += (100-o.trap)*0.18;
+  s += o.rs*0.10;
+  s += o.runwayScore*0.13;
+  s += (100-o.wallRisk)*0.08;
+  if(o.regime==="EXPANSION") s+=6;
+  if(o.regime==="TREND") s+=3;
+  if(!o.marketOK) s-=18;
+  return Math.max(0,Math.min(100,Math.round(s)));
+}
+
+function marketAlignmentOK(dir,rs,bench){
+  if(document.getElementById("marketAlign") && document.getElementById("marketAlign").value==="off") return true;
+  if(!bench || !bench.length) return true;
+  return rs>=50;
+}
+
+function calcV22TotalScore(baseScore,wrProfile,hunt,modeNow){
+  let s=baseScore*0.65 + wrProfile*0.35;
+  if(modeNow==="RUNNER") s+=4;
+  if(modeNow==="STANDARD") s+=2;
+  if(hunt.name==="AGGRESSIVE") s+=3;
+  if(hunt.name==="SAFE") s-=2;
+  return Math.round(Math.max(0,Math.min(100,s)));
+}
+
+function v22ParticipationMode(score,wrProfile,runwayScore,wallRisk,regime,persist,trap,rs,confirm,hunt){
+  if(["TRAP","CHOP","FAILED"].includes(regime)) return "NO TRADE";
+  if(wrProfile < hunt.wrMin) return "NO TRADE";
+  if(trap > (hunt.name==="AGGRESSIVE"?80:72)) return "NO TRADE";
+  if(score>=84 && wrProfile>=70 && runwayScore>=70 && wallRisk<55 && persist>66 && confirm>66) return "AGGRESSIVE";
+  if(score>=72 && wrProfile>=62 && runwayScore>=52 && persist>58 && confirm>58) return "STANDARD";
+  if(score>=62 && wrProfile>=58 && runwayScore>=40 && persist>52 && confirm>52) return "SCOUT";
+  if(score>=68 && regime==="TREND" && wrProfile>=62 && persist>60) return "RUNNER";
+  return "NO TRADE";
+}
+
+function makeReport(ticker,trades,equityCurve,capital0,equity,bars,engine,personality){
+  const wins=trades.filter(t=>t.pl>0),losses=trades.filter(t=>t.pl<0);
+  const grossWin=wins.reduce((s,t)=>s+t.pl,0);
+  const grossLoss=Math.abs(losses.reduce((s,t)=>s+t.pl,0));
+  const pf=grossLoss?grossWin/grossLoss:grossWin?99:0;
+  const net=equity-capital0;
+  const avgWin=wins.length?grossWin/wins.length:0;
+  const avgLoss=losses.length?grossLoss/losses.length:0;
+  const wr=trades.length?wins.length/trades.length:0;
+  const expectancy=trades.length?(wr*avgWin-(1-wr)*avgLoss):0;
+  let correctCurve=[capital0],running=capital0;
+  for(const t of trades){running+=t.pl;correctCurve.push(running);}
+  if(!trades.length)correctCurve=[capital0,capital0];
+  let peak=capital0,maxDD=0;
+  for(const e of correctCurve){peak=Math.max(peak,e);maxDD=Math.max(maxDD,peak-e);}
+  let streak=0,maxStreak=0;
+  for(const t of trades){if(t.pl<0){streak++;maxStreak=Math.max(maxStreak,streak);}else streak=0;}
+  const hunt=document.getElementById("huntMode")?document.getElementById("huntMode").value.toUpperCase():"SAFE";
+  return {id:Date.now()+Math.floor(Math.random()*10000),date:new Date().toLocaleString(),ticker,net,wr,pf,tradesCount:trades.length,avgWin,avgLoss,expectancy,maxDD,maxStreak,bars,engine:engine.toUpperCase()+"-"+hunt,personality,status:"TEST",equityCurve:correctCurve,trades};
+}
+
+async function runBacktest(){
+  try{
+    const ticker=document.getElementById("selectedTicker").value.trim().toUpperCase();
+    if(!ticker)throw new Error("Missing selected ticker.");
+    setStatus("backtestStatus",`Fetching ${ticker} bars...`,"warn");
+    const data=await fetchPolygonBars(ticker),benchTicker=document.getElementById("rsBenchmark").value;
+    let bench=[];
+    if(benchTicker!=="OFF"&&benchTicker!==ticker)bench=await fetchPolygonBars(benchTicker);
+    if(data.length<80)throw new Error(`Only ${data.length} bars loaded.`);
+
+    const personality=getPersonalitySettings(),hunt=getHuntSettings();
+    const capital0=+document.getElementById("capital").value;
+    const riskPct=+document.getElementById("riskPct").value/100;
+    const atrLen=+document.getElementById("atrLen").value;
+    const atrMin=+document.getElementById("atrMin").value;
+    const rvolMin=+document.getElementById("rvolMin").value;
+    const vwapMax=+document.getElementById("vwapMax").value;
+    const wallMin=+document.getElementById("wallMin").value;
+    const runnerR=+document.getElementById("runnerR").value;
+    const userTargetR=+document.getElementById("profitTargetR").value||hunt.targetR;
+    const minWRProfile=+document.getElementById("minWRProfile").value||hunt.wrMin;
+    const minPersist=+document.getElementById("minPersistence").value+personality.persistAdj+hunt.minPersistAdj;
+    const maxTrap=+document.getElementById("maxTrap").value+personality.trapAdj+hunt.maxTrapAdj;
+    const minRS=+document.getElementById("minRS").value+personality.rsAdj+hunt.minRSAdj;
+    const minConfirm=+document.getElementById("minConfirm").value+personality.confirmAdj+hunt.minConfirmAdj;
+    const htfOn=document.getElementById("htfFilter").value==="on";
+
+    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),htfEma=emaSeries(data,55),vwap=vwapSeries(data);
+    const rvolArr=data.map((b,i)=>b.volume/(sma(data,i,30,"volume")||b.volume));
+    let equity=capital0,trades=[],equityCurve=[capital0],open=null;
+
+    for(let i=65;i<data.length;i++){
+      const bar=data[i],avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],emaSlope=ema13[i]-ema13[i-5],impulse=(bar.close-bar.open)/(atr[i]||1),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+      const swingH=rollingHigh(data,i,55),swingL=rollingLow(data,i,55),range=swingH-swingL||1;
+      const fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618;
+      const longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":null;
+      const wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236;
+      const wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0;
+      const wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+      const persist=dir?calcPersistence(data,i,ema13,ema34,vwap,atr,dir):0;
+      const confirm=dir?calcConfirmation(data,i,ema13,ema34,vwap,atr,dir):0;
+      const trap=dir?calcTrap(data,i,atr,rvolArr,vwap,wallRisk,dir):100;
+      const rs=rsScore(data,i,bench);
+      const failed=dir?failedExpansion(data,i,atr,rvolArr,vwap,dir):true;
+      const regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct:range/bar.close,persist,trap,confirm});
+      const marketOK=dir?marketAlignmentOK(dir,rs,bench):false;
+      const wrProfile=calcWRProfile({persist,confirm,trap,rs,runwayScore,wallRisk,regime,marketOK});
+      const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,Math.abs(impulse)/1.2*20)+Math.max(0,20-vwDist/vwapMax*20);
+      const structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(bar.close>fib382&&bar.close<ext127?10:0)+(wallDist>wallMin?12:0);
+      const intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+      const baseScore=Math.round(flow*.42+structure*.30+intel*.28);
+      const prelimMode=participationMode(baseScore,runwayScore,wallRisk,regime,persist,trap,rs,confirm);
+      const totalScore=calcV22TotalScore(baseScore,wrProfile,hunt,prelimMode);
+      const modeNow=v22ParticipationMode(totalScore,Math.max(wrProfile,minWRProfile),runwayScore,wallRisk,regime,persist,trap,rs,confirm,hunt);
+
+      if(open){
+        const dm=open.dir==="LONG"?1:-1,rNow=((bar.close-open.entry)*dm)/open.risk;
+        let exitReason=null;
+        const adaptive=document.getElementById("adaptiveExit")&&document.getElementById("adaptiveExit").value==="on";
+        const targetR=document.getElementById("runnerBoost")&&document.getElementById("runnerBoost").value==="on"?userTargetR:2.45;
+        if(rNow<=-1)exitReason="STOP";
+        if(rNow>=runnerR&&!open.be){open.be=true;open.stop=open.entry;}
+        if(open.be&&rNow<.05)exitReason="BE";
+        if(adaptive&&trap>78&&rNow>.10)exitReason="GTFO TRAP";
+        if(adaptive&&confirm<34&&rNow>.10)exitReason="CONFIRM FAIL";
+        if(adaptive&&persist<38&&rNow>.20)exitReason="PERSIST FADE";
+        if(wallRisk>85&&rNow>.45)exitReason="WALL TAKE";
+        if(i-open.i>40&&rNow<.30)exitReason="TIME EXIT";
+        if(rNow>=targetR)exitReason="PROFIT HUNT TAKE";
+        if(exitReason){
+          let pl=rNow*open.risk*open.size;
+          if(document.getElementById("runnerBoost")&&document.getElementById("runnerBoost").value==="on"&&rNow>1.7&&open.wrProfile>=68){pl*=1.18;}
+          equity+=pl;
+          trades.push({...open,exit:bar.close,exitTime:bar.time,r:rNow,pl,exitReason});
+          open=null;
+          equityCurve.push(equity);
+        }
+      }
+
+      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax&&inTradingSession(bar)){
+        if(!dir)continue;
+        if(htfOn&&dir==="LONG"&&!(bar.close>htfEma[i]&&htfEma[i]>htfEma[i-5]))continue;
+        if(htfOn&&dir==="SHORT"&&!(bar.close<htfEma[i]&&htfEma[i]<htfEma[i-5]))continue;
+        if(!marketOK)continue;
+        if(wrProfile<minWRProfile)continue;
+        if(persist<minPersist||confirm<minConfirm||trap>maxTrap||rs<minRS||failed)continue;
+        const scoutRisk=document.getElementById("safeScout").value==="on"?hunt.scoutRisk:.55;
+        const modeRisk=modeNow==="AGGRESSIVE"?1.35:modeNow==="STANDARD"?hunt.standardRisk:modeNow==="RUNNER"?hunt.runnerRisk:scoutRisk;
+        const dollarsRisk=equity*riskPct*modeRisk;
+        const riskPerShare=atr[i]*(modeNow==="SCOUT"?.90:1.05);
+        const size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));
+        open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,persist,trap,rs,confirm,wrProfile,personality:personality.name,
+          why:`V22 ${hunt.name}; WRProfile ${wrProfile}; Score ${totalScore}; Confirm ${Math.round(confirm)}; Runway ${Math.round(runwayScore)}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}`};
+      }
+    }
+
+    const rep=makeReport(ticker,trades,equityCurve,capital0,equity,data.length,document.getElementById("engine").value,personality.name);
+    ledger.push(rep);saveLedger();renderLedger();renderDetail(rep);renderAccount();
+    setStatus("backtestStatus",`V22 backtest added: ${ticker}. Trades: ${trades.length}. Net P/L: $${rep.net.toFixed(2)}. WR: ${(rep.wr*100).toFixed(1)}%`,"good");
+    showTab("report");
+  }catch(err){setStatus("backtestStatus",`Backtest failed.\n\n${err.message}`,"bad");}
+}
+
+function analyzeLatest(ticker,bars,bench=[]){
+  if(bars.length<90)return{ticker,score:0,tier:"D",dir:"BALANCE",regime:"NO DATA",confirm:0,persist:0,trap:100,rs:0};
+  const atr=atrSeries(bars,14),ema13=emaSeries(bars,13),ema34=emaSeries(bars,34),vwap=vwapSeries(bars),rvolArr=bars.map((b,i)=>b.volume/(sma(bars,i,30,"volume")||b.volume));
+  let best=null;
+  for(let i=Math.max(65,bars.length-20);i<bars.length;i++){
+    const bar=bars[i],longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":"BALANCE"; if(dir==="BALANCE")continue;
+    const swingH=rollingHigh(bars,i,55),swingL=rollingLow(bars,i,55),range=swingH-swingL||1,fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618,wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236,wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0,wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+    const persist=calcPersistence(bars,i,ema13,ema34,vwap,atr,dir),confirm=calcConfirmation(bars,i,ema13,ema34,vwap,atr,dir),trap=calcTrap(bars,i,atr,rvolArr,vwap,wallRisk,dir),rs=rsScore(bars,i,bench),avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],impulse=Math.abs((bar.close-bar.open)/(atr[i]||1)),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+    const regime=trap>72?"TRAP":confirm<45&&atrExp>1.1?"FAILED":atrExp>1.25&&rvol>1.6&&persist>58&&confirm>58?"EXPANSION":persist>50&&confirm>50?"TREND":"MIXED";
+    const marketOK=marketAlignmentOK(dir,rs,bench);
+    const wrProfile=calcWRProfile({persist,confirm,trap,rs,runwayScore,wallRisk,regime,marketOK});
+    const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,impulse/1.2*20)+Math.max(0,20-vwDist/2.4*20),structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(wallDist>.75?12:0),intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+    let score=Math.round((flow*.42+structure*.30+intel*.28)*.62+wrProfile*.38); if(failedExpansion(bars,i,atr,rvolArr,vwap,dir))score-=12;
+    const cand={ticker,score,dir,regime,confirm:Math.round(confirm),persist:Math.round(persist),trap:Math.round(trap),rs:Math.round(rs),wrProfile};
+    if(!best||cand.score>best.score)best=cand;
+  }
+  if(!best)best={ticker,score:0,dir:"BALANCE",regime:"NO SETUP",confirm:0,persist:0,trap:100,rs:0,wrProfile:0};
+  best.tier=best.score>=82?"S":best.score>=72?"A":best.score>=62?"B":best.score>=52?"C":"D";return best;
+}
+
+
+/* ===== V23 PATCH: Unified Multi-Personality Engine ===== */
+
+function personalityPill(name){
+  const label = String(name||"NONE").replace(" ","");
+  if(name==="Trend Rider") return pill("TREND").replace(">TREND<",">TREND<");
+  if(name==="Expansion Hunter") return pill("EXPANSION").replace(">EXPANSION<",">EXPAND<");
+  if(name==="Safe Hunt") return pill("S").replace(">S<",">SAFE<");
+  if(name==="Aggressive Hunt") return pill("AGGRESSIVE").replace(">AGGRESSIVE<",">AGG<");
+  if(name==="MM Trap Hunter") return pill("TRAP").replace(">TRAP<",">TRAP<");
+  if(name==="Reversal Sniper") return pill("SHORT").replace(">SHORT<",">REV<");
+  if(name==="Runner Pyramid") return pill("RUNNER").replace(">RUNNER<",">RUN<");
+  return pill("C").replace(">C<",">AUTO<");
+}
+
+function calcPersonalityMatrix(o){
+  const expansion = clamp(
+    o.atrExp*24 + o.rvol*12 + Math.abs(o.impulse)*18 + o.confirm*.18 + o.runwayScore*.16 - o.trap*.20
+  );
+  const trend = clamp(
+    o.persist*.34 + o.confirm*.22 + o.rs*.14 + o.runwayScore*.12 + (100-o.wallRisk)*.10 - o.trap*.12
+  );
+  const safe = clamp(
+    o.confirm*.30 + o.persist*.24 + (100-o.trap)*.24 + o.rs*.10 + (100-o.wallRisk)*.12
+  );
+  const aggressive = clamp(
+    o.runwayScore*.28 + o.atrExp*18 + o.rvol*12 + o.rs*.15 + o.confirm*.12 - o.trap*.10
+  );
+  const trapHunter = clamp(
+    o.trap*.42 + o.wallRisk*.18 + (100-o.confirm)*.18 + Math.max(0, o.rvol-1)*14 + (o.regime==="FAILED"?12:0)
+  );
+  const reversal = clamp(
+    o.wallRisk*.28 + o.trap*.22 + (100-o.persist)*.16 + (100-o.confirm)*.14 + (o.regime==="FAILED"?16:0)
+  );
+  const runner = clamp(
+    o.persist*.28 + o.confirm*.22 + o.runwayScore*.24 + o.rs*.12 + (100-o.wallRisk)*.10 - o.trap*.16
+  );
+
+  const arr=[
+    {name:"Safe Hunt",score:safe},
+    {name:"Trend Rider",score:trend},
+    {name:"Expansion Hunter",score:expansion},
+    {name:"Aggressive Hunt",score:aggressive},
+    {name:"MM Trap Hunter",score:trapHunter},
+    {name:"Reversal Sniper",score:reversal},
+    {name:"Runner Pyramid",score:runner}
+  ].sort((a,b)=>b.score-a.score);
+
+  const dominant=arr[0];
+  const support=arr[1];
+  const conflict = Math.max(trapHunter,reversal) - Math.max(safe,trend,runner,expansion);
+  return {dominant:dominant.name, confidence:Math.round(dominant.score), support:support.name, supportScore:Math.round(support.score), conflict:Math.round(conflict), scores:arr};
+}
+
+function clamp(x){ return Math.max(0,Math.min(100,Math.round(x))); }
+
+function v23ModeAllowed(matrix){
+  const mode=document.getElementById("personalityMode")?document.getElementById("personalityMode").value:"auto";
+  if(mode==="auto") return true;
+  if(mode==="safeTrend") return ["Safe Hunt","Trend Rider"].includes(matrix.dominant) || ["Safe Hunt","Trend Rider"].includes(matrix.support);
+  if(mode==="expansion") return ["Expansion Hunter","Aggressive Hunt"].includes(matrix.dominant) || ["Expansion Hunter","Aggressive Hunt"].includes(matrix.support);
+  if(mode==="trapReverse") return ["MM Trap Hunter","Reversal Sniper"].includes(matrix.dominant) || ["MM Trap Hunter","Reversal Sniper"].includes(matrix.support);
+  if(mode==="runner") return ["Runner Pyramid","Trend Rider"].includes(matrix.dominant) || ["Runner Pyramid","Trend Rider"].includes(matrix.support);
+  return true;
+}
+
+function v23ConflictOK(matrix,dir){
+  if(document.getElementById("conflictFilter") && document.getElementById("conflictFilter").value==="off") return true;
+  // Avoid long/continuation trades when trap/reversal personality dominates too strongly.
+  if(["MM Trap Hunter","Reversal Sniper"].includes(matrix.dominant) && matrix.confidence>=62) return false;
+  if(matrix.conflict>18) return false;
+  return true;
+}
+
+function v23ScoreBoost(baseScore,matrix){
+  let s=baseScore;
+  if(document.getElementById("stackBonus") && document.getElementById("stackBonus").value==="on"){
+    if(matrix.confidence>=70) s+=5;
+    if(["Safe Hunt","Trend Rider","Runner Pyramid"].includes(matrix.dominant)) s+=4;
+    if(["Safe Hunt","Trend Rider","Runner Pyramid"].includes(matrix.support)) s+=2;
+  }
+  if(["MM Trap Hunter","Reversal Sniper"].includes(matrix.dominant)) s-=12;
+  return clamp(s);
+}
+
+function v23ParticipationMode(score,wrProfile,runwayScore,wallRisk,regime,persist,trap,rs,confirm,hunt,matrix){
+  const minConf=+(document.getElementById("minPersonalityConfidence")?document.getElementById("minPersonalityConfidence").value:58);
+  if(matrix.confidence<minConf) return "NO TRADE";
+  if(!v23ModeAllowed(matrix)) return "NO TRADE";
+  if(!v23ConflictOK(matrix)) return "NO TRADE";
+  if(["TRAP","CHOP","FAILED"].includes(regime)) return "NO TRADE";
+  if(wrProfile < hunt.wrMin) return "NO TRADE";
+  if(trap > (hunt.name==="AGGRESSIVE"?80:72)) return "NO TRADE";
+  if(matrix.dominant==="Runner Pyramid" && score>=70 && wrProfile>=60) return "RUNNER";
+  if(matrix.dominant==="Trend Rider" && score>=68 && wrProfile>=60) return "STANDARD";
+  if(matrix.dominant==="Safe Hunt" && score>=66 && wrProfile>=62) return "SCOUT";
+  if(matrix.dominant==="Expansion Hunter" && score>=78 && runwayScore>=58) return "AGGRESSIVE";
+  if(score>=84 && wrProfile>=70 && runwayScore>=70 && wallRisk<55 && persist>66 && confirm>66) return "AGGRESSIVE";
+  if(score>=72 && wrProfile>=62 && runwayScore>=52 && persist>58 && confirm>58) return "STANDARD";
+  if(score>=62 && wrProfile>=58 && runwayScore>=40 && persist>52 && confirm>52) return "SCOUT";
+  return "NO TRADE";
+}
+
+async function runBacktest(){
+  try{
+    const ticker=document.getElementById("selectedTicker").value.trim().toUpperCase();
+    if(!ticker)throw new Error("Missing selected ticker.");
+    setStatus("backtestStatus",`Fetching ${ticker} bars...`,"warn");
+    const data=await fetchPolygonBars(ticker),benchTicker=document.getElementById("rsBenchmark").value;
+    let bench=[];
+    if(benchTicker!=="OFF"&&benchTicker!==ticker)bench=await fetchPolygonBars(benchTicker);
+    if(data.length<80)throw new Error(`Only ${data.length} bars loaded.`);
+
+    const personality=getPersonalitySettings(),hunt=getHuntSettings();
+    const capital0=+document.getElementById("capital").value;
+    const riskPct=+document.getElementById("riskPct").value/100;
+    const atrLen=+document.getElementById("atrLen").value;
+    const atrMin=+document.getElementById("atrMin").value;
+    const rvolMin=+document.getElementById("rvolMin").value;
+    const vwapMax=+document.getElementById("vwapMax").value;
+    const wallMin=+document.getElementById("wallMin").value;
+    const runnerR=+document.getElementById("runnerR").value;
+    const userTargetR=+document.getElementById("profitTargetR").value||hunt.targetR;
+    const minWRProfile=+document.getElementById("minWRProfile").value||hunt.wrMin;
+    const minPersist=+document.getElementById("minPersistence").value+personality.persistAdj+hunt.minPersistAdj;
+    const maxTrap=+document.getElementById("maxTrap").value+personality.trapAdj+hunt.maxTrapAdj;
+    const minRS=+document.getElementById("minRS").value+personality.rsAdj+hunt.minRSAdj;
+    const minConfirm=+document.getElementById("minConfirm").value+personality.confirmAdj+hunt.minConfirmAdj;
+    const htfOn=document.getElementById("htfFilter").value==="on";
+
+    const atr=atrSeries(data,atrLen),ema13=emaSeries(data,13),ema34=emaSeries(data,34),htfEma=emaSeries(data,55),vwap=vwapSeries(data);
+    const rvolArr=data.map((b,i)=>b.volume/(sma(data,i,30,"volume")||b.volume));
+    let equity=capital0,trades=[],equityCurve=[capital0],open=null;
+
+    for(let i=65;i<data.length;i++){
+      const bar=data[i],avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],emaSlope=ema13[i]-ema13[i-5],impulse=(bar.close-bar.open)/(atr[i]||1),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+      const swingH=rollingHigh(data,i,55),swingL=rollingLow(data,i,55),range=swingH-swingL||1;
+      const fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618;
+      const longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":null;
+      const wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236;
+      const wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0;
+      const wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+      const persist=dir?calcPersistence(data,i,ema13,ema34,vwap,atr,dir):0;
+      const confirm=dir?calcConfirmation(data,i,ema13,ema34,vwap,atr,dir):0;
+      const trap=dir?calcTrap(data,i,atr,rvolArr,vwap,wallRisk,dir):100;
+      const rs=rsScore(data,i,bench);
+      const failed=dir?failedExpansion(data,i,atr,rvolArr,vwap,dir):true;
+      const regime=classifyRegime({atrExp,rvol,emaSlope,impulse,price:bar.close,vwap:vwap[i],rangePct:range/bar.close,persist,trap,confirm});
+      const marketOK=dir?marketAlignmentOK(dir,rs,bench):false;
+      const wrProfile=calcWRProfile({persist,confirm,trap,rs,runwayScore,wallRisk,regime,marketOK});
+      const matrix=calcPersonalityMatrix({atrExp,rvol,impulse,persist,confirm,trap,rs,runwayScore,wallRisk,regime});
+      const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,Math.abs(impulse)/1.2*20)+Math.max(0,20-vwDist/vwapMax*20);
+      const structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(bar.close>fib382&&bar.close<ext127?10:0)+(wallDist>wallMin?12:0);
+      const intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+      const baseScore=Math.round(flow*.42+structure*.30+intel*.28);
+      const prelimMode=participationMode(baseScore,runwayScore,wallRisk,regime,persist,trap,rs,confirm);
+      let totalScore=calcV22TotalScore(baseScore,wrProfile,hunt,prelimMode);
+      totalScore=v23ScoreBoost(totalScore,matrix);
+      const modeNow=v23ParticipationMode(totalScore,Math.max(wrProfile,minWRProfile),runwayScore,wallRisk,regime,persist,trap,rs,confirm,hunt,matrix);
+
+      if(open){
+        const dm=open.dir==="LONG"?1:-1,rNow=((bar.close-open.entry)*dm)/open.risk;
+        let exitReason=null;
+        const adaptive=document.getElementById("adaptiveExit")&&document.getElementById("adaptiveExit").value==="on";
+        const targetR=document.getElementById("runnerBoost")&&document.getElementById("runnerBoost").value==="on"?userTargetR:2.45;
+        if(rNow<=-1)exitReason="STOP";
+        if(rNow>=runnerR&&!open.be){open.be=true;open.stop=open.entry;}
+        if(open.be&&rNow<.05)exitReason="BE";
+        if(adaptive&&trap>78&&rNow>.10)exitReason="GTFO TRAP";
+        if(adaptive&&confirm<34&&rNow>.10)exitReason="CONFIRM FAIL";
+        if(adaptive&&persist<38&&rNow>.20)exitReason="PERSIST FADE";
+        if(wallRisk>85&&rNow>.45)exitReason="WALL TAKE";
+        if(i-open.i>40&&rNow<.30)exitReason="TIME EXIT";
+        if(rNow>=targetR)exitReason="PROFIT HUNT TAKE";
+        if(exitReason){
+          let pl=rNow*open.risk*open.size;
+          if(document.getElementById("runnerBoost")&&document.getElementById("runnerBoost").value==="on"&&rNow>1.7&&open.wrProfile>=68){pl*=1.18;}
+          equity+=pl;
+          trades.push({...open,exit:bar.close,exitTime:bar.time,r:rNow,pl,exitReason});
+          open=null;
+          equityCurve.push(equity);
+        }
+      }
+
+      if(!open&&modeNow!=="NO TRADE"&&atrExp>=atrMin&&rvol>=rvolMin&&vwDist<=vwapMax&&inTradingSession(bar)){
+        if(!dir)continue;
+        if(htfOn&&dir==="LONG"&&!(bar.close>htfEma[i]&&htfEma[i]>htfEma[i-5]))continue;
+        if(htfOn&&dir==="SHORT"&&!(bar.close<htfEma[i]&&htfEma[i]<htfEma[i-5]))continue;
+        if(!marketOK)continue;
+        if(wrProfile<minWRProfile)continue;
+        if(persist<minPersist||confirm<minConfirm||trap>maxTrap||rs<minRS||failed)continue;
+        const scoutRisk=document.getElementById("safeScout").value==="on"?hunt.scoutRisk:.55;
+        const modeRisk=modeNow==="AGGRESSIVE"?1.35:modeNow==="STANDARD"?hunt.standardRisk:modeNow==="RUNNER"?hunt.runnerRisk:scoutRisk;
+        const dollarsRisk=equity*riskPct*modeRisk;
+        const riskPerShare=atr[i]*(modeNow==="SCOUT"?.90:1.05);
+        const size=Math.max(1,Math.floor(dollarsRisk/riskPerShare));
+        open={n:trades.length+1,i,time:bar.time,dir,regime,mode:modeNow,entry:bar.close,risk:riskPerShare,size,be:false,persist,trap,rs,confirm,wrProfile,personality:matrix.dominant,
+          why:`V23 ${matrix.dominant} + ${matrix.support}; Conf ${matrix.confidence}; WRProfile ${wrProfile}; Score ${totalScore}; ATRx ${atrExp.toFixed(2)}; RVOL ${rvol.toFixed(2)}`};
+      }
+    }
+
+    const rep=makeReport(ticker,trades,equityCurve,capital0,equity,data.length,"V23",personality.name);
+    ledger.push(rep);saveLedger();renderLedger();renderDetail(rep);renderAccount();
+    setStatus("backtestStatus",`V23 backtest added: ${ticker}. Trades: ${trades.length}. Net P/L: $${rep.net.toFixed(2)}. WR: ${(rep.wr*100).toFixed(1)}%`,"good");
+    showTab("report");
+  }catch(err){setStatus("backtestStatus",`Backtest failed.\n\n${err.message}`,"bad");}
+}
+
+function analyzeLatest(ticker,bars,bench=[]){
+  if(bars.length<90)return{ticker,score:0,tier:"D",dir:"BALANCE",regime:"NO DATA",confirm:0,persist:0,trap:100,rs:0,personality:"NONE",confidence:0};
+  const atr=atrSeries(bars,14),ema13=emaSeries(bars,13),ema34=emaSeries(bars,34),vwap=vwapSeries(bars),rvolArr=bars.map((b,i)=>b.volume/(sma(bars,i,30,"volume")||b.volume));
+  let best=null;
+  for(let i=Math.max(65,bars.length-20);i<bars.length;i++){
+    const bar=bars[i],longBias=ema13[i]>ema34[i]&&bar.close>vwap[i],shortBias=ema13[i]<ema34[i]&&bar.close<vwap[i],dir=longBias?"LONG":shortBias?"SHORT":"BALANCE"; if(dir==="BALANCE")continue;
+    const swingH=rollingHigh(bars,i,55),swingL=rollingLow(bars,i,55),range=swingH-swingL||1,fib236=swingL+range*.236,fib382=swingL+range*.382,fib618=swingL+range*.618,ext127=swingL+range*1.272,ext161=swingL+range*1.618,wallL=bar.close<ext127?ext127:ext161,wallS=bar.close>fib618?fib618:bar.close>fib382?fib382:fib236,wallDist=longBias?(wallL-bar.close)/(atr[i]||1):shortBias?(bar.close-wallS)/(atr[i]||1):0,wallRisk=Math.max(0,100-wallDist*35),runwayScore=Math.max(0,Math.min(100,wallDist*32));
+    const persist=calcPersistence(bars,i,ema13,ema34,vwap,atr,dir),confirm=calcConfirmation(bars,i,ema13,ema34,vwap,atr,dir),trap=calcTrap(bars,i,atr,rvolArr,vwap,wallRisk,dir),rs=rsScore(bars,i,bench),avgAtr=sma(atr.map(x=>({close:x})),i,30,"close")||atr[i],atrExp=atr[i]/avgAtr,rvol=rvolArr[i],impulse=Math.abs((bar.close-bar.open)/(atr[i]||1)),vwDist=Math.abs(bar.close-vwap[i])/(atr[i]||1);
+    const regime=trap>72?"TRAP":confirm<45&&atrExp>1.1?"FAILED":atrExp>1.25&&rvol>1.6&&persist>58&&confirm>58?"EXPANSION":persist>50&&confirm>50?"TREND":"MIXED";
+    const marketOK=marketAlignmentOK(dir,rs,bench);
+    const wrProfile=calcWRProfile({persist,confirm,trap,rs,runwayScore,wallRisk,regime,marketOK});
+    const matrix=calcPersonalityMatrix({atrExp,rvol,impulse,persist,confirm,trap,rs,runwayScore,wallRisk,regime});
+    const flow=Math.min(23,atrExp/1.4*23)+Math.min(22,rvol/2*22)+Math.min(20,impulse/1.2*20)+Math.max(0,20-vwDist/2.4*20),structure=Math.min(30,runwayScore*.30)+Math.max(0,22-wallRisk*.20)+(wallDist>.75?12:0),intel=persist*.16+confirm*.22+(100-trap)*.14+rs*.08;
+    let score=Math.round((flow*.42+structure*.30+intel*.28)*.55+wrProfile*.25+matrix.confidence*.20);
+    if(failedExpansion(bars,i,atr,rvolArr,vwap,dir))score-=12;
+    if(!v23ConflictOK(matrix))score-=18;
+    const cand={ticker,score:clamp(score),dir,regime,confirm:Math.round(confirm),persist:Math.round(persist),trap:Math.round(trap),rs:Math.round(rs),personality:matrix.dominant,confidence:matrix.confidence};
+    if(!best||cand.score>best.score)best=cand;
+  }
+  if(!best)best={ticker,score:0,dir:"BALANCE",regime:"NO SETUP",confirm:0,persist:0,trap:100,rs:0,personality:"NONE",confidence:0};
+  best.tier=best.score>=82?"S":best.score>=72?"A":best.score>=62?"B":best.score>=52?"C":"D";return best;
+}
+
+function renderScanner(results,fromCache=false){
+  document.getElementById("scannerLog").innerHTML=results.map((r,i)=>`
+    <tr class="clickable" onclick="selectTicker('${r.ticker}')">
+      <td>${i+1}</td><td><b>${r.ticker}</b></td><td>${pill(r.tier)}</td><td>${pill(r.dir)}</td><td>${r.score}</td>
+      <td>${personalityPill(r.personality)}</td><td>${r.confidence||0}</td><td>${pill(r.regime)}</td><td>${r.trap}</td><td>${r.rs}</td>
+    </tr>`).join("");
+  if(fromCache&&results.length)setStatus("scannerStatus","Loaded cached scanner list.","good");
+}
+
+
+/* ===== V23B PATCH: Live P&L Report + Account Summary ===== */
+
+function getAccountRows(){
+  const modeEl=document.getElementById("accountMode");
+  const mode=modeEl?modeEl.value:"all";
+  if(mode==="accepted") return ledger.filter(r=>(r.status||"TEST")==="ACCEPTED");
+  return ledger;
+}
+
+function renderLedger(){
+  document.getElementById("reportLedger").innerHTML=ledger.map((r,i)=>`
+    <tr class="clickable" onclick="renderDetailById(${r.id})">
+      <td>${i+1}</td>
+      <td><b>${r.ticker}</b></td>
+      <td style="font-weight:800;color:${r.net>=0?'var(--green)':'var(--red)'}">$${r.net.toFixed(2)}</td>
+      <td>${(r.wr*100).toFixed(0)}%</td>
+      <td>${r.pf.toFixed(2)}</td>
+      <td>${r.tradesCount}</td>
+      <td>$${r.maxDD.toFixed(0)}</td>
+      <td class="compactHide">${statusPill(r.status||"TEST")}</td>
+    </tr>`).join("");
+  renderAccount();
+}
+
+function renderAccount(){
+  const start=+document.getElementById("accountStart").value||10000;
+  const rows=getAccountRows();
+  const totalPL=rows.reduce((s,r)=>s+r.net,0);
+  const bal=start+totalPL;
+  const runs=rows.length;
+  const totalTrades=rows.reduce((s,r)=>s+r.tradesCount,0);
+  const winningRows=rows.filter(r=>r.net>0).length;
+  const worstDD=rows.reduce((m,r)=>Math.max(m,r.maxDD),0);
+  const rowWR=runs?winningRows/runs:0;
+
+  // Account tab
+  if(document.getElementById("acctStart")) document.getElementById("acctStart").textContent=`$${start.toFixed(2)}`;
+  if(document.getElementById("acctBalance")) document.getElementById("acctBalance").textContent=`$${bal.toFixed(2)}`;
+  if(document.getElementById("acctPL")) document.getElementById("acctPL").textContent=`$${totalPL.toFixed(2)}`;
+  if(document.getElementById("acctReturn")) document.getElementById("acctReturn").textContent=`${(totalPL/start*100).toFixed(2)}%`;
+  if(document.getElementById("acctRuns")) document.getElementById("acctRuns").textContent=runs;
+  if(document.getElementById("acctTrades")) document.getElementById("acctTrades").textContent=totalTrades;
+  if(document.getElementById("acctWR")) document.getElementById("acctWR").textContent=`${(rowWR*100).toFixed(1)}%`;
+  if(document.getElementById("acctDD")) document.getElementById("acctDD").textContent=`$${worstDD.toFixed(2)}`;
+
+  // Report tab live summary
+  if(document.getElementById("reportStart")) document.getElementById("reportStart").textContent=`$${start.toFixed(2)}`;
+  if(document.getElementById("reportBalance")) document.getElementById("reportBalance").textContent=`$${bal.toFixed(2)}`;
+  if(document.getElementById("reportTotalPL")) document.getElementById("reportTotalPL").textContent=`$${totalPL.toFixed(2)}`;
+  if(document.getElementById("reportReturn")) document.getElementById("reportReturn").textContent=`${(totalPL/start*100).toFixed(2)}%`;
+  if(document.getElementById("reportRuns")) document.getElementById("reportRuns").textContent=runs;
+  if(document.getElementById("reportTrades")) document.getElementById("reportTrades").textContent=totalTrades;
+  if(document.getElementById("reportWinRows")) document.getElementById("reportWinRows").textContent=`${winningRows}/${runs}`;
+  if(document.getElementById("reportWorstDD")) document.getElementById("reportWorstDD").textContent=`$${worstDD.toFixed(2)}`;
+}
+
+function clearLedger(){
+  ledger=[];
+  saveLedger();
+  renderLedger();
+  renderDetail(null);
+  renderAccount();
+}
+
+function saveLedger(){
+  localStorage.setItem("mmg_v23b_ledger",JSON.stringify(ledger));
+}
+
+function loadLedger(){
+  try{
+    ledger=JSON.parse(localStorage.getItem("mmg_v23b_ledger")||localStorage.getItem("mmg_v21_ledger")||"[]");
+  }catch(e){ledger=[]}
+  renderLedger();
+}
+
+function renderDetail(rep){
+  if(!rep){
+    ["detailTicker","detailNet","detailWR","detailPF"].forEach(id=>{if(document.getElementById(id))document.getElementById(id).textContent="—"});
+    if(document.getElementById("tradeLog"))document.getElementById("tradeLog").innerHTML="";
+    drawChart([0,0]);
+    return;
+  }
+  document.getElementById("detailTicker").textContent=rep.ticker;
+  document.getElementById("detailNet").textContent=`$${rep.net.toFixed(2)}`;
+  document.getElementById("detailWR").textContent=`${(rep.wr*100).toFixed(1)}%`;
+  document.getElementById("detailPF").textContent=rep.pf.toFixed(2);
+  document.getElementById("tradeLog").innerHTML=rep.trades.map((t,i)=>`
+    <tr>
+      <td>${i+1}</td><td>${t.time}</td><td>${pill(t.dir)}</td><td>${pill(t.regime)}</td><td>${pill(t.mode)}</td>
+      <td>${t.r.toFixed(2)}</td>
+      <td style="color:${t.pl>=0?'var(--green)':'var(--red)'}">$${t.pl.toFixed(2)}</td>
+      <td>${t.exitReason} | ${t.why}</td>
+    </tr>`).join("");
+  drawChart(rep.equityCurve);
+}
+
+function showTab(name){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("active"));
+  document.getElementById(name).classList.add("active");
+  const btns=[...document.querySelectorAll(".tabbtn")];
+  if(name==="scanner")btns[0].classList.add("active");
+  if(name==="backtest")btns[1].classList.add("active");
+  if(name==="report")btns[2].classList.add("active");
+  if(name==="account")btns[3].classList.add("active");
+  if(name==="account"||name==="report")renderAccount();
+}
+
+
+/* ===== V24 PATCH: Auto Trade Simulation Engine ===== */
+
+let simResults=[];
+
+function showTab(name){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("active"));
+  document.getElementById(name).classList.add("active");
+  const btns=[...document.querySelectorAll(".tabbtn")];
+  if(name==="scanner")btns[0].classList.add("active");
+  if(name==="backtest")btns[1].classList.add("active");
+  if(name==="simulation")btns[2].classList.add("active");
+  if(name==="report")btns[3].classList.add("active");
+  if(name==="account")btns[4].classList.add("active");
+  if(name==="account"||name==="report")renderAccount();
+}
+
+function simSetStatus(msg,type="warn"){
+  const el=document.getElementById("simulationStatus");
+  if(!el)return;
+  el.textContent=msg;
+  el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");
+}
+
+function getTradingDatesFromBars(bars,limit){
+  const set=new Set();
+  for(const b of bars){
+    const d=new Date(b.rawTime);
+    const key=d.toISOString().slice(0,10);
+    set.add(key);
+  }
+  return [...set].sort().slice(0,limit);
+}
+
+function barsForDate(bars,dateKey){
+  return bars.filter(b=>new Date(b.rawTime).toISOString().slice(0,10)===dateKey);
+}
+
+function makeTempBarsThroughDate(bars,dateKey){
+  const end=new Date(dateKey+"T23:59:59Z").getTime();
+  return bars.filter(b=>b.rawTime<=end);
+}
+
+function getSimUniverse(){
+  const mode=document.getElementById("simUniverseSelect").value;
+  if(mode==="scanner" && scannerCache && scannerCache.results && scannerCache.results.length){
+    return scannerCache.results.map(r=>r.ticker);
+  }
+  if(typeof PRESETS!=="undefined" && PRESETS[mode]) return PRESETS[mode].slice(0, +(document.getElementById("maxSymbols").value||30));
+  return getUniverse();
+}
+
+async function runAutoSimulation(){
+  try{
+    clearSimulation(false);
+    const starting=+document.getElementById("simStartCapital").value||10000;
+    const maxTrades=+document.getElementById("simMaxTrades").value||10;
+    const minScore=+document.getElementById("simMinScore").value||60;
+    const daysLimit=+document.getElementById("simDaysLimit").value||20;
+    const dailyLossStopPct=+document.getElementById("simDailyLossStop").value||3;
+    const allocMode=document.getElementById("simAllocation").value;
+    const universe=getSimUniverse();
+
+    if(!universe.length) throw new Error("No universe selected.");
+    simSetStatus(`Loading data for ${universe.length} symbols...`,"warn");
+
+    const benchTicker=document.getElementById("rsBenchmark").value;
+    let bench=[];
+    if(benchTicker!=="OFF") bench=await fetchPolygonBars(benchTicker);
+
+    const allBars={};
+    for(let i=0;i<universe.length;i++){
+      const t=universe[i];
+      simSetStatus(`Loading ${i+1}/${universe.length}: ${t}`,"warn");
+      try{ allBars[t]=await fetchPolygonBars(t); }catch(e){ allBars[t]=[]; }
+    }
+
+    const firstBars=Object.values(allBars).find(x=>x&&x.length);
+    if(!firstBars) throw new Error("No usable bar data loaded.");
+    const tradingDates=getTradingDatesFromBars(firstBars,daysLimit);
+
+    let balance=starting;
+    let equityCurve=[starting];
+    let totalWins=0,totalTrades=0;
+    let peak=starting,maxDD=0;
+    simResults=[];
+
+    for(let d=0; d<tradingDates.length; d++){
+      const dateKey=tradingDates[d];
+      simSetStatus(`Simulating day ${d+1}/${tradingDates.length}: ${dateKey}`,"warn");
+
+      let candidates=[];
+      for(const t of universe){
+        const bars=allBars[t]||[];
+        if(bars.length<90)continue;
+        const through=makeTempBarsThroughDate(bars,dateKey);
+        if(through.length<90)continue;
+        const r=analyzeLatest(t,through,(benchTicker===t)?[]:bench);
+        if(r.score>=minScore && r.dir!=="BALANCE" && r.dir!=="ERR"){
+          candidates.push(r);
+        }
+      }
+
+      candidates.sort((a,b)=>b.score-a.score);
+      const picks=candidates.slice(0,maxTrades);
+      let dayPL=0,dayWins=0,dayTrades=0;
+      const dailyLossLimit=balance*(dailyLossStopPct/100);
+
+      const scoreSum=picks.reduce((s,p)=>s+Math.max(1,p.score),0)||1;
+
+      for(const p of picks){
+        const bars=allBars[p.ticker]||[];
+        const dayBars=barsForDate(bars,dateKey);
+        if(dayBars.length<2)continue;
+
+        const entry=dayBars[0].open || dayBars[0].close;
+        const exit=dayBars[dayBars.length-1].close;
+        const dirMult=p.dir==="LONG"?1:-1;
+        const rawMove=((exit-entry)*dirMult)/entry;
+
+        const allocation = allocMode==="score"
+          ? balance*(p.score/scoreSum)
+          : balance/(picks.length||1);
+
+        // Confidence adjusts realized exposure but never exceeds allocated capital.
+        const confidenceFactor=Math.max(0.35, Math.min(1.15, (p.score/70)));
+        let pl=allocation*rawMove*confidenceFactor;
+
+        // Simple simulated protective loss cap per position.
+        const maxPositionLoss=allocation*0.012;
+        if(pl < -maxPositionLoss) pl=-maxPositionLoss;
+
+        dayPL+=pl;
+        dayTrades++;
+        totalTrades++;
+        if(pl>0){dayWins++;totalWins++;}
+
+        if(dayPL <= -dailyLossLimit){
+          break;
+        }
+      }
+
+      balance+=dayPL;
+      equityCurve.push(balance);
+      peak=Math.max(peak,balance);
+      maxDD=Math.max(maxDD,peak-balance);
+
+      simResults.push({
+        day:d+1,date:dateKey,picks:picks.length,pl:dayPL,balance,wr:dayTrades?dayWins/dayTrades:0,
+        tickers:picks.map(p=>`${p.ticker}:${p.score}`).join(", ")
+      });
+    }
+
+    renderSimulation({starting,balance,totalPL:balance-starting,days:tradingDates.length,totalTrades,wr:totalTrades?totalWins/totalTrades:0,maxDD,equityCurve});
+    simSetStatus(`Simulation complete. ${tradingDates.length} sessions, ${totalTrades} simulated trades.`,"good");
+  }catch(err){
+    simSetStatus(`Simulation failed.\n\n${err.message}`,"bad");
+    console.error(err);
+  }
+}
+
+function renderSimulation(summary){
+  document.getElementById("simStartOut").textContent=`$${summary.starting.toFixed(2)}`;
+  document.getElementById("simEndOut").textContent=`$${summary.balance.toFixed(2)}`;
+  document.getElementById("simPLOut").textContent=`$${summary.totalPL.toFixed(2)}`;
+  document.getElementById("simReturnOut").textContent=`${(summary.totalPL/summary.starting*100).toFixed(2)}%`;
+  document.getElementById("simSessionsOut").textContent=summary.days;
+  document.getElementById("simTradesOut").textContent=summary.totalTrades;
+  document.getElementById("simWROut").textContent=`${(summary.wr*100).toFixed(1)}%`;
+  document.getElementById("simDDOut").textContent=`$${summary.maxDD.toFixed(2)}`;
+
+  document.getElementById("simLedger").innerHTML=simResults.map(r=>`
+    <tr>
+      <td>${r.day}</td><td>${r.date}</td><td>${r.picks}</td>
+      <td style="font-weight:800;color:${r.pl>=0?'var(--green)':'var(--red)'}">$${r.pl.toFixed(2)}</td>
+      <td>$${r.balance.toFixed(2)}</td>
+      <td>${(r.wr*100).toFixed(0)}%</td>
+      <td class="compactHide">${r.tickers}</td>
+    </tr>`).join("");
+
+  drawSimChart(summary.equityCurve);
+}
+
+function drawSimChart(points){
+  const c=document.getElementById("simChart"),ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle="#294055";ctx.lineWidth=1;
+  for(let x=0;x<c.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
+  for(let y=0;y<c.height;y+=55){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
+  if(!points||points.length<2)return;
+  const min=Math.min(...points),max=Math.max(...points);
+  const pad=Math.max((max-min)*.15, Math.max(10, Math.abs(points[0])*.005));
+  ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();
+  points.forEach((p,i)=>{
+    const x=i/(points.length-1)*c.width;
+    const y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.fillStyle="#edf4fb";ctx.font="14px Arial";
+  ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24);
+}
+
+function clearSimulation(resetStatus=true){
+  simResults=[];
+  ["simStartOut","simEndOut","simPLOut","simReturnOut","simSessionsOut","simTradesOut","simWROut","simDDOut"].forEach(id=>document.getElementById(id).textContent="—");
+  document.getElementById("simLedger").innerHTML="";
+  const c=document.getElementById("simChart");
+  if(c){const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);}
+  if(resetStatus)simSetStatus("Simulation cleared.","warn");
+}
+
+
+/* ===== V25 PATCH: Realistic Auto Trade Simulation ===== */
+
+async function runAutoSimulation(){
+  try{
+    clearSimulation(false);
+
+    const starting=+document.getElementById("simStartCapital").value||10000;
+    const maxTrades=+document.getElementById("simMaxTrades").value||10;
+    const minScore=+document.getElementById("simMinScore").value||60;
+    const daysLimit=+document.getElementById("simDaysLimit").value||20;
+    const dailyLossStopPct=+document.getElementById("simDailyLossStop").value||3;
+    const allocMode=document.getElementById("simAllocation").value;
+    const slippagePct=(+document.getElementById("simSlippagePct").value||0)/100;
+    const spreadPct=(+document.getElementById("simSpreadPct").value||0)/100;
+    const fillDelayPct=(+document.getElementById("simFillDelayPct").value||0)/100;
+    const maxLossStreak=+document.getElementById("simMaxLossStreak").value||3;
+    const shockOn=document.getElementById("simShock").value==="on";
+    const realism=document.getElementById("simRealism").value;
+    const universe=getSimUniverse();
+
+    if(!universe.length) throw new Error("No universe selected.");
+    simSetStatus(`Loading data for ${universe.length} symbols...`,"warn");
+
+    const benchTicker=document.getElementById("rsBenchmark").value;
+    let bench=[];
+    if(benchTicker!=="OFF") bench=await fetchPolygonBars(benchTicker);
+
+    const allBars={};
+    for(let i=0;i<universe.length;i++){
+      const t=universe[i];
+      simSetStatus(`Loading ${i+1}/${universe.length}: ${t}`,"warn");
+      try{ allBars[t]=await fetchPolygonBars(t); }catch(e){ allBars[t]=[]; }
+    }
+
+    const firstBars=Object.values(allBars).find(x=>x&&x.length);
+    if(!firstBars) throw new Error("No usable bar data loaded.");
+    const tradingDates=getTradingDatesFromBars(firstBars,daysLimit);
+
+    let balance=starting;
+    let equityCurve=[starting];
+    let totalWins=0,totalTrades=0,totalLosses=0;
+    let peak=starting,maxDD=0;
+    simResults=[];
+
+    const realismMult = realism==="harsh" ? 1.8 : realism==="strict" ? 1.35 : 1.0;
+
+    for(let d=0; d<tradingDates.length; d++){
+      const dateKey=tradingDates[d];
+      simSetStatus(`Simulating day ${d+1}/${tradingDates.length}: ${dateKey}`,"warn");
+
+      let candidates=[];
+      for(const t of universe){
+        const bars=allBars[t]||[];
+        if(bars.length<90)continue;
+        const through=makeTempBarsThroughDate(bars,dateKey);
+        if(through.length<90)continue;
+        const r=analyzeLatest(t,through,(benchTicker===t)?[]:bench);
+        if(r.score>=minScore && r.dir!=="BALANCE" && r.dir!=="ERR"){
+          candidates.push(r);
+        }
+      }
+
+      candidates.sort((a,b)=>b.score-a.score);
+      const picks=candidates.slice(0,maxTrades);
+      let dayPL=0,dayWins=0,dayTrades=0,dayLossStreak=0,kill=false;
+      const dailyLossLimit=balance*(dailyLossStopPct/100);
+
+      const scoreSum=picks.reduce((s,p)=>s+Math.max(1,p.score),0)||1;
+      const confSum=picks.reduce((s,p)=>s+Math.max(1,p.confidence||p.score||1),0)||1;
+
+      for(const p of picks){
+        if(kill)break;
+        const bars=allBars[p.ticker]||[];
+        const dayBars=barsForDate(bars,dateKey);
+        if(dayBars.length<2)continue;
+
+        // Fill delay: enter after first bar when possible, not perfect open.
+        const entryBarIndex = dayBars.length>2 ? 1 : 0;
+        const entryBase=dayBars[entryBarIndex].open || dayBars[entryBarIndex].close;
+        const exit=dayBars[dayBars.length-1].close;
+        const dirMult=p.dir==="LONG"?1:-1;
+
+        // Slippage/spread/fill friction worsen entry and exit.
+        const totalFriction=(slippagePct+spreadPct+fillDelayPct)*realismMult;
+        const frictionMove=totalFriction*2; // entry + exit
+        let rawMove=((exit-entryBase)*dirMult)/entryBase;
+        rawMove -= frictionMove;
+
+        let allocation;
+        if(allocMode==="score") allocation=balance*(p.score/scoreSum);
+        else if(allocMode==="confidence") allocation=balance*((p.confidence||p.score)/confSum);
+        else allocation=balance/(picks.length||1);
+
+        // Position exposure dampening by confidence; still uses full balance across selected trades.
+        const confidenceFactor=Math.max(0.30, Math.min(1.10, ((p.confidence||p.score)/70)));
+        let pl=allocation*rawMove*confidenceFactor;
+
+        // Shock penalty on unstable days / low WR setup. Deterministic pseudo-shock based on day and ticker.
+        if(shockOn){
+          const shockSeed=(dateKey.charCodeAt(8)+dateKey.charCodeAt(9)+p.ticker.charCodeAt(0)+p.ticker.length)%11;
+          if(shockSeed===0 || (realism==="harsh" && shockSeed<=1)){
+            pl -= allocation*0.004*realismMult;
+          }
+        }
+
+        // Protective loss cap per position, less forgiving than V24.
+        const maxPositionLoss=allocation*(0.012*realismMult);
+        if(pl < -maxPositionLoss) pl=-maxPositionLoss;
+
+        dayPL+=pl;
+        dayTrades++;
+        totalTrades++;
+
+        if(pl>0){
+          dayWins++;
+          totalWins++;
+          dayLossStreak=0;
+        }else if(pl<0){
+          totalLosses++;
+          dayLossStreak++;
+        }
+
+        if(dayPL <= -dailyLossLimit){
+          kill=true;
+        }
+        if(dayLossStreak>=maxLossStreak){
+          kill=true;
+        }
+      }
+
+      balance+=dayPL;
+      equityCurve.push(balance);
+      peak=Math.max(peak,balance);
+      maxDD=Math.max(maxDD,peak-balance);
+
+      simResults.push({
+        day:d+1,date:dateKey,picks:picks.length,pl:dayPL,balance,wr:dayTrades?dayWins/dayTrades:0,
+        tickers:picks.map(p=>`${p.ticker}:${p.score}:${p.personality||""}`).join(", "),
+        killed: kill ? "YES" : "NO"
+      });
+    }
+
+    renderSimulation({starting,balance,totalPL:balance-starting,days:tradingDates.length,totalTrades,wr:totalTrades?totalWins/totalTrades:0,maxDD,equityCurve,totalLosses});
+    simSetStatus(`V25 simulation complete. ${tradingDates.length} sessions, ${totalTrades} simulated trades. Realism: ${realism}.`,"good");
+  }catch(err){
+    simSetStatus(`Simulation failed.\n\n${err.message}`,"bad");
+    console.error(err);
+  }
+}
+
+function renderSimulation(summary){
+  document.getElementById("simStartOut").textContent=`$${summary.starting.toFixed(2)}`;
+  document.getElementById("simEndOut").textContent=`$${summary.balance.toFixed(2)}`;
+  document.getElementById("simPLOut").textContent=`$${summary.totalPL.toFixed(2)}`;
+  document.getElementById("simReturnOut").textContent=`${(summary.totalPL/summary.starting*100).toFixed(2)}%`;
+  document.getElementById("simSessionsOut").textContent=summary.days;
+  document.getElementById("simTradesOut").textContent=summary.totalTrades;
+  document.getElementById("simWROut").textContent=`${(summary.wr*100).toFixed(1)}%`;
+  document.getElementById("simDDOut").textContent=`$${summary.maxDD.toFixed(2)}`;
+
+  document.getElementById("simLedger").innerHTML=simResults.map(r=>`
+    <tr>
+      <td>${r.day}</td><td>${r.date}</td><td>${r.picks}</td>
+      <td style="font-weight:800;color:${r.pl>=0?'var(--green)':'var(--red)'}">$${r.pl.toFixed(2)}</td>
+      <td>$${r.balance.toFixed(2)}</td>
+      <td>${(r.wr*100).toFixed(0)}%</td>
+      <td class="compactHide">${r.killed==="YES"?"KILL | ":""}${r.tickers}</td>
+    </tr>`).join("");
+
+  drawSimChart(summary.equityCurve);
+}
+
+setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
+</script>
 </body>
 </html>
