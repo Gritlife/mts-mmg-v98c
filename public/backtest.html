@@ -1,296 +1,628 @@
+<!-- ===================================================== -->
+<!-- MMG V26 — ADAPTIVE MARKET INTELLIGENCE ENGINE -->
+<!-- OPERATIONAL HTML STRUCTURE (MY VERSION) -->
+<!-- ===================================================== -->
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
 <title>MMG V26 — Adaptive Market Intelligence Engine</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{
-  background:#081018;
-  color:#eaf2ff;
-  font-family:Arial,sans-serif;
-  margin:0;
-  padding:0;
+
+/* ===================================================== */
+/* GLOBAL */
+/* ===================================================== */
+
+:root{
+  --bg:#081018;
+  --card:#101a26;
+  --line:#223246;
+  --text:#edf4fb;
+  --muted:#8aa2bd;
+  --green:#46d17d;
+  --red:#ff6b6b;
+  --yellow:#ffd166;
+  --blue:#4ea8ff;
 }
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+
 header{
   padding:18px;
+  border-bottom:1px solid var(--line);
   background:#0f1722;
-  border-bottom:1px solid #223246;
 }
+
 h1{
   margin:0;
   font-size:24px;
 }
+
 .sub{
-  color:#8aa2bd;
   margin-top:8px;
+  color:var(--muted);
 }
+
 .container{
   padding:16px;
 }
+
 .card{
-  background:#101a26;
-  border:1px solid #23364a;
+  background:var(--card);
+  border:1px solid var(--line);
   border-radius:14px;
   padding:16px;
   margin-bottom:16px;
 }
+
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
   gap:12px;
 }
+
 .metric{
   background:#162332;
   border-radius:10px;
   padding:12px;
 }
+
 .k{
-  color:#8ea7c2;
   font-size:12px;
+  color:var(--muted);
 }
+
 .v{
+  margin-top:6px;
   font-size:22px;
   font-weight:bold;
-  margin-top:6px;
 }
+
+.tabs{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  border-bottom:1px solid var(--line);
+}
+
+.tabBtn{
+  background:#0f1722;
+  color:var(--text);
+  border:none;
+  padding:14px;
+  cursor:pointer;
+}
+
+.tabBtn.active{
+  background:#1b2b3d;
+}
+
+.tab{
+  display:none;
+}
+
+.tab.active{
+  display:block;
+}
+
+.tableWrap{
+  overflow:auto;
+}
+
 table{
   width:100%;
   border-collapse:collapse;
 }
+
 th,td{
   padding:10px;
-  border-bottom:1px solid #223246;
+  border-bottom:1px solid var(--line);
   text-align:left;
   font-size:14px;
 }
+
 th{
   color:#7fd0ff;
 }
-.good{
-  color:#46d17d;
+
+.green{
+  color:var(--green);
   font-weight:bold;
 }
-.bad{
-  color:#ff6b6b;
+
+.red{
+  color:var(--red);
   font-weight:bold;
 }
-.warn{
-  color:#ffd166;
+
+.yellow{
+  color:var(--yellow);
   font-weight:bold;
 }
-.note{
-  color:#91a8c3;
-  line-height:1.5;
+
+select,input{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid var(--line);
+  background:#132030;
+  color:var(--text);
 }
+
+button{
+  padding:12px 16px;
+  border:none;
+  border-radius:8px;
+  background:#234a6a;
+  color:white;
+  cursor:pointer;
+}
+
+button:hover{
+  opacity:.9;
+}
+
+.two{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.status{
+  margin-top:12px;
+  padding:10px;
+  border-radius:8px;
+}
+
+.goodBox{
+  background:rgba(70,209,125,.12);
+}
+
+.warnBox{
+  background:rgba(255,209,102,.12);
+}
+
+.badBox{
+  background:rgba(255,107,107,.12);
+}
+
 </style>
+
 </head>
 
 <body>
 
+<!-- ===================================================== -->
+<!-- HEADER -->
+<!-- ===================================================== -->
+
 <header>
-<h1>MMG V26 — Adaptive Market Intelligence Engine</h1>
+
+<h1>
+MMG V26 — Adaptive Market Intelligence Engine
+</h1>
+
 <div class="sub">
 Dynamic Trade Count • AI Confidence • Market Regimes • Personality Voting • Correlation Protection • Options Overlay
 </div>
+
 </header>
+
+<!-- ===================================================== -->
+<!-- TABS -->
+<!-- ===================================================== -->
+
+<div class="tabs">
+
+<button class="tabBtn active" onclick="showTab('scanner')">
+Scanner
+</button>
+
+<button class="tabBtn" onclick="showTab('backtest')">
+Backtest
+</button>
+
+<button class="tabBtn" onclick="showTab('simulation')">
+Simulation
+</button>
+
+<button class="tabBtn" onclick="showTab('report')">
+Report
+</button>
+
+<button class="tabBtn" onclick="showTab('account')">
+Account
+</button>
+
+</div>
 
 <div class="container">
 
+<!-- ===================================================== -->
+<!-- SCANNER TAB -->
+<!-- ===================================================== -->
+
+<section id="scanner" class="tab active">
+
 <div class="card">
-<h2>V26 System Overview</h2>
+
+<h2>Scanner Controls</h2>
+
+<div class="two">
+
+<div>
+<label>Universe</label>
+
+<select id="universe">
+<option>S&P 500</option>
+<option>Dow Jones</option>
+<option>Russell 2000</option>
+</select>
+</div>
+
+<div>
+<label>Minimum Score</label>
+<input type="number" value="60"/>
+</div>
+
+</div>
+
+<div class="two">
+
+<div>
+<label>Market Regime</label>
+
+<select>
+<option>Adaptive</option>
+<option>Expansion</option>
+<option>Trend</option>
+<option>Mixed</option>
+<option>Chop</option>
+<option>No Hunt</option>
+</select>
+</div>
+
+<div>
+<label>Trade Personality</label>
+
+<select>
+<option>AI Adaptive</option>
+<option>Safe Hunt</option>
+<option>Trend Rider</option>
+<option>Expansion Hunter</option>
+<option>MM Trap Hunter</option>
+<option>Runner Pyramid</option>
+</select>
+</div>
+
+</div>
+
+<button>
+Run Scanner
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>Scanner Results</h2>
+
+<div class="tableWrap">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Ticker</th>
+<th>Score</th>
+<th>AI%</th>
+<th>Regime</th>
+<th>Personality</th>
+<th>Trap</th>
+<th>RS</th>
+<th>Options</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+<td>NVDA</td>
+<td class="green">91</td>
+<td>88</td>
+<td>EXPANSION</td>
+<td>Expansion Hunter</td>
+<td>38</td>
+<td>84</td>
+<td class="green">HIGH</td>
+</tr>
+
+<tr>
+<td>AAPL</td>
+<td class="yellow">72</td>
+<td>69</td>
+<td>TREND</td>
+<td>Safe Hunt</td>
+<td>42</td>
+<td>71</td>
+<td>MED</td>
+</tr>
+
+<tr>
+<td>MRK</td>
+<td class="red">58</td>
+<td>54</td>
+<td>CHOP</td>
+<td>Trap Hunter</td>
+<td>74</td>
+<td>44</td>
+<td>LOW</td>
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- ===================================================== -->
+<!-- SIMULATION TAB -->
+<!-- ===================================================== -->
+
+<section id="simulation" class="tab">
+
+<div class="card">
+
+<h2>Simulation Controls</h2>
+
+<div class="two">
+
+<div>
+<label>Capital Amount</label>
+<input type="number" value="10000"/>
+</div>
+
+<div>
+<label>Trading Days Quantity</label>
+<input type="number" value="20"/>
+</div>
+
+</div>
+
+<div class="two">
+
+<div>
+<label>Max Trades Per Session</label>
+<input type="number" value="10"/>
+</div>
+
+<div>
+<label>Allocation Mode</label>
+
+<select>
+<option>Confidence Weighted</option>
+<option>Equal</option>
+<option>Score Weighted</option>
+<option>Volatility Weighted</option>
+</select>
+
+</div>
+
+</div>
+
+<div class="two">
+
+<div>
+<label>Realism Layer</label>
+
+<select>
+<option>Normal</option>
+<option>Strict</option>
+<option>Harsh</option>
+</select>
+
+</div>
+
+<div>
+<label>No Hunt Mode</label>
+
+<select>
+<option>ON</option>
+<option>OFF</option>
+</select>
+
+</div>
+
+</div>
+
+<button>
+Run V26 Simulation
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>Simulation Summary</h2>
 
 <div class="grid">
+
 <div class="metric">
-<div class="k">Core Engine</div>
-<div class="v">Adaptive AI</div>
+<div class="k">Start Capital</div>
+<div class="v">$10,000</div>
 </div>
 
 <div class="metric">
-<div class="k">Trade Doctrine</div>
-<div class="v">Dynamic</div>
+<div class="k">Current Balance</div>
+<div class="v green">$12,480</div>
 </div>
 
 <div class="metric">
-<div class="k">Market Intelligence</div>
-<div class="v">Regime Aware</div>
+<div class="k">Return</div>
+<div class="v green">+24.8%</div>
 </div>
 
 <div class="metric">
-<div class="k">Execution Logic</div>
-<div class="v">Selective Predator</div>
+<div class="k">Max DD</div>
+<div class="v red">$622</div>
 </div>
+
+<div class="metric">
+<div class="k">Win Rate</div>
+<div class="v">68.4%</div>
+</div>
+
+<div class="metric">
+<div class="k">Regime</div>
+<div class="v yellow">TREND</div>
 </div>
 
 </div>
+
+</div>
+
+</section>
+
+<!-- ===================================================== -->
+<!-- REPORT TAB -->
+<!-- ===================================================== -->
+
+<section id="report" class="tab">
 
 <div class="card">
-<h2>Phase 1 — Core Stabilization</h2>
+
+<h2>Performance Analytics</h2>
+
+<div class="tableWrap">
 
 <table>
+
 <thead>
+
 <tr>
-<th>Module</th>
-<th>Status</th>
-<th>Purpose</th>
+
+<th>Category</th>
+<th>Best</th>
+<th>Worst</th>
+<th>Notes</th>
+
 </tr>
+
 </thead>
 
 <tbody>
+
 <tr>
-<td>Dynamic Trade Count</td>
-<td class="good">Integrated</td>
-<td>Trade quantity adapts to market quality</td>
+<td>Market Regime</td>
+<td>EXPANSION</td>
+<td>CHOP</td>
+<td>Best results during aligned momentum</td>
 </tr>
 
 <tr>
-<td>Confidence Allocation</td>
-<td class="good">Integrated</td>
-<td>Capital weighted by AI confidence</td>
+<td>Personality</td>
+<td>Trend Rider</td>
+<td>Trap Hunter</td>
+<td>Trend continuation strongest</td>
 </tr>
 
 <tr>
-<td>Correlation Protection</td>
-<td class="good">Integrated</td>
-<td>Limits sector overexposure</td>
+<td>Sector</td>
+<td>Semiconductors</td>
+<td>Healthcare</td>
+<td>Expansion sectors outperform</td>
 </tr>
 
-<tr>
-<td>Adaptive Score Threshold</td>
-<td class="good">Integrated</td>
-<td>Threshold changes with regime</td>
-</tr>
-
-<tr>
-<td>No Hunt Regime</td>
-<td class="good">Integrated</td>
-<td>Stops trading in dangerous markets</td>
-</tr>
 </tbody>
+
 </table>
 
 </div>
 
-<div class="card">
-<h2>Phase 2 — Market Intelligence</h2>
-
-<table>
-<thead>
-<tr>
-<th>Module</th>
-<th>Status</th>
-<th>Purpose</th>
-</tr>
-</thead>
-
-<tbody>
-<tr>
-<td>Market Regime Engine</td>
-<td class="good">Integrated</td>
-<td>Detects trend, chop, expansion, defensive conditions</td>
-</tr>
-
-<tr>
-<td>Personality Voting Matrix</td>
-<td class="good">Integrated</td>
-<td>Multiple personalities vote simultaneously</td>
-</tr>
-
-<tr>
-<td>AI Confidence Engine</td>
-<td class="good">Integrated</td>
-<td>Confidence score separate from raw score</td>
-</tr>
-
-<tr>
-<td>Symbol DNA Memory</td>
-<td class="good">Integrated</td>
-<td>Remembers ticker behavior patterns</td>
-</tr>
-
-<tr>
-<td>Session Intelligence</td>
-<td class="good">Integrated</td>
-<td>Adjusts behavior by market session</td>
-</tr>
-</tbody>
-</table>
-
 </div>
+
+</section>
+
+<!-- ===================================================== -->
+<!-- ACCOUNT TAB -->
+<!-- ===================================================== -->
+
+<section id="account" class="tab">
 
 <div class="card">
-<h2>Phase 4 — Options Intelligence</h2>
 
-<table>
-<thead>
-<tr>
-<th>Module</th>
-<th>Status</th>
-<th>Purpose</th>
-</tr>
-</thead>
+<h2>Account Summary</h2>
 
-<tbody>
-<tr>
-<td>Options Overlay</td>
-<td class="warn">Prototype</td>
-<td>Options suitability scoring</td>
-</tr>
+<div class="grid">
 
-<tr>
-<td>IV Expansion Forecast</td>
-<td class="warn">Prototype</td>
-<td>Forecasts volatility expansion</td>
-</tr>
-
-<tr>
-<td>Strategy Selector</td>
-<td class="warn">Prototype</td>
-<td>Adaptive options strategy logic</td>
-</tr>
-</tbody>
-</table>
-
+<div class="metric">
+<div class="k">Balance</div>
+<div class="v">$12,480</div>
 </div>
 
-<div class="card">
-<h2>V26 Next Major Improvements</h2>
-
-<div class="note">
-<ul>
-<li>Real broker API integration (paper trading first)</li>
-<li>AI trade manager after entry</li>
-<li>True options contract selection</li>
-<li>Portfolio hedging engine</li>
-<li>Sector exposure dashboard</li>
-<li>Cloud-based distributed scanners</li>
-<li>Self-learning AI reinforcement layer</li>
-<li>Live mobile dashboard system</li>
-<li>Multi-user SaaS architecture</li>
-<li>Felix AI co-pilot integration</li>
-</ul>
+<div class="metric">
+<div class="k">Exposure</div>
+<div class="v">72%</div>
 </div>
 
+<div class="metric">
+<div class="k">Heat</div>
+<div class="v yellow">MED</div>
 </div>
 
-<div class="card">
-<h2>Current V26 Doctrine</h2>
-
-<div class="note">
-The engine should adapt to the market.<br><br>
-
-Not:<br>
-<b>"Force trades every session."</b><br><br>
-
-Instead:<br>
-<b>"Trade aggressively when conditions are favorable, trade cautiously during uncertainty, and do not trade when market conditions become hostile."</b>
+<div class="metric">
+<div class="k">Daily DD Limit</div>
+<div class="v red">3%</div>
 </div>
 
 </div>
 
 </div>
+
+</section>
+
+</div>
+
+<!-- ===================================================== -->
+<!-- JS -->
+<!-- ===================================================== -->
+
+<script>
+
+function showTab(id){
+
+document.querySelectorAll(".tab")
+.forEach(t=>t.classList.remove("active"));
+
+document.querySelectorAll(".tabBtn")
+.forEach(t=>t.classList.remove("active"));
+
+document.getElementById(id)
+.classList.add("active");
+
+event.target.classList.add("active");
+
+}
+
+</script>
 
 </body>
 </html>
