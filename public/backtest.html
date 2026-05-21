@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V25 — Realistic Auto Trade Simulation</title>
+<title>MMG V25B — Multi-Period Compounding Simulator</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,9 +72,9 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V25 — Realistic Auto Trade Simulation</h1>
+  <h1>MMG V25B — Multi-Period Compounding Simulator</h1>
   <div class="sub">
-    V25 adds realistic simulation controls: adjustable capital, adjustable trading-day quantity, slippage, spread, fill delay, daily loss stop, and losing-streak kill switch.
+    V25B adds auto-chained daily/monthly/yearly compounding so each period starts from the previous period’s ending balance.
   </div>
 </header>
 
@@ -270,8 +270,8 @@ tr.clickable:hover{background:#182637}
     <div class="grid">
       <div class="metric"><div class="k">Starting Capital</div><div class="v" id="reportStart">—</div></div>
       <div class="metric"><div class="k">Current Balance</div><div class="v" id="reportBalance">—</div></div>
-      <div class="metric"><div class="k">Total P/L</div><div class="v" id="reportTotalPL">—</div></div>
-      <div class="metric"><div class="k">Return %</div><div class="v" id="reportReturn">—</div></div>
+      <div class="metric"><div class="k">Compounded P/L</div><div class="v" id="reportTotalPL">—</div></div>
+      <div class="metric"><div class="k">Compounded Return %</div><div class="v" id="reportReturn">—</div></div>
     </div>
     <div class="grid">
       <div class="metric"><div class="k">Backtests</div><div class="v" id="reportRuns">—</div></div>
@@ -350,7 +350,19 @@ tr.clickable:hover{background:#182637}
       <div><label>Simulation End Date</label><input id="simEndDate" type="date" value="2025-02-01"/></div>
     </div>
 
-    <h2 style="margin-top:18px">V25 Realism Layer</h2>
+    <h2 style="margin-top:18px">V25B Compounding Controls</h2>
+
+    <div class="two">
+      <div><label>Period Mode</label><select id="simPeriodMode"><option value="daily">Daily Chain</option><option value="monthly" selected>Monthly Chain</option><option value="yearly">Yearly Chain</option></select></div>
+      <div><label>Auto-Chain Balance</label><select id="simAutoChain"><option value="on" selected>ON</option><option value="off">OFF</option></select></div>
+    </div>
+
+    <div class="two">
+      <div><label>Trading Days Per Period</label><input id="simDaysPerPeriod" type="number" value="20"/></div>
+      <div><label>Show Period Ledger</label><select id="simShowPeriodLedger"><option value="on" selected>ON</option><option value="off">OFF</option></select></div>
+    </div>
+
+    <h2 style="margin-top:18px">V25B Realism Layer</h2>
 
     <div class="two">
       <div><label>Slippage % Per Trade</label><input id="simSlippagePct" type="number" value="0.05" step="0.01"/></div>
@@ -373,7 +385,7 @@ tr.clickable:hover{background:#182637}
     </div>
 
     <div class="flexBtns">
-      <button onclick="runAutoSimulation()">Run V25 Simulation</button>
+      <button onclick="runAutoSimulation()">Run V25B Simulation</button>
       <button class="danger" onclick="clearSimulation()">Clear Simulation</button>
     </div>
 
@@ -383,10 +395,10 @@ tr.clickable:hover{background:#182637}
   <div class="card">
     <h2>Simulation Summary</h2>
     <div class="grid">
-      <div class="metric"><div class="k">Start Capital</div><div class="v" id="simStartOut">—</div></div>
-      <div class="metric"><div class="k">Ending Balance</div><div class="v" id="simEndOut">—</div></div>
-      <div class="metric"><div class="k">Total P/L</div><div class="v" id="simPLOut">—</div></div>
-      <div class="metric"><div class="k">Return %</div><div class="v" id="simReturnOut">—</div></div>
+      <div class="metric"><div class="k">Original Capital</div><div class="v" id="simStartOut">—</div></div>
+      <div class="metric"><div class="k">Final Balance</div><div class="v" id="simEndOut">—</div></div>
+      <div class="metric"><div class="k">Compounded P/L</div><div class="v" id="simPLOut">—</div></div>
+      <div class="metric"><div class="k">Compounded Return %</div><div class="v" id="simReturnOut">—</div></div>
     </div>
     <div class="grid">
       <div class="metric"><div class="k">Sessions</div><div class="v" id="simSessionsOut">—</div></div>
@@ -395,6 +407,20 @@ tr.clickable:hover{background:#182637}
       <div class="metric"><div class="k">Max DD</div><div class="v" id="simDDOut">—</div></div>
     </div>
     <canvas id="simChart" width="1000" height="240"></canvas>
+  </div>
+
+
+  <div class="card" id="periodLedgerCard">
+    <h2>Period Compounding Ledger</h2>
+    <div class="tablewrap">
+      <table class="ledgerTable">
+        <thead>
+          <tr><th>Period</th><th>Start</th><th>End</th><th>P/L</th><th>Return</th><th>Trades</th><th>WR</th><th class="compactHide">DD</th></tr>
+        </thead>
+        <tbody id="periodLedger"></tbody>
+      </table>
+    </div>
+    <div class="note">Each period starts from the previous period’s ending balance when Auto-Chain Balance is ON.</div>
   </div>
 
   <div class="card">
@@ -420,8 +446,8 @@ tr.clickable:hover{background:#182637}
     <div class="grid">
       <div class="metric"><div class="k">Starting Capital</div><div class="v" id="acctStart">—</div></div>
       <div class="metric"><div class="k">Current Balance</div><div class="v" id="acctBalance">—</div></div>
-      <div class="metric"><div class="k">Total P/L</div><div class="v" id="acctPL">—</div></div>
-      <div class="metric"><div class="k">Return %</div><div class="v" id="acctReturn">—</div></div>
+      <div class="metric"><div class="k">Compounded P/L</div><div class="v" id="acctPL">—</div></div>
+      <div class="metric"><div class="k">Compounded Return %</div><div class="v" id="acctReturn">—</div></div>
     </div>
     <div class="grid">
       <div class="metric"><div class="k">Backtests</div><div class="v" id="acctRuns">—</div></div>
@@ -1681,6 +1707,162 @@ function renderSimulation(summary){
     </tr>`).join("");
 
   drawSimChart(summary.equityCurve);
+}
+
+
+/* ===== V25B PATCH: Multi-Period / Multi-Year Compounding Simulator ===== */
+let periodResults=[];
+
+function parseDateInputV25B(id){const v=document.getElementById(id)?.value;if(!v)return null;const d=new Date(v+"T00:00:00");return isNaN(d.getTime())?null:d}
+function fmtDateKeyV25B(d){return d.toISOString().slice(0,10)}
+function addDaysV25B(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function addMonthsV25B(d,n){const x=new Date(d);x.setMonth(x.getMonth()+n);return x}
+function addYearsV25B(d,n){const x=new Date(d);x.setFullYear(x.getFullYear()+n);return x}
+
+function buildPeriodsV25B(startDate,endDate,mode){
+  const periods=[];let cur=new Date(startDate);
+  while(cur<=endDate){
+    let next=mode==="yearly"?addYearsV25B(cur,1):mode==="monthly"?addMonthsV25B(cur,1):addDaysV25B(cur,1);
+    let pEnd=addDaysV25B(next,-1);if(pEnd>endDate)pEnd=new Date(endDate);
+    const label=mode==="yearly"?String(cur.getFullYear()):mode==="monthly"?`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,"0")}`:fmtDateKeyV25B(cur);
+    periods.push({label,start:fmtDateKeyV25B(cur),end:fmtDateKeyV25B(pEnd)});
+    cur=next;
+  }
+  return periods;
+}
+
+function filterBarsByDateRangeV25B(bars,fromKey,toKey){
+  const from=new Date(fromKey+"T00:00:00Z").getTime(),to=new Date(toKey+"T23:59:59Z").getTime();
+  return bars.filter(b=>b.rawTime>=from&&b.rawTime<=to);
+}
+function getTradingDatesInRangeV25B(bars,fromKey,toKey,limit){
+  const filtered=filterBarsByDateRangeV25B(bars,fromKey,toKey),set=new Set();
+  for(const b of filtered)set.add(new Date(b.rawTime).toISOString().slice(0,10));
+  const arr=[...set].sort();return limit&&limit>0?arr.slice(0,limit):arr;
+}
+
+function renderPeriodLedger(){
+  const el=document.getElementById("periodLedger");if(!el)return;
+  el.innerHTML=periodResults.map(r=>`
+    <tr>
+      <td>${r.period}</td><td>$${r.startBalance.toFixed(2)}</td><td>$${r.endBalance.toFixed(2)}</td>
+      <td style="font-weight:800;color:${r.pl>=0?'var(--green)':'var(--red)'}">$${r.pl.toFixed(2)}</td>
+      <td>${(r.ret*100).toFixed(2)}%</td><td>${r.trades}</td><td>${(r.wr*100).toFixed(1)}%</td>
+      <td class="compactHide">$${r.dd.toFixed(2)}</td>
+    </tr>`).join("");
+  const card=document.getElementById("periodLedgerCard");
+  if(card)card.style.display=(document.getElementById("simShowPeriodLedger")?.value==="off")?"none":"block";
+}
+
+function renderSimulation(summary){
+  document.getElementById("simStartOut").textContent=`$${summary.starting.toFixed(2)}`;
+  document.getElementById("simEndOut").textContent=`$${summary.balance.toFixed(2)}`;
+  document.getElementById("simPLOut").textContent=`$${summary.totalPL.toFixed(2)}`;
+  document.getElementById("simReturnOut").textContent=`${(summary.totalPL/summary.starting*100).toFixed(2)}%`;
+  document.getElementById("simSessionsOut").textContent=summary.days;
+  document.getElementById("simTradesOut").textContent=summary.totalTrades;
+  document.getElementById("simWROut").textContent=`${(summary.wr*100).toFixed(1)}%`;
+  document.getElementById("simDDOut").textContent=`$${summary.maxDD.toFixed(2)}`;
+  document.getElementById("simLedger").innerHTML=simResults.map(r=>`
+    <tr>
+      <td>${r.day}</td><td>${r.date}</td><td>${r.picks}</td>
+      <td style="font-weight:800;color:${r.pl>=0?'var(--green)':'var(--red)'}">$${r.pl.toFixed(2)}</td>
+      <td>$${r.balance.toFixed(2)}</td><td>${(r.wr*100).toFixed(0)}%</td>
+      <td class="compactHide">${r.killed==="YES"?"KILL | ":""}${r.tickers}</td>
+    </tr>`).join("");
+  renderPeriodLedger();
+  drawSimChart(summary.equityCurve);
+}
+
+async function runAutoSimulation(){
+  try{
+    clearSimulation(false);
+    const originalCapital=+document.getElementById("simStartCapital").value||10000;
+    const autoChain=document.getElementById("simAutoChain")?.value!=="off";
+    const periodMode=document.getElementById("simPeriodMode")?.value||"monthly";
+    const daysPerPeriod=+document.getElementById("simDaysPerPeriod")?.value||0;
+    const maxTrades=+document.getElementById("simMaxTrades").value||10;
+    const minScore=+document.getElementById("simMinScore").value||60;
+    const totalDaysLimit=+document.getElementById("simDaysLimit").value||0;
+    const dailyLossStopPct=+document.getElementById("simDailyLossStop").value||3;
+    const allocMode=document.getElementById("simAllocation").value;
+    const slippagePct=(+document.getElementById("simSlippagePct").value||0)/100;
+    const spreadPct=(+document.getElementById("simSpreadPct").value||0)/100;
+    const fillDelayPct=(+document.getElementById("simFillDelayPct").value||0)/100;
+    const maxLossStreak=+document.getElementById("simMaxLossStreak").value||3;
+    const shockOn=document.getElementById("simShock").value==="on";
+    const realism=document.getElementById("simRealism").value;
+    const realismMult=realism==="harsh"?1.8:realism==="strict"?1.35:1.0;
+    const startDate=parseDateInputV25B("simStartDate"),endDate=parseDateInputV25B("simEndDate");
+    if(!startDate||!endDate)throw new Error("Invalid simulation start/end date.");
+    if(startDate>endDate)throw new Error("Start date must be before end date.");
+    const universe=getSimUniverse();if(!universe.length)throw new Error("No universe selected.");
+    simSetStatus(`V25B loading ${universe.length} symbols for ${periodMode} chained simulation...`,"warn");
+    const benchTicker=document.getElementById("rsBenchmark").value;let bench=[];
+    if(benchTicker!=="OFF")bench=await fetchPolygonBars(benchTicker);
+    const allBars={};
+    for(let i=0;i<universe.length;i++){
+      const t=universe[i];simSetStatus(`Loading ${i+1}/${universe.length}: ${t}`,"warn");
+      try{allBars[t]=await fetchPolygonBars(t)}catch(e){allBars[t]=[]}
+    }
+    const firstBars=Object.values(allBars).find(x=>x&&x.length);if(!firstBars)throw new Error("No usable bar data loaded.");
+    const periods=buildPeriodsV25B(startDate,endDate,periodMode);
+    let balance=originalCapital,equityCurve=[originalCapital],totalWins=0,totalTrades=0,totalSessions=0,peak=originalCapital,maxDD=0,globalDay=0;
+    simResults=[];periodResults=[];
+    for(const period of periods){
+      const periodStartBalance=autoChain?balance:originalCapital;if(!autoChain)balance=originalCapital;
+      let periodWins=0,periodTrades=0,periodPeak=balance,periodDD=0;
+      let dates=getTradingDatesInRangeV25B(firstBars,period.start,period.end,daysPerPeriod||null);
+      if(totalDaysLimit&&totalDaysLimit>0){const remaining=totalDaysLimit-totalSessions;if(remaining<=0)break;dates=dates.slice(0,remaining)}
+      for(const dateKey of dates){
+        globalDay++;totalSessions++;simSetStatus(`V25B ${period.label}: simulating ${dateKey} (${totalSessions} sessions)...`,"warn");
+        let candidates=[];
+        for(const t of universe){
+          const bars=allBars[t]||[];if(bars.length<90)continue;
+          const through=makeTempBarsThroughDate(bars,dateKey);if(through.length<90)continue;
+          const r=analyzeLatest(t,through,(benchTicker===t)?[]:bench);
+          if(r.score>=minScore&&r.dir!=="BALANCE"&&r.dir!=="ERR")candidates.push(r);
+        }
+        candidates.sort((a,b)=>b.score-a.score);const picks=candidates.slice(0,maxTrades);
+        let dayPL=0,dayWins=0,dayTrades=0,dayLossStreak=0,kill=false;
+        const dailyLossLimit=balance*(dailyLossStopPct/100);
+        const scoreSum=picks.reduce((s,p)=>s+Math.max(1,p.score),0)||1;
+        const confSum=picks.reduce((s,p)=>s+Math.max(1,p.confidence||p.score||1),0)||1;
+        for(const p of picks){
+          if(kill)break;
+          const bars=allBars[p.ticker]||[],dayBars=barsForDate(bars,dateKey);if(dayBars.length<2)continue;
+          const entryBarIndex=dayBars.length>2?1:0,entryBase=dayBars[entryBarIndex].open||dayBars[entryBarIndex].close,exit=dayBars[dayBars.length-1].close,dirMult=p.dir==="LONG"?1:-1;
+          const totalFriction=(slippagePct+spreadPct+fillDelayPct)*realismMult;
+          let rawMove=((exit-entryBase)*dirMult)/entryBase;rawMove-=totalFriction*2;
+          let allocation=allocMode==="score"?balance*(p.score/scoreSum):allocMode==="confidence"?balance*((p.confidence||p.score)/confSum):balance/(picks.length||1);
+          const confidenceFactor=Math.max(0.30,Math.min(1.10,((p.confidence||p.score)/70)));
+          let pl=allocation*rawMove*confidenceFactor;
+          if(shockOn){const shockSeed=(dateKey.charCodeAt(8)+dateKey.charCodeAt(9)+p.ticker.charCodeAt(0)+p.ticker.length)%11;if(shockSeed===0||(realism==="harsh"&&shockSeed<=1))pl-=allocation*0.004*realismMult}
+          const maxPositionLoss=allocation*(0.012*realismMult);if(pl < -maxPositionLoss)pl=-maxPositionLoss;
+          dayPL+=pl;dayTrades++;totalTrades++;periodTrades++;
+          if(pl>0){dayWins++;totalWins++;periodWins++;dayLossStreak=0}else if(pl<0){dayLossStreak++}
+          if(dayPL<=-dailyLossLimit)kill=true;if(dayLossStreak>=maxLossStreak)kill=true;
+        }
+        balance+=dayPL;equityCurve.push(balance);
+        peak=Math.max(peak,balance);maxDD=Math.max(maxDD,peak-balance);
+        periodPeak=Math.max(periodPeak,balance);periodDD=Math.max(periodDD,periodPeak-balance);
+        simResults.push({day:globalDay,date:dateKey,picks:picks.length,pl:dayPL,balance,wr:dayTrades?dayWins/dayTrades:0,tickers:`${period.label} | ${picks.map(p=>`${p.ticker}:${p.score}`).join(", ")}`,killed:kill?"YES":"NO"});
+      }
+      const periodPL=balance-periodStartBalance;
+      periodResults.push({period:period.label,startBalance:periodStartBalance,endBalance:balance,pl:periodPL,ret:periodStartBalance?periodPL/periodStartBalance:0,trades:periodTrades,wr:periodTrades?periodWins/periodTrades:0,dd:periodDD});
+    }
+    renderSimulation({starting:originalCapital,balance,totalPL:balance-originalCapital,days:totalSessions,totalTrades,wr:totalTrades?totalWins/totalTrades:0,maxDD,equityCurve});
+    simSetStatus(`V25B chained simulation complete. ${periodResults.length} periods, ${totalSessions} sessions, ${totalTrades} trades. Auto-chain: ${autoChain?"ON":"OFF"}.`,"good");
+  }catch(err){simSetStatus(`V25B simulation failed.\n\n${err.message}`,"bad");console.error(err)}
+}
+
+function clearSimulation(resetStatus=true){
+  simResults=[];periodResults=[];
+  ["simStartOut","simEndOut","simPLOut","simReturnOut","simSessionsOut","simTradesOut","simWROut","simDDOut"].forEach(id=>{if(document.getElementById(id))document.getElementById(id).textContent="—"});
+  if(document.getElementById("simLedger"))document.getElementById("simLedger").innerHTML="";
+  if(document.getElementById("periodLedger"))document.getElementById("periodLedger").innerHTML="";
+  const c=document.getElementById("simChart");if(c){const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height)}
+  if(resetStatus)simSetStatus("Simulation cleared.","warn");
 }
 
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
