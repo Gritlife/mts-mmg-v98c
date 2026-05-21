@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V25B — Multi-Period Compounding Simulator</title>
+<title>MMG V25C — Options Data Simulation Engine</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -15,7 +15,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica
 header{padding:18px;background:#0b1118;border-bottom:1px solid var(--line)}
 h1{margin:0 0 6px;font-size:22px}
 .sub{color:var(--muted);font-size:13px;line-height:1.45}
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding:10px;background:#071018;position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line)}
+.tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;padding:10px;background:#071018;position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line)}
 .tabbtn{padding:11px 6px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:800;font-size:14px}
 .tabbtn.active{background:linear-gradient(135deg,#2196f3,#2ecc71);border:0}
 main{padding:12px}
@@ -35,7 +35,7 @@ button.danger{background:linear-gradient(135deg,#ff5c5c,#ff9f43)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
-.grid4{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.grid4{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
 .metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
 .metric .k{color:var(--muted);font-size:12px}
 .metric .v{font-size:21px;margin-top:6px;font-weight:800}
@@ -60,7 +60,7 @@ tr.clickable:hover{background:#182637}
 .ledgerTable th,.ledgerTable td{font-size:12px;padding:7px 5px}
 .compactHide{display:table-cell}
 @media(max-width:760px){
-  .tabs{grid-template-columns:repeat(5,1fr);gap:5px}
+  .tabs{grid-template-columns:repeat(6,1fr);gap:5px}
   .tabbtn{font-size:12px;padding:10px 3px}
   .three{grid-template-columns:1fr}
   .grid4{grid-template-columns:repeat(2,1fr)}
@@ -72,15 +72,16 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V25B — Multi-Period Compounding Simulator</h1>
+  <h1>MMG V25C — Options Data Simulation Engine</h1>
   <div class="sub">
-    V25B adds auto-chained daily/monthly/yearly compounding so each period starts from the previous period’s ending balance.
+    V25C preserves V25B compounding and adds Polygon historical options OHLC simulation using actual option premium movement.
   </div>
 </header>
 
 <nav class="tabs">
   <button class="tabbtn active" onclick="showTab('scanner')">Scanner</button>
   <button class="tabbtn" onclick="showTab('backtest')">Backtest</button>
+  <button class="tabbtn" onclick="showTab('options')">Options</button>
   <button class="tabbtn" onclick="showTab('simulation')">Sim</button>
   <button class="tabbtn" onclick="showTab('report')">Report</button>
   <button class="tabbtn" onclick="showTab('account')">Account</button>
@@ -322,6 +323,69 @@ tr.clickable:hover{background:#182637}
   </div>
 </section>
 
+
+
+<section id="options" class="tab">
+  <div class="card">
+    <h2>V25C Options Data Simulation</h2>
+    <div class="note">Uses Polygon historical option aggregate bars for actual contract premium movement. Historical Greeks are not required.</div>
+    <div class="two">
+      <div><label>Options Underlying</label><input id="optUnderlying" value="QQQ"/></div>
+      <div><label>Option Contract Ticker</label><input id="optContract" placeholder="Example: O:QQQ250404C00480000"/></div>
+    </div>
+    <div class="two">
+      <div><label>Contract Type</label><select id="optType"><option value="call">Call</option><option value="put">Put</option></select></div>
+      <div><label>Direction Mode</label><select id="optDirection"><option value="long">Long Premium Only</option><option value="adaptive">Adaptive From Contract</option></select></div>
+    </div>
+    <div class="two">
+      <div><label>Options Start Date</label><input id="optStartDate" type="date" value="2025-04-01"/></div>
+      <div><label>Options End Date</label><input id="optEndDate" type="date" value="2025-04-30"/></div>
+    </div>
+    <div class="two">
+      <div><label>Multiplier</label><input id="optMultiplier" type="number" value="15"/></div>
+      <div><label>Timespan</label><select id="optTimespan"><option value="minute">minute</option><option value="hour">hour</option><option value="day">day</option></select></div>
+    </div>
+    <h2 style="margin-top:18px">Options Capital & Risk</h2>
+    <div class="two">
+      <div><label>Options Starting Capital</label><input id="optCapital" type="number" value="10000"/></div>
+      <div><label>Premium Risk % / Trade</label><input id="optRiskPct" type="number" value="10" step="0.5"/></div>
+    </div>
+    <div class="two">
+      <div><label>Max Contracts / Trade</label><input id="optMaxContracts" type="number" value="10"/></div>
+      <div><label>Contract Multiplier</label><input id="optContractMultiplier" type="number" value="100"/></div>
+    </div>
+    <div class="two">
+      <div><label>Take Profit %</label><input id="optTakeProfitPct" type="number" value="30" step="1"/></div>
+      <div><label>Stop Loss %</label><input id="optStopLossPct" type="number" value="25" step="1"/></div>
+    </div>
+    <div class="two">
+      <div><label>Spread / Slippage %</label><input id="optFrictionPct" type="number" value="3" step="0.25"/></div>
+      <div><label>Daily Chain Compounding</label><select id="optChain"><option value="on">ON</option><option value="off">OFF</option></select></div>
+    </div>
+    <div class="flexBtns"><button onclick="runOptionsSimulation()">Run Options Simulation</button><button class="danger" onclick="clearOptionsSimulation()">Clear Options</button></div>
+    <div id="optionsStatus" class="status warn">Ready. Paste a Polygon option contract ticker and run the options sim.</div>
+  </div>
+  <div class="card">
+    <h2>Options Simulation Summary</h2>
+    <div class="grid">
+      <div class="metric"><div class="k">Start Capital</div><div class="v" id="optStartOut">—</div></div>
+      <div class="metric"><div class="k">Final Balance</div><div class="v" id="optEndOut">—</div></div>
+      <div class="metric"><div class="k">Options P/L</div><div class="v" id="optPLOut">—</div></div>
+      <div class="metric"><div class="k">Return %</div><div class="v" id="optReturnOut">—</div></div>
+    </div>
+    <div class="grid">
+      <div class="metric"><div class="k">Trades</div><div class="v" id="optTradesOut">—</div></div>
+      <div class="metric"><div class="k">Win Rate</div><div class="v" id="optWROut">—</div></div>
+      <div class="metric"><div class="k">Max DD</div><div class="v" id="optDDOut">—</div></div>
+      <div class="metric"><div class="k">Avg Premium Move</div><div class="v" id="optAvgMoveOut">—</div></div>
+    </div>
+    <canvas id="optChart" width="1000" height="240"></canvas>
+  </div>
+  <div class="card">
+    <h2>Options Daily Premium Ledger</h2>
+    <div class="tablewrap"><table class="ledgerTable"><thead><tr><th>Day</th><th>Date</th><th>Entry</th><th>Exit</th><th>Move</th><th>P/L</th><th>Balance</th><th class="compactHide">Reason</th></tr></thead><tbody id="optLedger"></tbody></table></div>
+  </div>
+</section>
 
 <section id="simulation" class="tab">
   <div class="card">
@@ -1864,6 +1928,20 @@ function clearSimulation(resetStatus=true){
   const c=document.getElementById("simChart");if(c){const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height)}
   if(resetStatus)simSetStatus("Simulation cleared.","warn");
 }
+
+
+/* ===== V25C PATCH: Polygon Historical Options OHLC Simulation ===== */
+let optResults=[];
+function optSetStatus(msg,type="warn"){const el=document.getElementById("optionsStatus");if(!el)return;el.textContent=msg;el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");}
+function polygonOptionsAggUrl(contract){const apiKey=document.getElementById("apiKey").value.trim();if(!apiKey)throw new Error("Missing Polygon API key.");localStorage.setItem("polygon_api_key",apiKey);const multiplier=document.getElementById("optMultiplier").value||15,timespan=document.getElementById("optTimespan").value||"minute",from=document.getElementById("optStartDate").value,to=document.getElementById("optEndDate").value,limit=document.getElementById("limit")?(document.getElementById("limit").value||50000):50000;if(!contract)throw new Error("Missing option contract ticker.");if(!from||!to)throw new Error("Missing options start/end date.");return `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(contract)}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=true&sort=asc&limit=${limit}&apiKey=${encodeURIComponent(apiKey)}`;}
+async function fetchOptionBars(contract){let url=polygonOptionsAggUrl(contract),all=[],page=1;while(url){optSetStatus(`Fetching option bars page ${page} for ${contract}...`,"warn");const res=await fetch(url);const text=await res.text();if(!res.ok)throw new Error(`Polygon options HTTP ${res.status}: ${text.slice(0,350)}`);const json=JSON.parse(text);if(json.error)throw new Error(json.error);if(Array.isArray(json.results))all=all.concat(json.results);const apiKey=document.getElementById("apiKey").value.trim();url=json.next_url?`${json.next_url}&apiKey=${encodeURIComponent(apiKey)}`:null;page++;if(page>20)break;}if(!all.length)throw new Error("No option bars returned. Check contract ticker, date range, and Polygon plan permissions.");return all.map(r=>({time:new Date(r.t).toLocaleString(),rawTime:r.t,open:r.o,high:r.h,low:r.l,close:r.c,volume:r.v||0})).filter(x=>Number.isFinite(x.close));}
+function getOptionTradingDates(bars){const set=new Set();for(const b of bars)set.add(new Date(b.rawTime).toISOString().slice(0,10));return [...set].sort();}
+function optionBarsForDate(bars,dateKey){return bars.filter(b=>new Date(b.rawTime).toISOString().slice(0,10)===dateKey);}
+async function runOptionsSimulation(){try{clearOptionsSimulation(false);const contract=document.getElementById("optContract").value.trim();const starting=+document.getElementById("optCapital").value||10000;const riskPct=(+document.getElementById("optRiskPct").value||10)/100;const maxContracts=+document.getElementById("optMaxContracts").value||10;const contractMult=+document.getElementById("optContractMultiplier").value||100;const takeProfit=(+document.getElementById("optTakeProfitPct").value||30)/100;const stopLoss=(+document.getElementById("optStopLossPct").value||25)/100;const friction=(+document.getElementById("optFrictionPct").value||3)/100;const chain=document.getElementById("optChain").value==="on";const bars=await fetchOptionBars(contract);const dates=getOptionTradingDates(bars);let balance=starting,equity=[starting],wins=0,trades=0,peak=starting,maxDD=0,totalMove=0;optResults=[];for(let i=0;i<dates.length;i++){const dateKey=dates[i];const day=optionBarsForDate(bars,dateKey);if(day.length<2)continue;const startBalance=chain?balance:starting;const entryRaw=day[0].open||day[0].close;let exitRaw=day[day.length-1].close;const tp=entryRaw*(1+takeProfit),sl=entryRaw*(1-stopLoss);let reason="EOD";for(const b of day){if(b.high>=tp){exitRaw=tp;reason="TAKE PROFIT";break;}if(b.low<=sl){exitRaw=sl;reason="STOP LOSS";break;}}const entry=entryRaw*(1+friction/2),exit=exitRaw*(1-friction/2),premiumMove=(exit-entry)/entry;const tradeBudget=startBalance*riskPct,perContractCost=entry*contractMult;const contracts=Math.max(0,Math.min(maxContracts,Math.floor(tradeBudget/perContractCost)));if(contracts<=0){optResults.push({day:i+1,date:dateKey,entry,exit,move:0,pl:0,balance,reason:"SKIP: NO CONTRACT SIZE"});continue;}const pl=contracts*contractMult*(exit-entry);balance=chain?balance+pl:starting+pl;trades++;totalMove+=premiumMove;if(pl>0)wins++;equity.push(balance);peak=Math.max(peak,balance);maxDD=Math.max(maxDD,peak-balance);optResults.push({day:i+1,date:dateKey,entry,exit,move:premiumMove,pl,balance,reason:`${reason} | ${contracts} contract(s)`});}renderOptionsSimulation({starting,balance,totalPL:balance-starting,trades,wr:trades?wins/trades:0,maxDD,avgMove:trades?totalMove/trades:0,equity});optSetStatus(`Options simulation complete. ${trades} option premium trades from ${contract}.`,"good");}catch(err){optSetStatus(`Options simulation failed.\n\n${err.message}`,"bad");console.error(err);}}
+function renderOptionsSimulation(summary){document.getElementById("optStartOut").textContent=`$${summary.starting.toFixed(2)}`;document.getElementById("optEndOut").textContent=`$${summary.balance.toFixed(2)}`;document.getElementById("optPLOut").textContent=`$${summary.totalPL.toFixed(2)}`;document.getElementById("optReturnOut").textContent=`${(summary.totalPL/summary.starting*100).toFixed(2)}%`;document.getElementById("optTradesOut").textContent=summary.trades;document.getElementById("optWROut").textContent=`${(summary.wr*100).toFixed(1)}%`;document.getElementById("optDDOut").textContent=`$${summary.maxDD.toFixed(2)}`;document.getElementById("optAvgMoveOut").textContent=`${(summary.avgMove*100).toFixed(2)}%`;document.getElementById("optLedger").innerHTML=optResults.map(r=>`<tr><td>${r.day}</td><td>${r.date}</td><td>$${r.entry.toFixed(2)}</td><td>$${r.exit.toFixed(2)}</td><td style="font-weight:800;color:${r.move>=0?'var(--green)':'var(--red)'}">${(r.move*100).toFixed(2)}%</td><td style="font-weight:800;color:${r.pl>=0?'var(--green)':'var(--red)'}">$${r.pl.toFixed(2)}</td><td>$${r.balance.toFixed(2)}</td><td class="compactHide">${r.reason}</td></tr>`).join("");drawOptionsChart(summary.equity);}
+function drawOptionsChart(points){const c=document.getElementById("optChart");if(!c)return;const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);ctx.strokeStyle="#294055";ctx.lineWidth=1;for(let x=0;x<c.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}for(let y=0;y<c.height;y+=55){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}if(!points||points.length<2)return;const min=Math.min(...points),max=Math.max(...points),pad=Math.max((max-min)*.15,Math.max(10,Math.abs(points[0])*.005));ctx.strokeStyle="#37a2ff";ctx.lineWidth=3;ctx.beginPath();points.forEach((p,i)=>{const x=i/(points.length-1)*c.width;const y=c.height-((p-(min-pad))/((max+pad)-(min-pad)))*c.height;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();ctx.fillStyle="#edf4fb";ctx.font="14px Arial";ctx.fillText(`Start: $${points[0].toFixed(2)}   End: $${points[points.length-1].toFixed(2)}`,18,24);}
+function clearOptionsSimulation(resetStatus=true){optResults=[];["optStartOut","optEndOut","optPLOut","optReturnOut","optTradesOut","optWROut","optDDOut","optAvgMoveOut"].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent="—";});const ledger=document.getElementById("optLedger");if(ledger)ledger.innerHTML="";const c=document.getElementById("optChart");if(c){const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);}if(resetStatus)optSetStatus("Options simulation cleared.","warn");}
+function showTab(name){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("active"));document.getElementById(name).classList.add("active");const btns=[...document.querySelectorAll(".tabbtn")];if(name==="scanner")btns[0]?.classList.add("active");if(name==="backtest")btns[1]?.classList.add("active");if(name==="options")btns[2]?.classList.add("active");if(name==="simulation")btns[3]?.classList.add("active");if(name==="report")btns[4]?.classList.add("active");if(name==="account")btns[5]?.classList.add("active");if(name==="account"||name==="report")renderAccount();}
 
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
 </script>
