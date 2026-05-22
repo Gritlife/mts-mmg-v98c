@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V25D — Auto Option Sim Contract Engine</title>
+<title>MMG V25E — Fixed Auto Option Sim Engine</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,7 +72,7 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V25D — Auto Option Sim Contract Engine</h1>
+  <h1>MMG V25E — Fixed Auto Option Sim Engine</h1>
   <div class="sub">
     V25D auto-selects option contracts from equity signals and simulates max 10 option premium trades per session with daily compounding.
   </div>
@@ -331,7 +331,7 @@ tr.clickable:hover{background:#182637}
     <div class="note">Automated options simulation layer. Uses Polygon historical option aggregate bars for actual contract premium movement. Historical Greeks are not required.</div>
     <div class="two">
       <div><label>Underlying / Equity Signal</label><input id="optUnderlying" value="QQQ"/></div>
-      <div><label>Manual Contract Ticker (Optional)</label><input id="optContract" placeholder="Leave blank for auto-select"/></div>
+      <div><label>Manual Contract Ticker (Optional / Not Required)</label><input id="optContract" placeholder="Leave blank — engine auto-selects"/></div>
     </div>
     <div class="two">
       <div><label>Contract Type</label><select id="optType"><option value="call">Call</option><option value="put">Put</option></select></div>
@@ -403,7 +403,7 @@ tr.clickable:hover{background:#182637}
       <div><label>Spread / Slippage %</label><input id="optFrictionPct" type="number" value="3" step="0.25"/></div>
       <div><label>Daily Chain Compounding</label><select id="optChain"><option value="on">ON</option><option value="off">OFF</option></select></div>
     </div>
-    <div class="flexBtns"><button onclick="runOptionsSimulation()">Run Option Sim</button><button class="danger" onclick="clearOptionsSimulation()">Clear Option Sim</button></div>
+    <div class="flexBtns"><button onclick="runAutoOptionSimV25E()">Run Option Sim</button><button class="danger" onclick="clearOptionsSimulation()">Clear Option Sim</button></div>
     <div id="optionsStatus" class="status warn">Ready. Option Sim is designed to automate premium testing the same way equity Sim does.</div>
   </div>
   <div class="card">
@@ -2335,5 +2335,270 @@ function renderOptionsSimulation(summary){
 
 setInterval(()=>{if(document.getElementById("autoRescan").value==="on"&&Date.now()-scannerCache.time>5*60*1000)scanUniverse()},30000)
 </script>
+
+<script>
+/* ===== V25E FINAL OVERRIDE: Auto Option Sim — No Manual Contract Required ===== */
+
+let optResultsV25E = [];
+
+function optSetStatusV25E(msg,type="warn"){
+  const el=document.getElementById("optionsStatus");
+  if(!el)return;
+  el.textContent=msg;
+  el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");
+}
+
+function optDateAddV25E(dateKey,days){
+  const d=new Date(dateKey+"T00:00:00Z");
+  d.setUTCDate(d.getUTCDate()+days);
+  return d.toISOString().slice(0,10);
+}
+
+function getOptionAutoUniverseV25E(){
+  const mode=document.getElementById("optAutoUniverse")?.value || "scanner";
+  if(mode==="scanner" && typeof scannerCache!=="undefined" && scannerCache?.results?.length){
+    return scannerCache.results.map(r=>r.ticker);
+  }
+  if(typeof PRESETS!=="undefined" && PRESETS[mode]){
+    return PRESETS[mode].slice(0, +(document.getElementById("maxSymbols")?.value||30));
+  }
+  if(typeof getUniverse==="function") return getUniverse();
+  return ["SPY","QQQ","AAPL","MSFT","NVDA","AMZN","META","TSLA","GOOGL","JPM"];
+}
+
+async function fetchContractsV25E(underlying, dateKey, type){
+  const apiKey=document.getElementById("apiKey")?.value?.trim();
+  if(!apiKey) throw new Error("Missing Polygon API key.");
+
+  const minDTE=+document.getElementById("optMinDTE")?.value||7;
+  const maxDTE=+document.getElementById("optMaxDTE")?.value||21;
+  const expGte=optDateAddV25E(dateKey,minDTE);
+  const expLte=optDateAddV25E(dateKey,maxDTE);
+
+  const params=new URLSearchParams({
+    underlying_ticker:underlying.toUpperCase(),
+    contract_type:type,
+    as_of:dateKey,
+    "expiration_date.gte":expGte,
+    "expiration_date.lte":expLte,
+    expired:"true",
+    limit:"1000",
+    sort:"expiration_date",
+    order:"asc",
+    apiKey
+  });
+
+  const url=`https://api.polygon.io/v3/reference/options/contracts?${params.toString()}`;
+  const res=await fetch(url);
+  const text=await res.text();
+  if(!res.ok) throw new Error(`Contract lookup failed for ${underlying}: HTTP ${res.status} ${text.slice(0,220)}`);
+  const json=JSON.parse(text);
+  return Array.isArray(json.results)?json.results:[];
+}
+
+function pickContractV25E(contracts, underlyingPrice, type){
+  if(!contracts.length) return null;
+  const rule=document.getElementById("optStrikeRule")?.value||"atm";
+  let target=underlyingPrice;
+  if(rule==="slightly_otm") target = type==="call" ? underlyingPrice*1.01 : underlyingPrice*0.99;
+  if(rule==="slightly_itm") target = type==="call" ? underlyingPrice*0.99 : underlyingPrice*1.01;
+
+  return [...contracts].sort((a,b)=>{
+    const da=Math.abs(Number(a.strike_price||0)-target);
+    const db=Math.abs(Number(b.strike_price||0)-target);
+    return da-db;
+  })[0] || null;
+}
+
+async function fetchOptionBarsV25E(contract, fromDate, toDate){
+  const apiKey=document.getElementById("apiKey")?.value?.trim();
+  if(!apiKey) throw new Error("Missing Polygon API key.");
+  const multiplier=document.getElementById("optMultiplier")?.value||15;
+  const timespan=document.getElementById("optTimespan")?.value||"minute";
+  const limit=document.getElementById("limit")?.value||50000;
+  const url=`https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(contract)}/range/${multiplier}/${timespan}/${fromDate}/${toDate}?adjusted=true&sort=asc&limit=${limit}&apiKey=${encodeURIComponent(apiKey)}`;
+  const res=await fetch(url);
+  const text=await res.text();
+  if(!res.ok) throw new Error(`Option bars failed ${contract}: HTTP ${res.status} ${text.slice(0,220)}`);
+  const json=JSON.parse(text);
+  const arr=Array.isArray(json.results)?json.results:[];
+  return arr.map(r=>({time:new Date(r.t).toLocaleString(),rawTime:r.t,open:r.o,high:r.h,low:r.l,close:r.c,volume:r.v||0})).filter(x=>Number.isFinite(x.close));
+}
+
+function dayBarsV25E(bars,dateKey){
+  return bars.filter(b=>new Date(b.rawTime).toISOString().slice(0,10)===dateKey);
+}
+
+function simulateOptionTradeV25E({dayIndex,dateKey,underlying,contract,day,balance,starting,riskPct,maxContracts,contractMult,takeProfit,stopLoss,friction,chain}){
+  const entryRaw=day[0].open || day[0].close;
+  let exitRaw=day[day.length-1].close;
+  const tp=entryRaw*(1+takeProfit);
+  const sl=entryRaw*(1-stopLoss);
+  let reason="EOD";
+
+  for(const b of day){
+    if(b.high>=tp){exitRaw=tp;reason="TAKE PROFIT";break;}
+    if(b.low<=sl){exitRaw=sl;reason="STOP LOSS";break;}
+  }
+
+  const entry=entryRaw*(1+friction/2);
+  const exit=exitRaw*(1-friction/2);
+  const move=(exit-entry)/entry;
+
+  const baseBal=chain?balance:starting;
+  const tradeBudget=baseBal*riskPct;
+  const perContractCost=entry*contractMult;
+  const contracts=Math.max(0,Math.min(maxContracts,Math.floor(tradeBudget/perContractCost)));
+
+  if(contracts<=0){
+    return {balance,move:0,pl:0,row:{day:dayIndex,date:dateKey,underlying,contract,entry,exit,move:0,pl:0,balance,reason:"SKIP: NO CONTRACT SIZE"}};
+  }
+
+  const pl=contracts*contractMult*(exit-entry);
+  const newBalance=chain?balance+pl:starting+pl;
+
+  return {balance:newBalance,move,pl,row:{day:dayIndex,date:dateKey,underlying,contract,entry,exit,move,pl,balance:newBalance,reason:`${reason} | ${contracts} contract(s)`}};
+}
+
+async function runAutoOptionSimV25E(){
+  try{
+    if(typeof clearOptionsSimulation==="function") clearOptionsSimulation(false);
+
+    const manual=document.getElementById("optContract")?.value?.trim();
+    const autoOn=(document.getElementById("optAutoContract")?.value||"on")==="on";
+    const starting=+document.getElementById("optCapital")?.value||10000;
+    const riskPct=(+document.getElementById("optRiskPct")?.value||10)/100;
+    const maxContracts=+document.getElementById("optMaxContracts")?.value||10;
+    const contractMult=+document.getElementById("optContractMultiplier")?.value||100;
+    const takeProfit=(+document.getElementById("optTakeProfitPct")?.value||30)/100;
+    const stopLoss=(+document.getElementById("optStopLossPct")?.value||25)/100;
+    const friction=(+document.getElementById("optFrictionPct")?.value||3)/100;
+    const chain=(document.getElementById("optChain")?.value||"on")==="on";
+    const maxPerSession=+document.getElementById("optMaxSessionTrades")?.value||10;
+    const minScore=+document.getElementById("optAutoMinScore")?.value||60;
+
+    const fromDate=document.getElementById("optStartDate")?.value;
+    const toDate=document.getElementById("optEndDate")?.value;
+    if(!fromDate||!toDate) throw new Error("Missing Option Sim start/end date.");
+
+    let balance=starting,equity=[starting],wins=0,trades=0,peak=starting,maxDD=0,totalMove=0;
+    optResultsV25E=[];
+
+    if(!autoOn && manual){
+      optSetStatusV25E(`Manual Option Sim: ${manual}`,"warn");
+      const bars=await fetchOptionBarsV25E(manual,fromDate,toDate);
+      const dates=[...new Set(bars.map(b=>new Date(b.rawTime).toISOString().slice(0,10)))].sort();
+      for(const dateKey of dates){
+        const day=dayBarsV25E(bars,dateKey);
+        if(day.length<2) continue;
+        const result=simulateOptionTradeV25E({dayIndex:optResultsV25E.length+1,dateKey,underlying:"MANUAL",contract:manual,day,balance,starting,riskPct,maxContracts,contractMult,takeProfit,stopLoss,friction,chain});
+        balance=result.balance; equity.push(balance); trades++; totalMove+=result.move; if(result.pl>0)wins++;
+        peak=Math.max(peak,balance); maxDD=Math.max(maxDD,peak-balance); optResultsV25E.push(result.row);
+      }
+    } else {
+      optSetStatusV25E("Auto Option Sim: scanning equities and selecting option contracts...","warn");
+
+      const universe=getOptionAutoUniverseV25E();
+      const benchTicker=document.getElementById("rsBenchmark")?.value||"SPY";
+      let bench=[];
+      if(benchTicker!=="OFF"){try{bench=await fetchPolygonBars(benchTicker);}catch(e){bench=[];}}
+
+      const allBars={};
+      for(let i=0;i<universe.length;i++){
+        const t=universe[i];
+        optSetStatusV25E(`Loading equity ${i+1}/${universe.length}: ${t}`,"warn");
+        try{allBars[t]=await fetchPolygonBars(t);}catch(e){allBars[t]=[];}
+      }
+
+      const first=Object.values(allBars).find(x=>x&&x.length);
+      if(!first) throw new Error("No equity bars loaded for auto option selection.");
+
+      const dates=[...new Set(first.map(b=>new Date(b.rawTime).toISOString().slice(0,10)))].sort().filter(d=>d>=fromDate&&d<=toDate);
+
+      for(let di=0; di<dates.length; di++){
+        const dateKey=dates[di];
+        optSetStatusV25E(`Auto Option Sim day ${di+1}/${dates.length}: ${dateKey}`,"warn");
+
+        let signals=[];
+        for(const t of universe){
+          const bars=allBars[t]||[];
+          if(bars.length<90) continue;
+          const through=makeTempBarsThroughDate(bars,dateKey);
+          if(through.length<90) continue;
+          const r=analyzeLatest(t,through,(benchTicker===t)?[]:bench);
+          if(r.score>=minScore && r.dir!=="BALANCE" && r.dir!=="ERR") signals.push(r);
+        }
+
+        signals.sort((a,b)=>b.score-a.score);
+        const top=signals.slice(0,maxPerSession);
+
+        for(const sig of top){
+          const through=makeTempBarsThroughDate(allBars[sig.ticker]||[],dateKey);
+          const last=through[through.length-1];
+          if(!last) continue;
+
+          const type=sig.dir==="SHORT"?"put":"call";
+          let selected=null;
+          try{
+            const contracts=await fetchContractsV25E(sig.ticker,dateKey,type);
+            selected=pickContractV25E(contracts,last.close,type);
+          }catch(e){continue;}
+
+          const contract=selected?.ticker || selected?.options_ticker || selected?.symbol;
+          if(!contract) continue;
+
+          let optBars=[];
+          try{optBars=await fetchOptionBarsV25E(contract,dateKey,dateKey);}catch(e){continue;}
+          const day=dayBarsV25E(optBars,dateKey);
+          if(day.length<2) continue;
+
+          const result=simulateOptionTradeV25E({dayIndex:optResultsV25E.length+1,dateKey,underlying:sig.ticker,contract,day,balance,starting,riskPct,maxContracts,contractMult,takeProfit,stopLoss,friction,chain});
+          balance=result.balance; equity.push(balance); trades++; totalMove+=result.move; if(result.pl>0)wins++;
+          peak=Math.max(peak,balance); maxDD=Math.max(maxDD,peak-balance); optResultsV25E.push(result.row);
+        }
+      }
+    }
+
+    window.optResults = optResultsV25E;
+
+    renderOptionsSimulation({
+      starting,balance,totalPL:balance-starting,trades,
+      wr:trades?wins/trades:0,maxDD,avgMove:trades?totalMove/trades:0,equity
+    });
+
+    optSetStatusV25E(`Auto Option Sim complete. ${trades} option trades. Max ${maxPerSession}/session.`,"good");
+  }catch(err){
+    optSetStatusV25E(`Option Sim failed.\n\n${err.message}`,"bad");
+    console.error(err);
+  }
+}
+
+function renderOptionsSimulation(summary){
+  document.getElementById("optStartOut").textContent=`$${summary.starting.toFixed(2)}`;
+  document.getElementById("optEndOut").textContent=`$${summary.balance.toFixed(2)}`;
+  document.getElementById("optPLOut").textContent=`$${summary.totalPL.toFixed(2)}`;
+  document.getElementById("optReturnOut").textContent=`${(summary.totalPL/summary.starting*100).toFixed(2)}%`;
+  document.getElementById("optTradesOut").textContent=summary.trades;
+  document.getElementById("optWROut").textContent=`${(summary.wr*100).toFixed(1)}%`;
+  document.getElementById("optDDOut").textContent=`$${summary.maxDD.toFixed(2)}`;
+  document.getElementById("optAvgMoveOut").textContent=`${(summary.avgMove*100).toFixed(2)}%`;
+
+  const ledger=document.getElementById("optLedger");
+  if(ledger){
+    ledger.innerHTML=optResultsV25E.map(r=>`
+      <tr>
+        <td>${r.day}</td><td>${r.date}</td><td>${r.underlying||""}</td>
+        <td style="font-size:12px">${r.contract||""}</td>
+        <td>$${r.entry.toFixed(2)}</td><td>$${r.exit.toFixed(2)}</td>
+        <td style="font-weight:800;color:${r.move>=0?'var(--green)':'var(--red)'}">${(r.move*100).toFixed(2)}%</td>
+        <td style="font-weight:800;color:${r.pl>=0?'var(--green)':'var(--red)'}">$${r.pl.toFixed(2)}</td>
+        <td>$${r.balance.toFixed(2)}</td><td class="compactHide">${r.reason}</td>
+      </tr>`).join("");
+  }
+
+  if(typeof drawOptionsChart==="function") drawOptionsChart(summary.equity);
+}
+</script>
+
 </body>
 </html>
