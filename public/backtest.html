@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V25E — Fixed Auto Option Sim Engine</title>
+<title>MMG V25F — Option Sim Button Fix</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,7 +72,7 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V25E — Fixed Auto Option Sim Engine</h1>
+  <h1>MMG V25F — Option Sim Button Fix</h1>
   <div class="sub">
     V25D auto-selects option contracts from equity signals and simulates max 10 option premium trades per session with daily compounding.
   </div>
@@ -116,7 +116,7 @@ tr.clickable:hover{background:#182637}
 
     <div class="three">
       <div><label>Multiplier</label><input id="multiplier" type="number" value="15"/></div>
-      <div><label>Timespan</label><select id="timespan"><option value="minute">minute</option><option value="hour">hour</option><option value="day">day</option></select></div>
+      <div><label>Timespan</label><select id="timespan"><option value="day" selected>day</option><option value="minute">minute</option><option value="hour">hour</option></select></div>
       <div><label>Limit</label><input id="limit" type="number" value="50000"/></div>
     </div>
 
@@ -342,14 +342,14 @@ tr.clickable:hover{background:#182637}
       <div><label>Option Sim End Date</label><input id="optEndDate" type="date" value="2025-04-30"/></div>
     </div>
     <div class="two">
-      <div><label>Multiplier</label><input id="optMultiplier" type="number" value="15"/></div>
-      <div><label>Timespan</label><select id="optTimespan"><option value="minute">minute</option><option value="hour">hour</option><option value="day">day</option></select></div>
+      <div><label>Multiplier</label><input id="optMultiplier" type="number" value="1"/></div>
+      <div><label>Timespan</label><select id="optTimespan"><option value="day" selected>day</option><option value="minute">minute</option><option value="hour">hour</option></select></div>
     </div>
     
     <h2 style="margin-top:18px">Option Sim Automation Rules</h2>
 
     <div class="two">
-      <div><label>Auto-Select Mode</label><select id="optAutoSelect"><option value="manual">Manual Contract</option><option value="score">Auto From Top Equity Signals</option><option value="chain">Auto Chain Scan</option></select></div>
+      <div><label>Auto-Select Mode</label><select id="optAutoSelect"><option value="score" selected>Auto From Top Equity Signals</option><option value="chain">Auto Chain Scan</option><option value="manual">Manual Contract</option></select></div>
       <div><label>Max Option Trades / Session</label><input id="optMaxTradesSession" type="number" value="5"/></div>
     </div>
 
@@ -403,7 +403,8 @@ tr.clickable:hover{background:#182637}
       <div><label>Spread / Slippage %</label><input id="optFrictionPct" type="number" value="3" step="0.25"/></div>
       <div><label>Daily Chain Compounding</label><select id="optChain"><option value="on">ON</option><option value="off">OFF</option></select></div>
     </div>
-    <div class="flexBtns"><button onclick="runAutoOptionSimV25E()">Run Option Sim</button><button class="danger" onclick="clearOptionsSimulation()">Clear Option Sim</button></div>
+    <div class="flexBtns"><button onclick="runOptionSimSafeV25F()">Run Option Sim</button><button class="danger" onclick="clearOptionsSimulation()">Clear Option Sim</button></div>
+    <div id="optionDebugLog" class="note" style="white-space:pre-wrap;margin-top:10px"></div>
     <div id="optionsStatus" class="status warn">Ready. Option Sim is designed to automate premium testing the same way equity Sim does.</div>
   </div>
   <div class="card">
@@ -2598,6 +2599,83 @@ function renderOptionsSimulation(summary){
 
   if(typeof drawOptionsChart==="function") drawOptionsChart(summary.equity);
 }
+</script>
+
+
+<script>
+/* ===== V25F PATCH: Safe Option Sim Button Wrapper + Debug Logger ===== */
+
+function optionDebugV25F(msg){
+  const el=document.getElementById("optionDebugLog");
+  if(el){
+    const now=new Date().toLocaleTimeString();
+    el.textContent = `[${now}] ${msg}\n` + (el.textContent||"");
+  }
+  console.log("[V25F OptionSim]", msg);
+}
+
+function setOptionStatusV25F(msg,type="warn"){
+  const el=document.getElementById("optionsStatus");
+  if(el){
+    el.textContent=msg;
+    el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");
+  }
+  optionDebugV25F(msg);
+}
+
+async function runOptionSimSafeV25F(){
+  try{
+    setOptionStatusV25F("Starting Option Sim safe wrapper...","warn");
+
+    // Force safe test defaults if fields exist.
+    const mult=document.getElementById("optMultiplier");
+    const span=document.getElementById("optTimespan");
+    const auto=document.getElementById("optAutoContract");
+    const autoSelect=document.getElementById("optAutoSelect");
+
+    if(mult && (!mult.value || Number(mult.value) <= 0)) mult.value="1";
+    if(span) span.value="day";
+    if(auto) auto.value="on";
+    if(autoSelect && autoSelect.value==="manual") autoSelect.value="score";
+
+    // Clear manual contract requirement when auto is on.
+    const contract=document.getElementById("optContract");
+    if(contract && auto && auto.value==="on"){
+      // leaving blank is valid
+    }
+
+    optionDebugV25F(`Settings: multiplier=${mult?.value}, timespan=${span?.value}, auto=${auto?.value}`);
+
+    // Prefer newest function if available.
+    if(typeof runAutoOptionSimV25E === "function"){
+      optionDebugV25F("Calling runAutoOptionSimV25E()");
+      await runAutoOptionSimV25E();
+      return;
+    }
+
+    // Fallback to prior function only if no newer engine exists.
+    if(typeof runOptionsSimulation === "function"){
+      optionDebugV25F("Calling fallback runOptionsSimulation()");
+      await runOptionsSimulation();
+      return;
+    }
+
+    throw new Error("No Option Sim engine function found.");
+  }catch(err){
+    setOptionStatusV25F(`Option Sim button failed.\n\n${err.message}`,"bad");
+    console.error(err);
+  }
+}
+
+// Guarantee every visible Run Option Sim button uses the safe wrapper after page load.
+window.addEventListener("load",()=>{
+  document.querySelectorAll("button").forEach(btn=>{
+    if((btn.textContent||"").trim().toLowerCase().includes("run option sim")){
+      btn.onclick=runOptionSimSafeV25F;
+    }
+  });
+  optionDebugV25F("V25F button patch loaded.");
+});
 </script>
 
 </body>
