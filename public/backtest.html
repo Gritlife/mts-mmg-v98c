@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V25G — Option Chain Diagnostic Engine</title>
+<title>MMG V25H — Option Sim Diagnostic Auto Runner</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,7 +72,7 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V25G — Option Chain Diagnostic Engine</h1>
+  <h1>MMG V25H — Option Sim Diagnostic Auto Runner</h1>
   <div class="sub">
     V25D auto-selects option contracts from equity signals and simulates max 10 option premium trades per session with daily compounding.
   </div>
@@ -423,8 +423,9 @@ tr.clickable:hover{background:#182637}
       <div><label>Spread / Slippage %</label><input id="optFrictionPct" type="number" value="3" step="0.25"/></div>
       <div><label>Daily Chain Compounding</label><select id="optChain"><option value="on">ON</option><option value="off">OFF</option></select></div>
     </div>
-    <div class="flexBtns"><button onclick="runOptionSimSafeV25F()">Run Option Sim</button><button class="danger" onclick="clearOptionsSimulation()">Clear Option Sim</button></div>
+    <div class="flexBtns"><button onclick="runOptionSimV25H()">Run Option Sim</button><button class="danger" onclick="clearOptionsSimulation()">Clear Option Sim</button></div>
     <div id="optionDebugLog" class="note" style="white-space:pre-wrap;margin-top:10px"></div>
+    <div id="v25hDiagnosticOutput" class="status warn" style="white-space:pre-wrap">V25H ready. Click Run Option Sim to test option chain + OHLC bars first.</div>
     <div id="optionsStatus" class="status warn">Ready. Option Sim is designed to automate premium testing the same way equity Sim does.</div>
   </div>
   
@@ -2874,6 +2875,79 @@ async function testSelectedOptionBarsV25G(){
 window.addEventListener("load",()=>{
   const btns=[...document.querySelectorAll("button")].filter(b=>(b.textContent||"").includes("Test Option Chain"));
   if(btns.length) console.log("[V25G] Diagnostic buttons loaded.");
+});
+</script>
+
+
+<script>
+/* V25H: force Run Option Sim to diagnose Polygon option chain + option OHLC first */
+function v25hLog(msg,type="warn"){
+  ["v25hDiagnosticOutput","optionsStatus","optionDebugLog","diagDetail"].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    if(id==="optionDebugLog"||id==="diagDetail"){el.textContent="["+new Date().toLocaleTimeString()+"] "+msg+"\n"+(el.textContent||"");}
+    else{el.textContent=msg; el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");}
+  });
+  console.log("[V25H]",msg);
+}
+function v25hKey(){const k=document.getElementById("apiKey")?.value?.trim(); if(!k)throw new Error("Missing Polygon API key."); return k;}
+function v25hAdd(dateKey,n){const d=new Date(dateKey+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10);}
+async function v25hContracts(ticker,dateKey,type){
+  const min=+(document.getElementById("optMinDTE")?.value||7), max=+(document.getElementById("optMaxDTE")?.value||45);
+  const p=new URLSearchParams({underlying_ticker:ticker,contract_type:type,as_of:dateKey,"expiration_date.gte":v25hAdd(dateKey,min),"expiration_date.lte":v25hAdd(dateKey,max),expired:"true",limit:"1000",sort:"expiration_date",order:"asc",apiKey:v25hKey()});
+  const url="https://api.polygon.io/v3/reference/options/contracts?"+p.toString();
+  v25hLog("Testing option contracts: "+ticker+" "+type+" as_of "+dateKey+" DTE "+min+"-"+max,"warn");
+  const r=await fetch(url); const txt=await r.text();
+  if(!r.ok)throw new Error("Contract endpoint failed HTTP "+r.status+":\n"+txt.slice(0,500));
+  const j=JSON.parse(txt); return Array.isArray(j.results)?j.results:[];
+}
+async function v25hEquityPrice(ticker,dateKey){
+  if(typeof fetchPolygonBars!=="function")return null;
+  const bars=await fetchPolygonBars(ticker);
+  const through=typeof makeTempBarsThroughDate==="function"?makeTempBarsThroughDate(bars,dateKey):bars.filter(b=>new Date(b.rawTime).toISOString().slice(0,10)<=dateKey);
+  return through[through.length-1]?.close||null;
+}
+function v25hPick(contracts,price){
+  if(!contracts.length)return null;
+  if(!price)return contracts[0];
+  return [...contracts].sort((a,b)=>Math.abs((+a.strike_price||0)-price)-Math.abs((+b.strike_price||0)-price))[0];
+}
+async function v25hBars(contract,dateKey){
+  const mult=document.getElementById("optMultiplier"); if(mult)mult.value="1";
+  const span=document.getElementById("optTimespan"); if(span)span.value="day";
+  const limit=document.getElementById("limit")?.value||50000;
+  const url=`https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(contract)}/range/1/day/${dateKey}/${dateKey}?adjusted=true&sort=asc&limit=${limit}&apiKey=${encodeURIComponent(v25hKey())}`;
+  v25hLog("Testing option OHLC bars: "+contract+" on "+dateKey,"warn");
+  const r=await fetch(url); const txt=await r.text();
+  if(!r.ok)throw new Error("Option bars failed HTTP "+r.status+":\n"+txt.slice(0,500));
+  const j=JSON.parse(txt); return Array.isArray(j.results)?j.results:[];
+}
+function v25hTable(contracts){
+  const tb=document.getElementById("diagContracts"); if(!tb)return;
+  tb.innerHTML=contracts.slice(0,15).map((c,i)=>`<tr><td>${i+1}</td><td style="font-size:12px"><b>${c.ticker||c.options_ticker||c.symbol||"N/A"}</b></td><td>${c.contract_type||""}</td><td>${c.expiration_date||""}</td><td>${c.strike_price||""}</td><td class="compactHide">found</td></tr>`).join("");
+}
+async function runOptionSimV25H(){
+  try{
+    const ticker=(document.getElementById("diagUnderlying")?.value||document.getElementById("optUnderlying")?.value||"QQQ").trim().toUpperCase();
+    const dateKey=document.getElementById("diagDate")?.value||document.getElementById("optStartDate")?.value||"2025-04-01";
+    const type=document.getElementById("diagType")?.value||"call";
+    v25hLog("V25H diagnostic started. This checks data access before full automation.","warn");
+    const contracts=await v25hContracts(ticker,dateKey,type);
+    v25hTable(contracts);
+    if(!contracts.length)throw new Error(`0 contracts found for ${ticker} on ${dateKey}. Try SPY/QQQ/AAPL, DTE 0-60 or 7-45, and confirm Polygon options reference access.`);
+    const price=await v25hEquityPrice(ticker,dateKey);
+    const chosen=v25hPick(contracts,price);
+    const contract=chosen?.ticker||chosen?.options_ticker||chosen?.symbol;
+    if(!contract)throw new Error("Contracts returned but no usable contract ticker field.");
+    const manual=document.getElementById("optContract"); if(manual)manual.value=contract;
+    const bars=await v25hBars(contract,dateKey);
+    if(!bars.length)throw new Error(`Contract found (${contract}), but 0 OHLC bars returned for ${dateKey}. Try another date/contract or confirm historical options aggregate access.`);
+    const b=bars[0];
+    v25hLog(`SUCCESS.\nContract: ${contract}\nBars: ${bars.length}\nSample: O ${b.o}, H ${b.h}, L ${b.l}, C ${b.c}\n\nData pipeline works. Next build can run full 20-session auto Option Sim.`,"good");
+  }catch(e){v25hLog("V25H diagnostic failed:\n\n"+e.message,"bad"); console.error(e);}
+}
+window.addEventListener("load",()=>{
+  document.querySelectorAll("button").forEach(btn=>{if((btn.textContent||"").toLowerCase().includes("run option sim"))btn.onclick=runOptionSimV25H;});
+  v25hLog("V25H loaded. Run Option Sim now tests contracts + OHLC first.","warn");
 });
 </script>
 
