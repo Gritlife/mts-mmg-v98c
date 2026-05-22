@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MMG V25F — Option Sim Button Fix</title>
+<title>MMG V25G — Option Chain Diagnostic Engine</title>
 <style>
 :root{
   --bg:#060a0f;--panel:#101923;--panel2:#162331;--text:#edf4fb;--muted:#9aa9b8;
@@ -72,7 +72,7 @@ tr.clickable:hover{background:#182637}
 </head>
 <body>
 <header>
-  <h1>MMG V25F — Option Sim Button Fix</h1>
+  <h1>MMG V25G — Option Chain Diagnostic Engine</h1>
   <div class="sub">
     V25D auto-selects option contracts from equity signals and simulates max 10 option premium trades per session with daily compounding.
   </div>
@@ -386,6 +386,26 @@ tr.clickable:hover{background:#182637}
       <div><label>Min Option Volume</label><input id="optMinVolume" type="number" value="1"/></div>
     </div>
 
+    
+    <h2 style="margin-top:18px">V25G Option Chain Diagnostics</h2>
+
+    <div class="two">
+      <div><label>Diagnostic Ticker</label><input id="diagUnderlying" value="QQQ"/></div>
+      <div><label>Diagnostic Date</label><input id="diagDate" type="date" value="2025-04-01"/></div>
+    </div>
+
+    <div class="two">
+      <div><label>Diagnostic Type</label><select id="diagType"><option value="call">Call</option><option value="put">Put</option></select></div>
+      <div><label>Diagnostic DTE Range</label><select id="diagDTE"><option value="7-21">7-21</option><option value="7-45">7-45</option><option value="0-60">0-60</option></select></div>
+    </div>
+
+    <div class="flexBtns">
+      <button onclick="testOptionChainV25G()">Test Option Chain</button>
+      <button onclick="testSelectedOptionBarsV25G()">Test Selected Contract Bars</button>
+    </div>
+
+    <div id="diagStatus" class="status warn">Ready. Use this first if Auto Option Sim returns 0 trades.</div>
+
     <h2 style="margin-top:18px">Option Sim Capital & Risk</h2>
     <div class="two">
       <div><label>Option Sim Capital</label><input id="optCapital" type="number" value="10000"/></div>
@@ -407,6 +427,20 @@ tr.clickable:hover{background:#182637}
     <div id="optionDebugLog" class="note" style="white-space:pre-wrap;margin-top:10px"></div>
     <div id="optionsStatus" class="status warn">Ready. Option Sim is designed to automate premium testing the same way equity Sim does.</div>
   </div>
+  
+  <div class="card">
+    <h2>V25G Diagnostic Results</h2>
+    <div class="tablewrap">
+      <table class="ledgerTable">
+        <thead>
+          <tr><th>#</th><th>Contract</th><th>Type</th><th>Exp</th><th>Strike</th><th class="compactHide">Status</th></tr>
+        </thead>
+        <tbody id="diagContracts"></tbody>
+      </table>
+    </div>
+    <div class="note" id="diagDetail" style="white-space:pre-wrap;margin-top:12px">No diagnostic run yet.</div>
+  </div>
+
   <div class="card">
     <h2>Option Sim Summary</h2>
     <div class="grid">
@@ -2675,6 +2709,171 @@ window.addEventListener("load",()=>{
     }
   });
   optionDebugV25F("V25F button patch loaded.");
+});
+</script>
+
+
+<script>
+/* ===== V25G PATCH: Option Chain Diagnostic Engine ===== */
+
+let v25gContracts = [];
+let v25gSelectedContract = null;
+
+function diagSetStatusV25G(msg,type="warn"){
+  const el=document.getElementById("diagStatus");
+  if(el){
+    el.textContent=msg;
+    el.className="status "+(type==="good"?"good":type==="bad"?"bad":"warn");
+  }
+  const detail=document.getElementById("diagDetail");
+  if(detail){
+    const now=new Date().toLocaleTimeString();
+    detail.textContent = `[${now}] ${msg}\n` + (detail.textContent||"");
+  }
+  console.log("[V25G Diagnostic]", msg);
+}
+
+function diagDateAddV25G(dateKey,days){
+  const d=new Date(dateKey+"T00:00:00Z");
+  d.setUTCDate(d.getUTCDate()+days);
+  return d.toISOString().slice(0,10);
+}
+
+function diagDTERangeV25G(){
+  const v=document.getElementById("diagDTE")?.value || "7-21";
+  const parts=v.split("-").map(Number);
+  return {min:parts[0]||7,max:parts[1]||21};
+}
+
+function getPolygonApiKeyV25G(){
+  const apiKey=document.getElementById("apiKey")?.value?.trim();
+  if(!apiKey) throw new Error("Missing Polygon API key.");
+  return apiKey;
+}
+
+async function testOptionChainV25G(){
+  try{
+    const apiKey=getPolygonApiKeyV25G();
+    const underlying=(document.getElementById("diagUnderlying")?.value||"QQQ").trim().toUpperCase();
+    const dateKey=document.getElementById("diagDate")?.value;
+    const type=document.getElementById("diagType")?.value||"call";
+    const dte=diagDTERangeV25G();
+
+    if(!underlying) throw new Error("Missing diagnostic ticker.");
+    if(!dateKey) throw new Error("Missing diagnostic date.");
+
+    const expGte=diagDateAddV25G(dateKey,dte.min);
+    const expLte=diagDateAddV25G(dateKey,dte.max);
+
+    diagSetStatusV25G(`Testing option chain: ${underlying} ${type.toUpperCase()} as of ${dateKey}, DTE ${dte.min}-${dte.max}...`,"warn");
+
+    const params=new URLSearchParams({
+      underlying_ticker:underlying,
+      contract_type:type,
+      as_of:dateKey,
+      "expiration_date.gte":expGte,
+      "expiration_date.lte":expLte,
+      expired:"true",
+      limit:"1000",
+      sort:"expiration_date",
+      order:"asc",
+      apiKey
+    });
+
+    const url=`https://api.polygon.io/v3/reference/options/contracts?${params.toString()}`;
+    const res=await fetch(url);
+    const text=await res.text();
+
+    if(!res.ok){
+      throw new Error(`Contract endpoint failed HTTP ${res.status}.\n${text.slice(0,600)}`);
+    }
+
+    const json=JSON.parse(text);
+    v25gContracts=Array.isArray(json.results)?json.results:[];
+    v25gSelectedContract=v25gContracts[0]||null;
+
+    const tbody=document.getElementById("diagContracts");
+    if(tbody){
+      tbody.innerHTML=v25gContracts.slice(0,20).map((c,i)=>`
+        <tr onclick="selectDiagContractV25G('${c.ticker || c.options_ticker || c.symbol || ""}')" style="cursor:pointer">
+          <td>${i+1}</td>
+          <td style="font-size:12px"><b>${c.ticker || c.options_ticker || c.symbol || "N/A"}</b></td>
+          <td>${c.contract_type || type}</td>
+          <td>${c.expiration_date || ""}</td>
+          <td>${c.strike_price || ""}</td>
+          <td class="compactHide">click row to select</td>
+        </tr>`).join("");
+    }
+
+    if(v25gContracts.length){
+      const first=v25gSelectedContract.ticker || v25gSelectedContract.options_ticker || v25gSelectedContract.symbol;
+      const manual=document.getElementById("optContract");
+      if(manual && first) manual.value=first;
+      diagSetStatusV25G(`Success. Found ${v25gContracts.length} contracts. Selected first: ${first}`,"good");
+    }else{
+      diagSetStatusV25G(`No contracts found. Try wider DTE range, another date, or another ticker.`,"bad");
+    }
+  }catch(err){
+    diagSetStatusV25G(`Option chain diagnostic failed.\n\n${err.message}`,"bad");
+    console.error(err);
+  }
+}
+
+function selectDiagContractV25G(contract){
+  if(!contract) return;
+  const manual=document.getElementById("optContract");
+  if(manual) manual.value=contract;
+  v25gSelectedContract={ticker:contract};
+  diagSetStatusV25G(`Selected contract: ${contract}`,"good");
+}
+
+async function testSelectedOptionBarsV25G(){
+  try{
+    const apiKey=getPolygonApiKeyV25G();
+    const contract=(document.getElementById("optContract")?.value || v25gSelectedContract?.ticker || "").trim();
+    const dateKey=document.getElementById("diagDate")?.value || document.getElementById("optStartDate")?.value;
+    const multiplier=document.getElementById("optMultiplier")?.value || "1";
+    const timespan=document.getElementById("optTimespan")?.value || "day";
+    const limit=document.getElementById("limit")?.value || "50000";
+
+    if(!contract) throw new Error("No selected contract. Run Test Option Chain first.");
+    if(!dateKey) throw new Error("Missing diagnostic date.");
+
+    diagSetStatusV25G(`Testing option bars for ${contract}, ${multiplier} ${timespan}, date ${dateKey}...`,"warn");
+
+    const url=`https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(contract)}/range/${multiplier}/${timespan}/${dateKey}/${dateKey}?adjusted=true&sort=asc&limit=${limit}&apiKey=${encodeURIComponent(apiKey)}`;
+    const res=await fetch(url);
+    const text=await res.text();
+
+    if(!res.ok){
+      throw new Error(`Option bars endpoint failed HTTP ${res.status}.\n${text.slice(0,600)}`);
+    }
+
+    const json=JSON.parse(text);
+    const bars=Array.isArray(json.results)?json.results:[];
+    const detail=document.getElementById("diagDetail");
+
+    if(!bars.length){
+      diagSetStatusV25G(`Bars request succeeded but returned 0 bars. Try timespan=day, another contract, or another active trading date.`,"bad");
+      return;
+    }
+
+    const sample=bars.slice(0,5).map((b,i)=>`#${i+1}: O=${b.o}, H=${b.h}, L=${b.l}, C=${b.c}, V=${b.v || 0}`).join("\n");
+    if(detail){
+      detail.textContent = `Selected Contract: ${contract}\nBars Found: ${bars.length}\nSample:\n${sample}\n\n` + detail.textContent;
+    }
+
+    diagSetStatusV25G(`Success. Loaded ${bars.length} option bars for ${contract}.`,"good");
+  }catch(err){
+    diagSetStatusV25G(`Option bars diagnostic failed.\n\n${err.message}`,"bad");
+    console.error(err);
+  }
+}
+
+/* Make diagnostic contract usable by Option Sim manual fallback */
+window.addEventListener("load",()=>{
+  const btns=[...document.querySelectorAll("button")].filter(b=>(b.textContent||"").includes("Test Option Chain"));
+  if(btns.length) console.log("[V25G] Diagnostic buttons loaded.");
 });
 </script>
 
