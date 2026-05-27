@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q Compounder V1 — QQQ Options Sweep Simulator</title>
+  <style>
+    :root {
+      --bg: #07110d;
+      --panel: #0d1c15;
+      --panel2: #10251b;
+      --text: #e8fff0;
+      --muted: #9db8a8;
+      --green: #2cff8f;
+      --yellow: #ffd84d;
+      --red: #ff5c70;
+      --blue: #58a6ff;
+      --border: rgba(255,255,255,.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top, #123322 0%, var(--bg) 45%);
+      color: var(--text);
+    }
+    header {
+      padding: 22px 22px 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+    h1 { margin: 0; font-size: 24px; letter-spacing: .3px; }
+    .subtitle { margin-top: 6px; color: var(--muted); font-size: 13px; }
+    main { padding: 18px; max-width: 1500px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 15px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.22);
+    }
+    .card h2 { margin: 0 0 12px; font-size: 16px; color: var(--green); }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 11px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.28);
+      color: var(--text);
+      outline: none;
+    }
+    input[type="file"] { padding: 8px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      cursor: pointer;
+      font-weight: 700;
+      color: #04130a;
+      background: linear-gradient(135deg, var(--green), #b6ffd4);
+    }
+    button.secondary { background: rgba(255,255,255,.10); color: var(--text); border: 1px solid var(--border); }
+    .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+    @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+    .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 13px; }
+    .kpi .name { color: var(--muted); font-size: 12px; }
+    .kpi .value { font-size: 22px; margin-top: 7px; font-weight: 800; }
+    .value.green { color: var(--green); }
+    .value.red { color: var(--red); }
+    .value.yellow { color: var(--yellow); }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; }
+    th, td { padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; font-size: 12px; white-space: nowrap; }
+    th { color: var(--green); background: rgba(44,255,143,.08); position: sticky; top: 88px; z-index: 2; }
+    tr:hover td { background: rgba(255,255,255,.035); }
+    .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .CALL { background: rgba(44,255,143,.15); color: var(--green); }
+    .PUT { background: rgba(255,92,112,.15); color: var(--red); }
+    .WAIT { background: rgba(255,216,77,.15); color: var(--yellow); }
+    .scroll { max-height: 650px; overflow: auto; border-radius: 12px; border: 1px solid var(--border); }
+    .note { color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 10px; }
+    .warning { color: var(--yellow); }
+    .small { font-size: 11px; color: var(--muted); }
+    canvas { width: 100%; height: 280px; background: rgba(0,0,0,.18); border-radius: 14px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Q Compounder V1 — QQQ Options Sweep Simulator</h1>
+    <div class="subtitle">Liquidity Sweep Price simulator using Train of Fortune logic. Built for testing before paper trading.</div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <section class="card">
+        <h2>Simulation Controls</h2>
+
+        <label>Data Mode</label>
+        <select id="dataMode">
+          <option value="synthetic">Synthetic QQQ-like intraday data</option>
+          <option value="csv">CSV upload: date,time,open,high,low,close,volume</option>
+        </select>
+
+        <label>Upload CSV</label>
+        <input type="file" id="csvFile" accept=".csv" />
+        <div class="note">CSV columns accepted: <b>date,time,open,high,low,close,volume</b>. One-minute or five-minute candles work best.</div>
+
+        <div class="row">
+          <div>
+            <label>Starting Capital</label>
+            <input id="capital" type="number" value="5000" step="100" />
+          </div>
+          <div>
+            <label>Trading Sessions</label>
+            <input id="sessions" type="number" value="20" min="1" max="60" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Max Trades / Day</label>
+            <input id="maxTrades" type="number" value="10" min="1" max="20" />
+          </div>
+          <div>
+            <label>Risk % / Trade</label>
+            <input id="riskPct" type="number" value="8" step="0.5" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Profit Target %</label>
+            <input id="targetPct" type="number" value="18" step="1" />
+          </div>
+          <div>
+            <label>Stop Loss %</label>
+            <input id="stopPct" type="number" value="12" step="1" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Contract Delta Proxy</label>
+            <input id="deltaProxy" type="number" value="0.38" step="0.01" min="0.1" max="0.9" />
+          </div>
+          <div>
+            <label>Premium Multiplier</label>
+            <input id="premiumMult" type="number" value="1" step="0.1" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Min Sweep Score</label>
+            <input id="minScore" type="number" value="70" min="0" max="100" />
+          </div>
+          <div>
+            <label>Opening Range Minutes</label>
+            <input id="orMinutes" type="number" value="30" min="5" max="60" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>ATR Length</label>
+            <input id="atrLen" type="number" value="14" min="5" max="50" />
+          </div>
+          <div>
+            <label>EMA Length</label>
+            <input id="emaLen" type="number" value="13" min="5" max="50" />
+          </div>
+        </div>
+
+        <button onclick="runSim()">Run Q Compounder Simulation</button>
+        <button class="secondary" onclick="downloadResults()">Download Results CSV</button>
+
+        <div class="note warning">
+          V1 uses approximate option pricing based on QQQ move × delta proxy × 100. This is for logic testing only, not live pricing.
+        </div>
+      </section>
+
+      <section>
+        <div class="kpis">
+          <div class="kpi"><div class="name">Ending Capital</div><div id="kpiCapital" class="value">—</div></div>
+          <div class="kpi"><div class="name">Total Return</div><div id="kpiReturn" class="value">—</div></div>
+          <div class="kpi"><div class="name">Win Rate</div><div id="kpiWin" class="value">—</div></div>
+          <div class="kpi"><div class="name">Total Trades</div><div id="kpiTrades" class="value">—</div></div>
+          <div class="kpi"><div class="name">Max Drawdown</div><div id="kpiDD" class="value">—</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <h2>Equity Curve</h2>
+          <canvas id="equityCanvas" width="1000" height="280"></canvas>
+        </div>
+
+        <div class="card">
+          <h2>Trade Log</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Date</th><th>Time</th><th>Action</th><th>Sweep Price</th><th>Entry QQQ</th><th>Exit QQQ</th><th>Score</th><th>Contracts</th><th>P/L</th><th>Capital</th><th>Reason</th>
+                </tr>
+              </thead>
+              <tbody id="tradeBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+<script>
+let lastResults = [];
+
+function num(v) { return Number(v || 0); }
+function fmtMoney(v) { return "$" + Number(v).toLocaleString(undefined, {maximumFractionDigits: 2}); }
+function fmtPct(v) { return Number(v).toFixed(2) + "%"; }
+
+function generateSyntheticData(days = 20) {
+  const rows = [];
+  let price = 430;
+  const start = new Date("2026-01-05T09:30:00");
+  for (let d = 0; d < days; d++) {
+    let day = new Date(start);
+    day.setDate(start.getDate() + d);
+    while ([0,6].includes(day.getDay())) day.setDate(day.getDate() + 1);
+    let openBias = (Math.random() - .5) * 2.5;
+    price += openBias;
+    let dayHigh = price, dayLow = price;
+    for (let m = 0; m < 390; m += 5) {
+      const t = new Date(day);
+      t.setHours(9, 30 + m, 0, 0);
+      const trend = Math.sin((m/390) * Math.PI * 2 + Math.random()) * 0.08;
+      const shock = (Math.random() - .5) * 0.75;
+      const open = price;
+      const close = Math.max(250, open + trend + shock);
+      const high = Math.max(open, close) + Math.random() * 0.45;
+      const low = Math.min(open, close) - Math.random() * 0.45;
+      const volume = Math.round(400000 + Math.random() * 1800000 + (m < 30 ? 1500000 : 0));
+      price = close;
+      dayHigh = Math.max(dayHigh, high);
+      dayLow = Math.min(dayLow, low);
+      rows.push({
+        date: t.toISOString().slice(0,10),
+        time: t.toTimeString().slice(0,5),
+        open, high, low, close, volume
+      });
+    }
+  }
+  return rows;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const header = lines.shift().split(",").map(x => x.trim().toLowerCase());
+  const idx = key => header.indexOf(key);
+  const out = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const c = line.split(",");
+    out.push({
+      date: c[idx("date")],
+      time: c[idx("time")],
+      open: num(c[idx("open")]),
+      high: num(c[idx("high")]),
+      low: num(c[idx("low")]),
+      close: num(c[idx("close")]),
+      volume: num(c[idx("volume")])
+    });
+  }
+  return out.filter(r => r.date && r.time && r.close);
+}
+
+function ema(values, len) {
+  const k = 2 / (len + 1);
+  const out = [];
+  let prev = values[0] || 0;
+  for (let i = 0; i < values.length; i++) {
+    prev = i === 0 ? values[i] : values[i] * k + prev * (1-k);
+    out.push(prev);
+  }
+  return out;
+}
+
+function atr(rows, len) {
+  const tr = rows.map((r, i) => {
+    if (i === 0) return r.high - r.low;
+    const pc = rows[i-1].close;
+    return Math.max(r.high-r.low, Math.abs(r.high-pc), Math.abs(r.low-pc));
+  });
+  return ema(tr, len);
+}
+
+function groupByDate(rows) {
+  const map = new Map();
+  for (const r of rows) {
+    if (!map.has(r.date)) map.set(r.date, []);
+    map.get(r.date).push(r);
+  }
+  return Array.from(map.entries()).map(([date, bars]) => ({date, bars}));
+}
+
+function calcVWAP(bars) {
+  let pv = 0, vol = 0;
+  for (const b of bars) {
+    const tp = (b.high + b.low + b.close) / 3;
+    pv += tp * b.volume;
+    vol += b.volume;
+    b.vwap = pv / Math.max(1, vol);
+  }
+}
+
+function detectSweepSetup(dayBars, i, orBars, emaSeries, atrSeries, params) {
+  const b = dayBars[i];
+  const prev = dayBars[i-1];
+  if (!b || !prev || i < orBars) return null;
+
+  const opening = dayBars.slice(0, orBars);
+  const orHigh = Math.max(...opening.map(x => x.high));
+  const orLow = Math.min(...opening.map(x => x.low));
+  const prior = dayBars.slice(Math.max(0, i-20), i);
+  const priorHigh = Math.max(...prior.map(x => x.high));
+  const priorLow = Math.min(...prior.map(x => x.low));
+
+  const aboveLiquidity = Math.max(orHigh, priorHigh);
+  const belowLiquidity = Math.min(orLow, priorLow);
+  const atrNow = atrSeries[i] || .5;
+  const emaNow = emaSeries[i];
+
+  const sweptHigh = b.high > aboveLiquidity && b.close < aboveLiquidity;
+  const sweptLow = b.low < belowLiquidity && b.close > belowLiquidity;
+
+  const vwapBull = b.close > b.vwap;
+  const vwapBear = b.close < b.vwap;
+  const emaBull = b.close > emaNow;
+  const emaBear = b.close < emaNow;
+  const rangeExpansion = (b.high - b.low) > atrNow * 1.05;
+  const volAvg = prior.reduce((s,x)=>s+x.volume,0) / Math.max(1, prior.length);
+  const rvol = b.volume / Math.max(1, volAvg);
+
+  let score = 0, action = "WAIT", sweepPrice = null, reason = "";
+
+  if (sweptLow && vwapBull) {
+    score += 35;
+    if (emaBull) score += 20;
+    if (rangeExpansion) score += 15;
+    if (rvol > 1.2) score += 15;
+    if (b.close > prev.high) score += 15;
+    action = "CALL";
+    sweepPrice = belowLiquidity;
+    reason = "Low sweep + reclaim above liquidity/VWAP";
+  }
+
+  if (sweptHigh && vwapBear) {
+    score += 35;
+    if (emaBear) score += 20;
+    if (rangeExpansion) score += 15;
+    if (rvol > 1.2) score += 15;
+    if (b.close < prev.low) score += 15;
+    action = "PUT";
+    sweepPrice = aboveLiquidity;
+    reason = "High sweep + rejection below liquidity/VWAP";
+  }
+
+  score = Math.min(100, score);
+  if (score < params.minScore) return null;
+  return { action, score, sweepPrice, reason };
+}
+
+function simulate(rows, params) {
+  const groups = groupByDate(rows).slice(0, params.sessions);
+  let capital = params.capital;
+  const trades = [];
+  let tradeNo = 1;
+  const equity = [capital];
+
+  for (const day of groups) {
+    const bars = day.bars;
+    if (bars.length < 20) continue;
+    calcVWAP(bars);
+    const closes = bars.map(b => b.close);
+    const emaSeries = ema(closes, params.emaLen);
+    const atrSeries = atr(bars, params.atrLen);
+    const barsPerMinute = bars.length > 120 ? 1 : 5;
+    const orBars = Math.max(1, Math.round(params.orMinutes / barsPerMinute));
+    let tradesToday = 0;
+
+    for (let i = orBars + 1; i < bars.length - 2; i++) {
+      if (tradesToday >= params.maxTrades) break;
+      const setup = detectSweepSetup(bars, i, orBars, emaSeries, atrSeries, params);
+      if (!setup) continue;
+
+      const entry = bars[i].close;
+      const riskDollars = capital * (params.riskPct / 100);
+      const estPremium = Math.max(0.25, (atrSeries[i] * params.deltaProxy * 100 * params.premiumMult) / 100);
+      const costPerContract = estPremium * 100;
+      const contracts = Math.max(1, Math.floor(riskDollars / costPerContract));
+      const deployed = contracts * costPerContract;
+      if (deployed > capital * 0.5) continue;
+
+      let exit = bars[bars.length-1].close;
+      let exitReason = "End of day";
+      for (let j = i+1; j < bars.length; j++) {
+        const move = setup.action === "CALL" ? bars[j].close - entry : entry - bars[j].close;
+        const optionPct = (move * params.deltaProxy * 100) / costPerContract * 100;
+        if (optionPct >= params.targetPct) { exit = bars[j].close; exitReason = "Target hit"; break; }
+        if (optionPct <= -params.stopPct) { exit = bars[j].close; exitReason = "Stop hit"; break; }
+      }
+
+      const qMove = setup.action === "CALL" ? exit - entry : entry - exit;
+      const pnl = qMove * params.deltaProxy * 100 * contracts * params.premiumMult;
+      const cappedLoss = Math.max(pnl, -deployed * params.stopPct / 100);
+      const finalPnl = cappedLoss;
+      capital += finalPnl;
+      equity.push(capital);
+
+      trades.push({
+        no: tradeNo++, date: day.date, time: bars[i].time, action: setup.action,
+        sweepPrice: setup.sweepPrice, entry, exit, score: setup.score, contracts,
+        pnl: finalPnl, capital, reason: setup.reason + " / " + exitReason
+      });
+      tradesToday++;
+      i += 3;
+      if (capital <= 0) break;
+    }
+    if (capital <= 0) break;
+  }
+  return { trades, equity, endingCapital: capital };
+}
+
+function maxDrawdown(equity) {
+  let peak = equity[0] || 0, maxDD = 0;
+  for (const v of equity) {
+    peak = Math.max(peak, v);
+    const dd = peak > 0 ? (peak - v) / peak * 100 : 0;
+    maxDD = Math.max(maxDD, dd);
+  }
+  return maxDD;
+}
+
+function render(results, startCapital) {
+  lastResults = results.trades;
+  const wins = results.trades.filter(t => t.pnl > 0).length;
+  const total = results.trades.length;
+  const ret = (results.endingCapital - startCapital) / startCapital * 100;
+  const dd = maxDrawdown(results.equity);
+
+  const set = (id, val, cls="") => { const el = document.getElementById(id); el.textContent = val; el.className = "value " + cls; };
+  set("kpiCapital", fmtMoney(results.endingCapital), results.endingCapital >= startCapital ? "green" : "red");
+  set("kpiReturn", fmtPct(ret), ret >= 0 ? "green" : "red");
+  set("kpiWin", total ? fmtPct(wins/total*100) : "0%", "yellow");
+  set("kpiTrades", total, "");
+  set("kpiDD", fmtPct(dd), dd > 20 ? "red" : "yellow");
+
+  const body = document.getElementById("tradeBody");
+  body.innerHTML = results.trades.map(t => `
+    <tr>
+      <td>${t.no}</td><td>${t.date}</td><td>${t.time}</td>
+      <td><span class="pill ${t.action}">${t.action}</span></td>
+      <td>${t.sweepPrice.toFixed(2)}</td><td>${t.entry.toFixed(2)}</td><td>${t.exit.toFixed(2)}</td>
+      <td>${t.score}</td><td>${t.contracts}</td>
+      <td style="color:${t.pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtMoney(t.pnl)}</td>
+      <td>${fmtMoney(t.capital)}</td><td>${t.reason}</td>
+    </tr>`).join("");
+
+  drawEquity(results.equity);
+}
+
+function drawEquity(equity) {
+  const canvas = document.getElementById("equityCanvas");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle = "rgba(255,255,255,.15)";
+  ctx.lineWidth = 1;
+  for (let i=0; i<5; i++) {
+    const y = 20 + i*(h-40)/4;
+    ctx.beginPath(); ctx.moveTo(20,y); ctx.lineTo(w-20,y); ctx.stroke();
+  }
+  if (!equity.length) return;
+  const min = Math.min(...equity), max = Math.max(...equity);
+  const pad = Math.max(1, (max-min)*.1);
+  ctx.strokeStyle = "#2cff8f";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  equity.forEach((v,i)=>{
+    const x = 25 + i * (w-50) / Math.max(1, equity.length-1);
+    const y = h-25 - ((v-(min-pad)) / ((max+pad)-(min-pad))) * (h-50);
+    if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+
+async function runSim() {
+  const params = {
+    capital: num(document.getElementById("capital").value),
+    sessions: num(document.getElementById("sessions").value),
+    maxTrades: num(document.getElementById("maxTrades").value),
+    riskPct: num(document.getElementById("riskPct").value),
+    targetPct: num(document.getElementById("targetPct").value),
+    stopPct: num(document.getElementById("stopPct").value),
+    deltaProxy: num(document.getElementById("deltaProxy").value),
+    premiumMult: num(document.getElementById("premiumMult").value),
+    minScore: num(document.getElementById("minScore").value),
+    orMinutes: num(document.getElementById("orMinutes").value),
+    atrLen: num(document.getElementById("atrLen").value),
+    emaLen: num(document.getElementById("emaLen").value)
+  };
+
+  let rows = [];
+  const mode = document.getElementById("dataMode").value;
+  if (mode === "csv") {
+    const file = document.getElementById("csvFile").files[0];
+    if (!file) { alert("Please upload a CSV file first."); return; }
+    const text = await file.text();
+    rows = parseCSV(text);
+  } else {
+    rows = generateSyntheticData(params.sessions);
+  }
+
+  if (!rows.length) { alert("No valid data found."); return; }
+  const results = simulate(rows, params);
+  render(results, params.capital);
+}
+
+function downloadResults() {
+  if (!lastResults.length) { alert("Run a simulation first."); return; }
+  const header = ["no","date","time","action","sweepPrice","entry","exit","score","contracts","pnl","capital","reason"];
+  const lines = [header.join(",")];
+  for (const t of lastResults) {
+    lines.push(header.map(k => JSON.stringify(t[k] ?? "")).join(","));
+  }
+  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "q_compounder_v1_results.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+runSim();
+</script>
+</body>
+</html>
