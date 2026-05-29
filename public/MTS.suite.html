@@ -393,6 +393,31 @@ table.jtable tr:hover td{background:var(--bg3);}
       <div class="hit-foot"><span>SESSION START</span><span>NEXT STATION</span></div>
     </div>
 
+    <!-- Distance + Arrive Today -->
+    <div class="lvl-table" style="margin-top:10px">
+      <div class="lvl-row"><div class="lk">DISTANCE TO STATION</div><div class="lv" id="dashDist" style="color:var(--amber2)">—</div></div>
+      <div class="lvl-row" style="background:var(--bg)"><div class="lk">ARRIVE TODAY %</div><div class="lv" id="dashArrive" style="color:var(--cyan)">—</div></div>
+    </div>
+
+    <!-- Certainty + Engine Temp -->
+    <div class="g2" style="margin-top:10px">
+      <div class="sbox">
+        <div class="l">CERTAINTY %</div>
+        <div class="v" id="dashCertainty" style="color:var(--amber)">—</div>
+        <div class="s" id="dashCertaintyLbl">Signal strength</div>
+        <div style="height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden"><div id="dashCertaintyBar" style="height:100%;width:0%;border-radius:2px;background:var(--amber);transition:width .6s"></div></div>
+      </div>
+      <div class="sbox">
+        <div class="l">ENGINE TEMP %</div>
+        <div class="v" id="dashTemp" style="color:var(--blue)">—</div>
+        <div class="s" id="dashTempLbl">Data quality</div>
+        <div style="height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden"><div id="dashTempBar" style="height:100%;width:0%;border-radius:2px;background:var(--blue);transition:width .6s"></div></div>
+      </div>
+    </div>
+
+    <!-- Low certainty warning -->
+    <div id="dashWarn" style="display:none;margin-top:10px;padding:10px 14px;border-radius:8px;background:rgba(255,184,48,.08);border:1px solid rgba(255,184,48,.25);font-family:var(--mono);font-size:11px;color:var(--amber);line-height:1.5"></div>
+
     <!-- Mini chart canvas -->
     <div class="card" style="margin-top:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -897,7 +922,7 @@ function loadDash(ticker,name){
 
   if(!apiKey){
     // Demo dashboard
-    setTimeout(function(){renderDashResult(ticker,{bias:1,close:182.45,s1:179.20,s2:176.80,sta:188.60,hit:62,mName:'ROLLING',action:'GET ON',mode:4});},600);
+    setTimeout(function(){renderDashResult(ticker,{bias:1,close:182.45,s1:179.20,s2:176.80,sta:188.60,hit:62,mName:'ROLLING',action:'GET ON',mode:4,certainty:71,engineTemp:85,distRaw:6.15,distPct:3.37,arriveToday:48,warning:'',dailyAgree:true});},600);
     return;
   }
 
@@ -911,7 +936,7 @@ function loadDash(ticker,name){
     runMMGDash(ticker,b15D||[],b60D||[],b240D||[],bDD||[],snapD,function(r){
       if(!r){
         var day=snapD&&snapD.day?snapD.day:{};
-        renderDashResult(ticker,{bias:1,close:day.c||0,s1:null,s2:null,sta:null,hit:null,mName:'WAITING',action:'WAIT',mode:1});
+        renderDashResult(ticker,{bias:0,close:day.c||0,s1:null,s2:null,sta:null,hit:null,mName:'WAITING',action:'WAIT',mode:1,certainty:0,engineTemp:0,distRaw:null,distPct:null,arriveToday:null,warning:'⚠️ Insufficient data to run engine. Check API key and try again during market hours.'});
       } else {
         renderDashResult(ticker,r);
       }
@@ -933,6 +958,7 @@ function renderDashResult(ticker,result){
   var hcol=result.hit!==null?(result.hit>=75?'var(--red)':result.hit>=50?'var(--amber)':result.hit>=25?'var(--blue)':'var(--green)'):'var(--muted)';
   var mc=result.mName==='ROLLING'?'var(--green)':result.mName==='DEPART'?'#88ffcc':result.mName==='BOARDING'?'var(--amber)':result.mName.indexOf('REV')!==-1?'var(--red)':'var(--muted)';
   var el=function(id){return document.getElementById(id);};
+
   el('dashArrow').textContent=result.bias===1?'▲':'▼';
   el('dashArrow').style.color=dc;
   el('dashDirLabel').textContent=result.bias===1?'NORTH':'SOUTH';
@@ -953,6 +979,59 @@ function renderDashResult(ticker,result){
   el('dashHitBar').style.width=(result.hit||0)+'%';
   el('dashHitBar').style.background=hcol;
   el('chartPriceLbl').style.color=dc;
+
+  // ── Distance to Station ──
+  if(result.distRaw!=null&&result.distPct!=null){
+    var sign=result.bias===1?'+':'-';
+    el('dashDist').textContent=sign+'$'+result.distRaw.toFixed(2)+' ('+result.distPct.toFixed(2)+'%)';
+    el('dashDist').style.color=result.bias===1?'var(--amber2)':'var(--amber)';
+  } else { el('dashDist').textContent='—'; }
+
+  // ── Arrive Today % ──
+  if(result.arriveToday!=null){
+    el('dashArrive').textContent=result.arriveToday+'%';
+    el('dashArrive').style.color=result.arriveToday>=75?'var(--green)':result.arriveToday>=40?'var(--amber)':'var(--muted)';
+  } else { el('dashArrive').textContent='—'; }
+
+  // ── Certainty % ──
+  var cert=result.certainty!=null?result.certainty:0;
+  var certCol=cert>=60?'var(--green)':cert>=35?'var(--amber)':'var(--red)';
+  var certLbl=cert>=70?'Strong signal':cert>=45?'Moderate signal':cert>=25?'Weak signal':'Very low — wait';
+  el('dashCertainty').textContent=cert+'%';
+  el('dashCertainty').style.color=certCol;
+  el('dashCertaintyLbl').textContent=certLbl;
+  el('dashCertaintyBar').style.width=cert+'%';
+  el('dashCertaintyBar').style.background=certCol;
+
+  // ── Engine Temp % ──
+  var temp=result.engineTemp!=null?result.engineTemp:0;
+  var tempCol=temp>=70?'var(--blue)':temp>=40?'var(--amber)':'var(--red)';
+  var tempLbl=temp>=80?'Full data':temp>=50?'Good data':temp>=30?'Partial data':'Insufficient data';
+  el('dashTemp').textContent=temp+'%';
+  el('dashTemp').style.color=tempCol;
+  el('dashTempLbl').textContent=tempLbl;
+  el('dashTempBar').style.width=temp+'%';
+  el('dashTempBar').style.background=tempCol;
+
+  // ── Warning banner ──
+  var warn=el('dashWarn');
+  if(result.warning){
+    warn.textContent=result.warning;
+    warn.style.display='block';
+    // Color by severity
+    if(result.warning.indexOf('⚠️')===0){
+      warn.style.background='rgba(255,79,99,.08)';
+      warn.style.borderColor='rgba(255,79,99,.25)';
+      warn.style.color='var(--red)';
+    } else {
+      warn.style.background='rgba(255,184,48,.08)';
+      warn.style.borderColor='rgba(255,184,48,.25)';
+      warn.style.color='var(--amber)';
+    }
+  } else {
+    warn.style.display='none';
+  }
+
   // Clock
   var clk=el('dashClock');
   if(clk)clk.textContent=new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit'})+' ET';
@@ -976,36 +1055,87 @@ function runMMGDash(ticker,b15,b60,b240,bD,snap,cb){
     var day=snap&&snap.day?snap.day:{};var prev=snap&&snap.prevDay?snap.prevDay:{};
     var close=day.c||prev.c||(b15.length>0?b15[b15.length-1].c:0);
     if(!close||close<=0)return cb(null);
-    var atr=calcATR(b15,14)||close*0.01;
-    var emaN=calcEMA(b15,21)||close;
-    var vwapN=calcVWAP(b15)||close;
+
+    // ── ENGINE TEMP: data quality score 0-100 ──
+    var b15ok=b15.length>=10,b60ok=b60.length>=5,b240ok=b240.length>=4,bDok=bD.length>=10;
+    var tempScore=((b15ok?30:b15.length*3)+(b60ok?20:b60.length*4)+(b240ok?20:b240.length*5)+(bDok?30:bD.length*3));
+    tempScore=Math.min(100,Math.round(tempScore));
+
+    // ── USE DAILY AS PRIMARY BIAS ANCHOR ──
+    // Daily bars give the most stable direction — use them first
+    var dailyBias=0;
+    if(bD.length>=5){
+      var dEma20=calcEMA(bD,20)||close;
+      var dEma50=calcEMA(bD,50)||close;
+      var dClose=bD[bD.length-1].c;
+      var dPrev=bD[bD.length-2]?bD[bD.length-2].c:dClose;
+      var dAtr=calcATR(bD,14)||close*0.02;
+      // Daily trend votes
+      if(dClose>dEma20&&dClose>dEma50)dailyBias=1;
+      else if(dClose<dEma20&&dClose<dEma50)dailyBias=-1;
+      else dailyBias=dClose>dEma20?0.5:dClose<dEma20?-0.5:0;
+    }
+
+    var atr=calcATR(b15.length>=5?b15:bD,14)||close*0.01;
+    var emaN=b15.length>=5?calcEMA(b15,21):calcEMA(bD,21)||close;
+    var vwapN=b15.length>=3?calcVWAP(b15):close;
     var closeN=b15.length>0?b15[b15.length-1].c:close;
-    var l15=getLvls(b15,5),l60=getLvls(b60.length>=10?b60:b15,5),l240=getLvls(b240.length>=5?b240:b15,5),lD=getLvls(bD.length>=5?bD:b15,5);
+
+    var l15=getLvls(b15.length>=11?b15:bD,5);
+    var l60=getLvls(b60.length>=10?b60:bD,5);
+    var l240=getLvls(b240.length>=5?b240:bD,5);
+    var lD=getLvls(bD.length>=5?bD:b15,5);
+
     var raw=[];
     var allL=[l15,l60,l240,lD];
     for(var i=0;i<allL.length;i++){var lv=allL[i];if(lv.res)raw.push(lv.res);if(lv.sup)raw.push(lv.sup);if(lv.gu)raw.push(lv.gu);if(lv.gd)raw.push(lv.gd);}
     if(!raw.length)return cb(null);
     var cl=cluster(raw,atr);
     var hiL=Math.max.apply(null,cl),loL=Math.min.apply(null,cl);
+
     var v15=tfVote(nAbove(l15,close),nBelow(l15,close),close);
     var v60=tfVote(nAbove(l60,close),nBelow(l60,close),close);
     var v240=tfVote(nAbove(l240,close),nBelow(l240,close),close);
     var vD=tfVote(nAbove(lD,close),nBelow(lD,close),close);
+
     var cntA=0,cntB=0,sumA=0,sumB=0;
     for(var i=0;i<cl.length;i++){if(cl[i]>close){cntA++;sumA+=cl[i]-close;}else if(cl[i]<close){cntB++;sumB+=close-cl[i];}}
     var tot=cntA+cntB;var pScore=tot>0?(cntA-cntB)/tot:0;
     var avgA=cntA>0?sumA/cntA:null,avgB=cntB>0?sumB/cntB:null;
     var gScore=0;
-    if(avgA!==null&&avgB===null)gScore=1;else if(avgA===null&&avgB!==null)gScore=-1;else if(avgA!==null&&avgB!==null){if(avgA<avgB)gScore=1;else if(avgB<avgA)gScore=-1;}
+    if(avgA!==null&&avgB===null)gScore=1;else if(avgA===null&&avgB!==null)gScore=-1;
+    else if(avgA!==null&&avgB!==null){if(avgA<avgB)gScore=1;else if(avgB<avgA)gScore=-1;}
     var vScore=(v15+v60+v240+vD)/4;
+
     var bullFlow=closeN>emaN&&closeN>vwapN,bearFlow=closeN<emaN&&closeN<vwapN;
     var bullRun=close>hiL&&bullFlow,bearRun=close<loL&&bearFlow;
-    var dir=(pScore*0.50)+(gScore*0.30)+(vScore*0.20);
+
+    // ── WEIGHTED DIRECTION: daily anchor gets 40% weight ──
+    var intraDir=(pScore*0.35)+(gScore*0.25)+(vScore*0.20);
+    var dir=intraDir*0.60 + dailyBias*0.40;
     if(bullRun)dir=Math.max(dir,0.85);if(bearRun)dir=Math.min(dir,-0.85);
     var bias=dir>0.10?1:dir<-0.10?-1:0;
+
+    // ── CERTAINTY %: how confident is the engine 0-100 ──
+    var certaintyRaw=Math.abs(dir); // 0..1
+    // Agreement bonus: if daily and intraday agree, boost certainty
+    var dailyAgree=(dailyBias>0&&intraDir>0)||(dailyBias<0&&intraDir<0);
+    if(dailyAgree)certaintyRaw=Math.min(1,certaintyRaw*1.25);
+    // tfVote agreement
+    var tfAgree=Math.abs(v15+v60+v240+vD)/4;
+    certaintyRaw=(certaintyRaw*0.7)+(tfAgree*0.3);
+    // Scale by data quality
+    certaintyRaw=certaintyRaw*(tempScore/100)*1.15;
+    var certainty=Math.min(100,Math.round(certaintyRaw*100));
+
     var fwd=[],beh=[];
-    for(var i=0;i<cl.length;i++){if(bias===1){if(cl[i]>close)fwd.push(cl[i]);else if(cl[i]<close)beh.push(cl[i]);}else if(bias===-1){if(cl[i]<close)fwd.push(cl[i]);else if(cl[i]>close)beh.push(cl[i]);}}
-    if(bias===1){fwd.sort(function(a,b){return a-b;});beh.sort(function(a,b){return b-a;});}else{fwd.sort(function(a,b){return b-a;});beh.sort(function(a,b){return a-b;});}
+    for(var i=0;i<cl.length;i++){
+      if(bias===1){if(cl[i]>close)fwd.push(cl[i]);else if(cl[i]<close)beh.push(cl[i]);}
+      else if(bias===-1){if(cl[i]<close)fwd.push(cl[i]);else if(cl[i]>close)beh.push(cl[i]);}
+    }
+    if(bias===1){fwd.sort(function(a,b){return a-b;});beh.sort(function(a,b){return b-a;});}
+    else{fwd.sort(function(a,b){return b-a;});beh.sort(function(a,b){return a-b;});}
+
     var sp2=atr*0.25,s1=null,s2=null,sta=null,bPrice=null;
     if(beh.length)bPrice=beh[0];if(fwd.length)s1=fwd[0];
     if(fwd.length>1&&s1!==null){for(var i=1;i<fwd.length;i++){if(Math.abs(fwd[i]-s1)>sp2){s2=fwd[i];break;}}}
@@ -1013,12 +1143,21 @@ function runMMGDash(ticker,b15,b60,b240,bD,snap,cb){
     if(bias===1){if(!bPrice)bPrice=hiL;if(!s1)s1=close+atr*0.5;if(!s2)s2=close+atr*1.0;if(!sta)sta=close+atr*1.618;}
     if(bias===-1){if(!bPrice)bPrice=loL;if(!s1)s1=close-atr*0.5;if(!s2)s2=close-atr*1.0;if(!sta)sta=close-atr*1.618;}
     if(!s1)return cb(null);
+
+    // ── DISTANCE TO STATION & ARRIVE TODAY % ──
+    var distRaw=sta?Math.abs(sta-closeN):null;
+    var distPct=sta&&closeN>0?Math.abs(sta-closeN)/closeN*100:null;
+    // Arrive Today %: how much of today's range covers the distance
     var sesH=b15.length?Math.max.apply(null,b15.map(function(b){return b.h;})):close;
     var sesL=b15.length?Math.min.apply(null,b15.map(function(b){return b.l;})):close;
+    var sesRange=sesH-sesL||atr;
+    var arriveToday=distRaw?Math.min(100,Math.round((sesRange/distRaw)*100)):null;
+
     var hit=null;
     if(bias===1&&sta&&sta>sesL)hit=Math.max(0,Math.min(100,((closeN-sesL)/(sta-sesL))*100));
     else if(bias===-1&&sta&&sta<sesH)hit=Math.max(0,Math.min(100,((sesH-closeN)/(sesH-sta))*100));
-    var atrN=calcATR(b15,14)||atr;
+
+    var atrN=calcATR(b15.length>=5?b15:bD,14)||atr;
     var vwapOK=bias===1?closeN>vwapN:closeN<vwapN;
     var prevC=b15.length>=2?b15[b15.length-2].c:closeN;
     var nTgt=(s1&&Math.abs(closeN-s1)<=atrN*0.4)||(s2&&Math.abs(closeN-s2)<=atrN*0.4)||(sta&&Math.abs(closeN-sta)<=atrN*0.4);
@@ -1036,10 +1175,32 @@ function runMMGDash(ticker,b15,b60,b240,bD,snap,cb){
     var rev67=bias===1?closeN<emaN:closeN>emaN;
     var rev99=bPrice&&(bias===1?closeN<bPrice:closeN>bPrice);
     var mode=1;
-    if(rev99)mode=8;else if(rev67)mode=7;else if(rev33&&slow)mode=6;else if(slow)mode=5;else if(rolling)mode=4;else if(depart)mode=3;else if(boarding)mode=2;
+    if(rev99)mode=8;else if(rev67)mode=7;else if(rev33&&slow)mode=6;
+    else if(slow)mode=5;else if(rolling)mode=4;else if(depart)mode=3;else if(boarding)mode=2;
+
+    // ── LOW DATA WARNING ──
+    var warning='';
+    if(tempScore<40)warning='⚠️ Low data quality (Engine Temp '+tempScore+'%). Signal may be inaccurate. Wait for market open.';
+    else if(certainty<25)warning='⚠️ Low certainty ('+certainty+'%). Signal is weak — stay out until score improves.';
+    else if(!dailyAgree&&bias!==0)warning='ℹ️ Daily bias and intraday bias disagree. Use caution.';
+
     var action=mode>=2&&mode<=4?'GET ON':mode>=6?'GET OFF':'WAIT';
+    // Force WAIT if certainty too low
+    if(certainty<20&&action==='GET ON')action='WAIT';
     var modeNames=['WAITING','BOARDING','DEPART','ROLLING','SLOW','REV 33%','REV 67%','REV 99%'];
-    cb({bias:bias,close:closeN,s1:s1,s2:s2,sta:sta,hit:hit!==null?Math.round(hit):null,mName:modeNames[mode-1]||'WAITING',action:action,mode:mode});
+
+    cb({
+      bias:bias,close:closeN,s1:s1,s2:s2,sta:sta,
+      hit:hit!==null?Math.round(hit):null,
+      mName:modeNames[mode-1]||'WAITING',
+      action:action,mode:mode,
+      certainty:certainty,
+      engineTemp:tempScore,
+      distRaw:distRaw,distPct:distPct,
+      arriveToday:arriveToday,
+      warning:warning,
+      dailyAgree:dailyAgree
+    });
   }catch(e){cb(null);}
 }
 
