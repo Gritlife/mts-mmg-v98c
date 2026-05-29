@@ -350,12 +350,12 @@ table.jtable tr:hover td{background:var(--bg3);}
   <!-- Content -->
   <div id="dashContent" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <button onclick="showDashEmpty()" class="btn bts" style="width:auto;padding:6px 14px;font-size:11px">← BACK</button>
+      <button onclick="showDashEmpty();stopDashRefresh();" class="btn bts" style="width:auto;padding:6px 14px;font-size:11px">← BACK</button>
       <div style="text-align:center">
         <div id="dashTicker" style="font-family:var(--head);font-size:26px;font-weight:700;color:var(--text)"></div>
         <div id="dashName" style="font-size:11px;color:var(--muted)"></div>
       </div>
-      <div id="dashClock" style="font-size:10px;color:var(--muted);font-family:var(--mono);text-align:right"></div>
+      <div style="text-align:right"><div id="dashClock" style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px"></div><button id="dashRefreshBtn" onclick="manualRefresh()" style="background:rgba(168,255,62,.08);border:1px solid rgba(168,255,62,.25);border-radius:6px;color:var(--lime);font-family:var(--mono);font-size:9px;padding:4px 8px;cursor:pointer;letter-spacing:1px">↺ REFRESH</button></div>
     </div>
 
     <!-- Direction / Mode / Action -->
@@ -789,7 +789,7 @@ table.jtable tr:hover td{background:var(--bg3);}
 
 <script>
 // ── STATE ──
-var apiKey='';
+var apiKey='0SUTf8rnk_T75ClnyVTm9gbap7ZUEpS5';
 var journal=[];
 try{var j=localStorage.getItem('mts_journal_v2');if(j)journal=JSON.parse(j);}catch(e){}
 var activeManualTrade=null;
@@ -1033,6 +1033,7 @@ function renderDashResult(ticker,result){
   }
 
   // Clock
+  startDashRefresh();
   var clk=el('dashClock');
   if(clk)clk.textContent=new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit'})+' ET';
 }
@@ -1499,7 +1500,47 @@ async function sendAI(){
 }
 function aiQ(p){document.getElementById('aiInput').value=p;sendAI();}
 
+// ── AUTO-REFRESH ──
+var dashRefreshTimer=null;
+var dashRefreshSecs=60;
+
+function startDashRefresh(){
+  stopDashRefresh();
+  dashRefreshSecs=60;
+  updateRefreshBtn();
+  dashRefreshTimer=setInterval(function(){
+    dashRefreshSecs--;
+    updateRefreshBtn();
+    if(dashRefreshSecs<=0){
+      dashRefreshSecs=60;
+      if(currentDashTicker)loadDash(currentDashTicker,document.getElementById('dashName').textContent||currentDashTicker);
+    }
+  },1000);
+}
+
+function stopDashRefresh(){
+  if(dashRefreshTimer){clearInterval(dashRefreshTimer);dashRefreshTimer=null;}
+}
+
+function updateRefreshBtn(){
+  var el=document.getElementById('dashRefreshBtn');
+  if(el)el.textContent='↺ REFRESH ('+dashRefreshSecs+'s)';
+}
+
+function manualRefresh(){
+  dashRefreshSecs=60;
+  updateRefreshBtn();
+  if(currentDashTicker)loadDash(currentDashTicker,document.getElementById('dashName').textContent||currentDashTicker);
+}
+
 // ── INIT ──
+// Hardcoded key — set badge immediately
+(function(){
+  var b=document.getElementById('apiBadge');
+  var s=document.getElementById('apiStatusCtrl');
+  if(b){b.textContent='KEY SET';b.classList.add('on');}
+  if(s)s.textContent='Key configured ✓';
+})();
 renderJournal();
 renderKpis();
 loadDemoScan();
