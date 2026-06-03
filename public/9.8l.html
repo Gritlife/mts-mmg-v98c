@@ -1,1 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MMG V9.8L — Train of Fortune</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap');
+
+  :root {
+    --bg:        #090c10;
+    --bg2:       #0d1117;
+    --bg3:       #131920;
+    --border:    #1e2a35;
+    --border2:   #243040;
+    --txt:       #c8d8e8;
+    --txt-dim:   #4a6070;
+    --mono:      'Share Tech Mono', monospace;
+    --sans:      'Barlow Condensed', sans-serif;
+    --lime:      #00ff88;
+    --red:       #ff3355;
+    --orange:    #ff9900;
+    --blue:      #00aaff;
+    --teal:      #00ccbb;
+    --yellow:    #ffe566;
+    --gray:      #445566;
+    --glow-lime: 0 0 12px rgba(0,255,136,0.35);
+    --glow-red:  0 0 12px rgba(255,51,85,0.35);
+    --glow-ora:  0 0 12px rgba(255,153,0,0.35);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--txt);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.06) 2px,
+      rgba(0,0,0,0.06) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 0.12em;
+    color: var(--lime);
+    text-shadow: var(--glow-lime);
+  }
+  .logo span { color: var(--txt-dim); font-weight: 300; font-size: 14px; margin-left: 10px; letter-spacing: 0.05em; }
+
+  .header-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  input[type="text"], input[type="password"] {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--txt);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: 4px;
+    outline: none;
+    width: 130px;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, input[type="password"]:focus {
+    border-color: var(--blue);
+  }
+
+  select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--txt);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  button {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    padding: 7px 18px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-start {
+    background: var(--lime);
+    color: #000;
+    text-transform: uppercase;
+  }
+  .btn-start:hover { background: #00ffaa; box-shadow: var(--glow-lime); }
+  .btn-start:disabled { background: var(--gray); color: var(--txt-dim); cursor: not-allowed; box-shadow: none; }
+
+  .btn-stop {
+    background: var(--red);
+    color: #fff;
+    text-transform: uppercase;
+  }
+  .btn-stop:hover { box-shadow: var(--glow-red); }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--gray);
+    display: inline-block;
+    transition: background 0.3s;
+  }
+  .status-dot.live { background: var(--lime); box-shadow: var(--glow-lime); animation: pulse 1.5s infinite; }
+  .status-dot.error { background: var(--red); }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+
+  /* ── MAIN GRID ── */
+  .main {
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    grid-template-rows: auto auto;
+    gap: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── PANEL BASE ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--txt-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ── DASHBOARD TABLE ── */
+  .dashboard-panel {
+    grid-row: 1 / 3;
+  }
+
+  .dash-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .dash-table tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .dash-table tr:last-child { border-bottom: none; }
+  .dash-table tr:hover { background: rgba(255,255,255,0.02); }
+
+  .dash-table td {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .dash-table td:first-child {
+    color: var(--txt-dim);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    width: 52%;
+  }
+
+  .dash-table td:last-child {
+    font-family: var(--mono);
+    font-size: 14px;
+    text-align: right;
+  }
+
+  .dash-divider td {
+    padding: 4px 16px;
+    border-bottom: 1px solid var(--border2) !important;
+  }
+  .dash-divider td span {
+    display: block;
+    height: 1px;
+    background: var(--border2);
+  }
+
+  /* Action row big highlight */
+  .action-row td {
+    padding: 14px 16px;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  .state-row td {
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── TF PANELS ── */
+  .tf-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .tf-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .tf-card-header {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tf-card-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .tf-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .tf-row .label {
+    color: var(--txt-dim);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .tf-row .val {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  /* ── STATE MACHINE VISUAL ── */
+  .sm-panel {
+    grid-column: 2;
+  }
+
+  .sm-steps {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    gap: 0;
+    overflow-x: auto;
+  }
+
+  .sm-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 80px;
+    position: relative;
+  }
+
+  .sm-step::after {
+    content: '→';
+    position: absolute;
+    right: -10px;
+    top: 16px;
+    color: var(--border2);
+    font-size: 16px;
+    font-weight: 300;
+  }
+  .sm-step:last-child::after { display: none; }
+
+  .sm-dot {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 2px solid var(--border2);
+    background: var(--bg3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--txt-dim);
+    transition: all 0.3s;
+    font-family: var(--mono);
+  }
+
+  .sm-dot.active {
+    border-color: var(--lime);
+    background: rgba(0,255,136,0.12);
+    color: var(--lime);
+    box-shadow: var(--glow-lime);
+  }
+  .sm-dot.passed {
+    border-color: var(--teal);
+    background: rgba(0,204,187,0.08);
+    color: var(--teal);
+  }
+  .sm-dot.caution {
+    border-color: var(--orange);
+    background: rgba(255,153,0,0.12);
+    color: var(--orange);
+    box-shadow: var(--glow-ora);
+  }
+  .sm-dot.getoff {
+    border-color: var(--red);
+    background: rgba(255,51,85,0.12);
+    color: var(--red);
+    box-shadow: var(--glow-red);
+  }
+
+  .sm-label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--txt-dim);
+    text-align: center;
+  }
+
+  /* ── LOG PANEL ── */
+  .log-panel {
+    grid-column: 2;
+  }
+
+  .log-body {
+    height: 160px;
+    overflow-y: auto;
+    padding: 8px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .log-entry {
+    padding: 3px 16px;
+    display: flex;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+  .log-time { color: var(--txt-dim); min-width: 70px; }
+  .log-tf   { color: var(--blue); min-width: 35px; }
+  .log-msg  { color: var(--txt); }
+  .log-msg.b2o  { color: var(--lime);   font-weight: bold; }
+  .log-msg.s2o  { color: var(--red);    font-weight: bold; }
+  .log-msg.caut { color: var(--orange); }
+  .log-msg.off  { color: var(--red); }
+
+  /* ── COLOR UTILITIES ── */
+  .c-lime   { color: var(--lime)   !important; }
+  .c-red    { color: var(--red)    !important; }
+  .c-orange { color: var(--orange) !important; }
+  .c-blue   { color: var(--blue)   !important; }
+  .c-teal   { color: var(--teal)   !important; }
+  .c-yellow { color: var(--yellow) !important; }
+  .c-gray   { color: var(--gray)   !important; }
+  .c-white  { color: #fff          !important; }
+
+  .bg-lime   { background: rgba(0,255,136,0.15)  !important; color: var(--lime)   !important; }
+  .bg-red    { background: rgba(255,51,85,0.15)   !important; color: var(--red)    !important; }
+  .bg-orange { background: rgba(255,153,0,0.15)   !important; color: var(--orange) !important; }
+  .bg-teal   { background: rgba(0,204,187,0.12)   !important; color: var(--teal)   !important; }
+  .bg-blue   { background: rgba(0,170,255,0.12)   !important; color: var(--blue)   !important; }
+  .bg-yellow { background: rgba(255,229,102,0.12) !important; color: var(--yellow) !important; }
+
+  /* ── PRICE BIG ── */
+  .price-big {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── CERTAINTY BAR ── */
+  .cert-bar-wrap {
+    padding: 0 16px 12px;
+  }
+  .cert-bar-track {
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .cert-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease, background 0.5s;
+    background: var(--gray);
+  }
+
+  /* ── MINI BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .dashboard-panel { grid-row: auto; }
+    .tf-grid { grid-template-columns: 1fr; }
+    .sm-panel, .log-panel { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════ HEADER -->
+<header>
+  <div class="logo">MMG V9.8L <span>Train of Fortune — Sequential State Machine</span></div>
+  <div class="header-controls">
+    <input type="text"     id="tickerInput"  placeholder="Ticker (e.g. TSLA)" value="TSLA"/>
+    <input type="password" id="apiKeyInput"  placeholder="Polygon API Key"/>
+    <select id="refreshSelect">
+      <option value="15000">Refresh 15s</option>
+      <option value="30000" selected>Refresh 30s</option>
+      <option value="60000">Refresh 60s</option>
+    </select>
+    <span class="status-dot" id="statusDot"></span>
+    <button class="btn-start" id="btnStart" onclick="startEngine()">START</button>
+    <button class="btn-stop"  id="btnStop"  onclick="stopEngine()" style="display:none">STOP</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════ MAIN -->
+<div class="main">
+
+  <!-- ── LEFT: DASHBOARD TABLE ── -->
+  <div class="panel dashboard-panel">
+    <div class="panel-header">
+      <span>Live Dashboard</span>
+      <span id="lastUpdate" class="c-gray" style="font-family:var(--mono);font-size:11px;">—</span>
+    </div>
+
+    <table class="dash-table" id="dashTable">
+      <tr><td>Ticker</td>      <td id="dTicker"    class="c-white">—</td></tr>
+      <tr><td>Current Price</td><td id="dPrice"    class="price-big c-white">—</td></tr>
+      <tr><td>Stop 1</td>      <td id="dStop1"     class="c-gray">—</td></tr>
+      <tr><td>Stop 2</td>      <td id="dStop2"     class="c-gray">—</td></tr>
+      <tr><td>Next Station</td><td id="dStation"   class="c-gray">—</td></tr>
+      <tr><td>Dist to Station</td><td id="dDist"   class="c-gray">—</td></tr>
+      <tr><td>Arrive Today %</td><td id="dArrive"  class="c-gray">—</td></tr>
+      <tr class="dash-divider"><td colspan="2"><span></span></td></tr>
+      <tr><td>Direction</td>   <td id="dDir"       class="c-gray">—</td></tr>
+      <tr><td>Scalp</td>       <td id="dScalp"     class="c-gray">—</td></tr>
+      <tr><td>Intraday</td>    <td id="dIntraday"  class="c-gray">—</td></tr>
+      <tr><td>Swing</td>       <td id="dSwing"     class="c-gray">—</td></tr>
+      <tr class="dash-divider"><td colspan="2"><span></span></td></tr>
+      <tr class="state-row">
+        <td>SM State</td>      <td id="dState"     class="c-gray">—</td>
+      </tr>
+      <tr class="action-row">
+        <td>Action</td>        <td id="dAction"    class="c-gray">—</td>
+      </tr>
+      <tr><td>Certainty</td>   <td id="dCertainty" class="c-gray">—</td></tr>
+      <tr><td>RVOL (15m)</td>  <td id="dRvol"      class="c-gray">—</td></tr>
+    </table>
+
+    <div class="cert-bar-wrap">
+      <div style="font-size:10px;color:var(--txt-dim);letter-spacing:0.08em;text-transform:uppercase;">Certainty</div>
+      <div class="cert-bar-track"><div class="cert-bar-fill" id="certBar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT TOP: STATE MACHINE VISUAL ── -->
+  <div class="panel sm-panel">
+    <div class="panel-header">
+      <span>State Machine — Sequential Gate Progress</span>
+      <span id="smTfBadge" class="badge bg-blue">—</span>
+    </div>
+    <div class="sm-steps" id="smSteps">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- ── RIGHT MID: TF CARDS ── -->
+  <div class="tf-grid" style="grid-column:2">
+    <div class="tf-card" id="card1m">
+      <div class="tf-card-header">
+        <span>1m — Scalp</span>
+        <span class="badge" id="badge1m">—</span>
+      </div>
+      <div class="tf-card-body" id="body1m">
+        <div class="tf-row"><span class="label">State</span>    <span class="val" id="s1m_state">—</span></div>
+        <div class="tf-row"><span class="label">BB Width</span> <span class="val" id="s1m_bbw">—</span></div>
+        <div class="tf-row"><span class="label">SAR</span>      <span class="val" id="s1m_sar">—</span></div>
+        <div class="tf-row"><span class="label">RVOL</span>     <span class="val" id="s1m_rvol">—</span></div>
+        <div class="tf-row"><span class="label">Score</span>    <span class="val" id="s1m_score">—</span></div>
+      </div>
+    </div>
+    <div class="tf-card" id="card5m">
+      <div class="tf-card-header">
+        <span>5m — Intraday</span>
+        <span class="badge" id="badge5m">—</span>
+      </div>
+      <div class="tf-card-body" id="body5m">
+        <div class="tf-row"><span class="label">State</span>    <span class="val" id="s5m_state">—</span></div>
+        <div class="tf-row"><span class="label">BB Width</span> <span class="val" id="s5m_bbw">—</span></div>
+        <div class="tf-row"><span class="label">SAR</span>      <span class="val" id="s5m_sar">—</span></div>
+        <div class="tf-row"><span class="label">RVOL</span>     <span class="val" id="s5m_rvol">—</span></div>
+        <div class="tf-row"><span class="label">Score</span>    <span class="val" id="s5m_score">—</span></div>
+      </div>
+    </div>
+    <div class="tf-card" id="card15m">
+      <div class="tf-card-header">
+        <span>15m — Anchor</span>
+        <span class="badge" id="badge15m">—</span>
+      </div>
+      <div class="tf-card-body" id="body15m">
+        <div class="tf-row"><span class="label">State</span>    <span class="val" id="s15m_state">—</span></div>
+        <div class="tf-row"><span class="label">BB Width</span> <span class="val" id="s15m_bbw">—</span></div>
+        <div class="tf-row"><span class="label">SAR</span>      <span class="val" id="s15m_sar">—</span></div>
+        <div class="tf-row"><span class="label">RVOL</span>     <span class="val" id="s15m_rvol">—</span></div>
+        <div class="tf-row"><span class="label">Score</span>    <span class="val" id="s15m_score">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT BOTTOM: LOG ── -->
+  <div class="panel log-panel">
+    <div class="panel-header">
+      <span>Signal Log</span>
+      <button onclick="clearLog()" style="background:transparent;border:1px solid var(--border2);color:var(--txt-dim);padding:3px 10px;font-size:11px;letter-spacing:0.08em;">CLEAR</button>
+    </div>
+    <div class="log-body" id="logBody">
+      <div class="log-entry">
+        <span class="log-time">--:--:--</span>
+        <span class="log-tf">—</span>
+        <span class="log-msg">Waiting for engine start...</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// MMG V9.8L — Full State Machine in JavaScript
+// Polygon.io REST API (free tier: 5 calls/min → we stagger requests)
+// ══════════════════════════════════════════════════════════════════
+
+// ── Params (mirrors Pine inputs) ─────────────────────────────────
+const P = {
+  emaLen:          21,
+  atrLen:          14,
+  bbLen:           20,
+  bbMult:          2.0,
+  bbWidthLen:      20,
+  bbMidlineLookback: 3,
+  bbCompressLen:   5,
+  bbExpandMinBars: 2,
+  bbWeakenBars:    3,
+  sarStart:        0.02,
+  sarInc:          0.02,
+  sarMax:          0.20,
+  volLen:          20,
+  rvolHot:         1.50,
+  rvolWeak:        0.75,
+  rsiLen:          14,
+  pivotLen:        5,
+  clusterFactor:   0.25,
+  spacingFactor:   0.25,
+  confirmWeight:   0.15,
+  confirmBonus:    8.0,
+  conflictPenalty: 10.0,
+  scalpTrigger:    0.25,
+  intradayTrigger: 0.22,
+  swingTrigger:    0.18,
+};
+
+// ── State ─────────────────────────────────────────────────────────
+let intervalId    = null;
+let smStates      = { '1': 0, '5': 0, '15': 0 };
+let prevDirs      = { '1': 0, '5': 0, '15': 0 };
+let lastAction    = '';
+
+// ── Math helpers ─────────────────────────────────────────────────
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+
+function sma(arr, len) {
+  if (arr.length < len) return NaN;
+  const slice = arr.slice(-len);
+  return slice.reduce((a,b)=>a+b,0) / len;
+}
+
+function ema(arr, len) {
+  if (arr.length === 0) return NaN;
+  const k = 2 / (len + 1);
+  let e = arr[0];
+  for (let i = 1; i < arr.length; i++) e = arr[i] * k + e * (1 - k);
+  return e;
+}
+
+function stdev(arr, len) {
+  if (arr.length < len) return NaN;
+  const sl = arr.slice(-len);
+  const m  = sl.reduce((a,b)=>a+b,0)/len;
+  return Math.sqrt(sl.reduce((a,b)=>a+(b-m)**2,0)/len);
+}
+
+function atr(highs, lows, closes, len) {
+  if (closes.length < 2) return NaN;
+  const trs = [];
+  for (let i = 1; i < closes.length; i++) {
+    trs.push(Math.max(
+      highs[i]  - lows[i],
+      Math.abs(highs[i]  - closes[i-1]),
+      Math.abs(lows[i]   - closes[i-1])
+    ));
+  }
+  return sma(trs, Math.min(len, trs.length));
+}
+
+function rsi(closes, len) {
+  if (closes.length < len + 1) return 50;
+  const slice = closes.slice(-(len+1));
+  let gains = 0, losses = 0;
+  for (let i = 1; i < slice.length; i++) {
+    const d = slice[i] - slice[i-1];
+    if (d > 0) gains  += d;
+    else       losses -= d;
+  }
+  gains  /= len; losses /= len;
+  if (losses === 0) return 100;
+  return 100 - 100 / (1 + gains / losses);
+}
+
+// Parabolic SAR (simplified iterative)
+function calcSAR(highs, lows, start, inc, max) {
+  if (highs.length < 2) return lows[lows.length-1];
+  let bull = true, sar = lows[0], ep = highs[0], af = start;
+  for (let i = 1; i < highs.length; i++) {
+    sar = sar + af * (ep - sar);
+    if (bull) {
+      if (lows[i] < sar) {
+        bull = false; sar = ep; ep = lows[i]; af = start;
+      } else {
+        if (highs[i] > ep) { ep = highs[i]; af = Math.min(af + inc, max); }
+        sar = Math.min(sar, lows[Math.max(i-1,0)], lows[Math.max(i-2,0)]);
+      }
+    } else {
+      if (highs[i] > sar) {
+        bull = true; sar = ep; ep = highs[i]; af = start;
+      } else {
+        if (lows[i] < ep) { ep = lows[i]; af = Math.min(af + inc, max); }
+        sar = Math.max(sar, highs[Math.max(i-1,0)], highs[Math.max(i-2,0)]);
+      }
+    }
+  }
+  return { sar, bull };
+}
+
+// ── BB Engine ─────────────────────────────────────────────────────
+function calcBB(closes, len, mult, widthLen) {
+  if (closes.length < len) return null;
+  const basis    = sma(closes, len);
+  const dev      = stdev(closes, len) * mult;
+  const upper    = basis + dev;
+  const lower    = basis - dev;
+  const width    = basis !== 0 ? (upper - lower) / basis : 0;
+
+  // width history for average and expansion detection
+  const widthArr = [];
+  for (let i = Math.max(0, closes.length - widthLen - 10); i < closes.length; i++) {
+    const sl  = closes.slice(Math.max(0, i - len + 1), i + 1);
+    if (sl.length < len) continue;
+    const b   = sma(sl, len);
+    const s   = stdev(sl, len) * mult;
+    widthArr.push(b !== 0 ? (2 * s) / b : 0);
+  }
+  const widthAvg = sma(widthArr, Math.min(widthLen, widthArr.length));
+  const prevWidth = widthArr.length > 1 ? widthArr[widthArr.length - 2] : width;
+
+  const close    = closes[closes.length - 1];
+  const prevClose = closes[closes.length - 2] ?? close;
+  const prevBasis = (() => {
+    const sl2 = closes.slice(Math.max(0, closes.length - len - 1), closes.length - 1);
+    return sl2.length >= len ? sma(sl2, len) : basis;
+  })();
+
+  return {
+    basis, upper, lower, width, widthAvg, prevWidth,
+    bull:       close > basis && close > prevBasis,
+    bear:       close < basis && close < prevBasis,
+    upperPush:  close > upper,
+    lowerPush:  close < lower,
+    expanding:  width > widthAvg && width > prevWidth,
+    squeezing:  width < widthAvg && width < prevWidth,
+    crossBull:  prevClose <= basis && close > basis,
+    crossBear:  prevClose >= basis && close < basis,
+    regimeBull: close > basis,
+    regimeBear: close < basis,
+    widthArr,
+  };
+}
+
+// ── Volume Engine ─────────────────────────────────────────────────
+function calcVolume(volumes, closes, opens, volLen) {
+  const volAvg = sma(volumes, Math.min(volLen, volumes.length));
+  const vol    = volumes[volumes.length - 1];
+  const rvol   = volAvg > 0 ? vol / volAvg : 1;
+  const close  = closes[closes.length - 1];
+  const open   = opens[opens.length - 1];
+  const prevVol = volumes[volumes.length - 2] ?? vol;
+  const prevVol2 = volumes[volumes.length - 3] ?? prevVol;
+  return {
+    rvol,
+    volGreen:  close > open,
+    volRed:    close < open,
+    volRising: vol > prevVol,
+    volFading: vol < prevVol && vol < prevVol2,
+  };
+}
+
+// ── Momentum Engine ───────────────────────────────────────────────
+function calcMomentum(closes) {
+  const rsiVal = rsi(closes, P.rsiLen);
+  const roc    = closes.length > 10
+    ? (closes[closes.length-1] - closes[closes.length-11]) / closes[closes.length-11] * 100
+    : 0;
+  // Simplified MACD histogram
+  const ema12 = ema(closes.slice(-26), 12);
+  const ema26 = ema(closes.slice(-26), 26);
+  const macdLine = ema12 - ema26;
+  const signalArr = [macdLine]; // simplified: use macdLine as proxy
+  const hist = macdLine; // in real impl this would be macdLine - signal
+
+  return {
+    rsi: rsiVal, roc, hist,
+    bull:       rsiVal > 50 && roc > 0 && hist > 0,
+    bear:       rsiVal < 50 && roc < 0 && hist < 0,
+    bullStrong: rsiVal > 60 && roc > 0,
+    bearStrong: rsiVal < 40 && roc < 0,
+  };
+}
+
+// ── Score composer ────────────────────────────────────────────────
+function composeBBScore(bb) {
+  let s = 0;
+  s += bb.bull ? 0.35 : bb.bear ? -0.35 : 0;
+  s += (bb.expanding && bb.bull) ? 0.25 : (bb.expanding && bb.bear) ? -0.25 : 0;
+  s += bb.upperPush ? 0.20 : bb.lowerPush ? -0.20 : 0;
+  return clamp(s, -1, 1);
+}
+
+function composeSARScore(sarBull) {
+  return clamp(sarBull ? 0.55 : -0.55, -1, 1);
+}
+
+function composeVolumeScore(v) {
+  let s = 0;
+  s += (v.rvol >= P.rvolHot && v.volGreen) ? 0.45 : (v.rvol >= P.rvolHot && v.volRed) ? -0.45 : 0;
+  s += (v.volRising && v.volGreen) ? 0.20 : (v.volRising && v.volRed) ? -0.20 : 0;
+  s += v.rvol <= P.rvolWeak ? -0.10 : 0;
+  return clamp(s, -1, 1);
+}
+
+function composeMomScore(m) {
+  let s = 0;
+  s += m.bull ? 0.35 : m.bear ? -0.35 : 0;
+  s += m.bullStrong ? 0.25 : m.bearStrong ? -0.25 : 0;
+  return clamp(s, -1, 1);
+}
+
+// ── State Machine ─────────────────────────────────────────────────
+function runStateMachine(tf, candles) {
+  const closes  = candles.map(c=>c.c);
+  const highs   = candles.map(c=>c.h);
+  const lows    = candles.map(c=>c.l);
+  const opens   = candles.map(c=>c.o);
+  const volumes = candles.map(c=>c.v);
+  const n       = closes.length;
+
+  if (n < 30) return null;
+
+  const close  = closes[n-1];
+  const close1 = closes[n-2];
+
+  // Indicators
+  const bb    = calcBB(closes, P.bbLen, P.bbMult, P.bbWidthLen);
+  if (!bb) return null;
+
+  const sarRes = calcSAR(highs, lows, P.sarStart, P.sarInc, P.sarMax);
+  const sarBull = sarRes.bull;
+  const sarFlipBull = sarBull && !calcSAR(highs.slice(0,-1), lows.slice(0,-1), P.sarStart, P.sarInc, P.sarMax).bull;
+  const sarFlipBear = !sarBull && calcSAR(highs.slice(0,-1), lows.slice(0,-1), P.sarStart, P.sarInc, P.sarMax).bull;
+
+  const vol   = calcVolume(volumes, closes, opens, P.volLen);
+  const mom   = calcMomentum(closes);
+  const atrV  = atr(highs, lows, closes, P.atrLen);
+
+  // Scores
+  const bbScore  = composeBBScore(bb);
+  const sarScore = composeSARScore(sarBull);
+  const volScore = composeVolumeScore(vol);
+  const momScore = composeMomScore(mom);
+
+  // Simplified direction (from BB + SAR + momentum)
+  const rawScore = (bbScore * 0.30 + sarScore * 0.35 + momScore * 0.25 + volScore * 0.10);
+  let dir = 0;
+  if (rawScore > 0.10) dir = 1;
+  else if (rawScore < -0.10) dir = -1;
+
+  // BB midline trigger (recent cross within lookback)
+  const bbBullTrigger = bb.crossBull || (bb.regimeBull && bb.crossBull);
+  const bbBearTrigger = bb.crossBear || (bb.regimeBear && bb.crossBear);
+
+  // VWAP proxy: EMA as alignment check
+  const emaVal    = ema(closes.slice(-Math.max(n, P.emaLen)), P.emaLen);
+  const vwapOK    = dir === 1 ? close > emaVal : dir === -1 ? close < emaVal : false;
+
+  // ── State machine conditions ──────────────────────────────────
+  // Compression: last bbCompressLen bars all below widthAvg
+  let compressionPresent = true;
+  const wa = bb.widthArr;
+  if (wa.length >= P.bbCompressLen) {
+    for (let i = 0; i < P.bbCompressLen; i++) {
+      const w = wa[wa.length - 1 - i];
+      const avg = sma(wa.slice(0, wa.length - i), P.bbWidthLen);
+      if (isNaN(avg) || w >= avg) { compressionPresent = false; break; }
+    }
+  } else { compressionPresent = false; }
+
+  // Expansion: width growing and above average for bbExpandMinBars
+  let expansionPresent = !isNaN(bb.widthAvg) && bb.width > bb.widthAvg;
+  if (expansionPresent && P.bbExpandMinBars > 1) {
+    for (let i = 0; i < Math.min(P.bbExpandMinBars, wa.length - 1); i++) {
+      if (wa[wa.length-1-i] <= wa[wa.length-2-i]) { expansionPresent = false; break; }
+    }
+  }
+
+  // Expansion weakening
+  const wb = P.bbWeakenBars;
+  const w0 = bb.width, w1 = wa[wa.length-2]??w0, wN = wa[wa.length-1-wb]??w0, w2N = wa[wa.length-1-wb*2]??wN;
+  const expansionWeakening = w0 <= w1 || (w0 - wN) < (wN - w2N);
+
+  // Expansion dead
+  const expansionDead = !isNaN(bb.widthAvg) && bb.width < bb.widthAvg && bb.width < (wa[wa.length-2]??bb.width+0.001);
+
+  // Midline held/lost
+  const midlineHeld = dir === 1  ? (close > bb.basis && (bb.crossBull || close > close1))
+                    : dir === -1 ? (close < bb.basis && (bb.crossBear || close < close1))
+                    : false;
+  const midlineLost = dir === 1  ? close < bb.basis
+                    : dir === -1 ? close > bb.basis
+                    : false;
+
+  // SAR
+  const sarAligned   = dir === 1  ? sarBull  : dir === -1 ? !sarBull : false;
+  const sarDisagreed = dir === 1  ? !sarBull : dir === -1 ? sarBull  : false;
+  const sarLost      = dir === 1  ? sarFlipBear : dir === -1 ? sarFlipBull : false;
+
+  // Volume
+  const volConfirmed = dir === 1
+    ? (vol.rvol >= P.rvolHot && vol.volGreen) || (vol.volRising && vol.volGreen)
+    : dir === -1
+    ? (vol.rvol >= P.rvolHot && vol.volRed) || (vol.volRising && vol.volRed)
+    : false;
+  const volFadingDir = dir === 1
+    ? (vol.volFading && vol.volGreen) || !vol.volGreen
+    : dir === -1
+    ? (vol.volFading && vol.volRed) || !vol.volRed
+    : false;
+
+  // Direction flip
+  const prevDir = prevDirs[tf] ?? 0;
+  const dirFlipped = dir !== prevDir;
+  prevDirs[tf] = dir;
+
+  // ── Run state transitions ─────────────────────────────────────
+  let state = smStates[tf] ?? 0;
+
+  if (dir === 0 || dirFlipped) {
+    state = 0;
+  } else if (state === 0) {
+    if (compressionPresent) state = 1;
+  } else if (state === 1) {
+    if (expansionPresent) state = 2;
+    else if (!compressionPresent && !expansionPresent) state = 0;
+  } else if (state === 2) {
+    if (expansionDead) state = 7;
+    else if (midlineHeld && vwapOK) state = 3;
+    else if (expansionWeakening) state = 6;
+  } else if (state === 3) {
+    if (midlineLost || expansionDead) state = 7;
+    else if (sarAligned && vwapOK) state = 4;
+    else if (sarDisagreed || expansionWeakening) state = 6;
+  } else if (state === 4) {
+    if (midlineLost || sarLost || expansionDead) state = 7;
+    else if (volConfirmed) state = 5;
+    else if (volFadingDir || expansionWeakening) state = 6;
+  } else if (state === 5) {
+    if (midlineLost || sarLost || expansionDead) state = 7;
+    else if (expansionWeakening || sarDisagreed || volFadingDir) state = 6;
+  } else if (state === 6) {
+    if (midlineLost || sarLost || expansionDead) state = 7;
+    else if (sarAligned && volConfirmed && !expansionWeakening) state = 5;
+    else if (!expansionPresent && !compressionPresent) state = 0;
+  } else if (state === 7) {
+    if (compressionPresent && !expansionPresent) state = 1;
+    else if (dir === 0) state = 0;
+  }
+
+  smStates[tf] = state;
+
+  // ── Action from state ─────────────────────────────────────────
+  const stateNames = ['Idle','Compressing','Expanding','Midline','Confirmed','ACTIVE','Caution','Get Off'];
+  const action = state === 5 ? (dir === 1 ? 'B2O' : 'S2O')
+               : state === 6 ? 'Caution'
+               : state === 7 ? 'Get Off'
+               : 'Wait';
+
+  // Scalp / intraday / swing signals
+  const scalpScore    = clamp(bbScore*0.25 + sarScore*0.25 + momScore*0.20 + volScore*0.15, -1, 1);
+  const intradayScore = clamp(bbScore*0.22 + sarScore*0.22 + momScore*0.18 + volScore*0.13, -1, 1);
+  const swingScore    = clamp(rawScore*0.40 + bbScore*0.18 + sarScore*0.14 + volScore*0.14, -1, 1);
+
+  const sig = (score, trig) => score > trig ? 'Get On' : score < -trig ? 'Get Off' : 'Wait';
+
+  return {
+    close, atr: atrV, dir, state, stateName: stateNames[state], action,
+    bb, sarBull, vol, mom,
+    bbScore, sarScore, volScore, momScore,
+    scalpScore, intradayScore, swingScore,
+    scalpSig:    sig(scalpScore,    P.scalpTrigger),
+    intradaySig: sig(intradayScore, P.intradayTrigger),
+    swingSig:    sig(swingScore,    P.swingTrigger),
+    conditions: { compressionPresent, expansionPresent, expansionWeakening, expansionDead, midlineHeld, midlineLost, sarAligned, sarLost, volConfirmed, volFadingDir },
+  };
+}
+
+// ── Polygon Fetch ─────────────────────────────────────────────────
+async function fetchCandles(ticker, multiplier, timespan, apiKey, limit=120) {
+  const to   = new Date();
+  const from = new Date(to - 5 * 24 * 60 * 60 * 1000);
+  const fmt  = d => d.toISOString().split('T')[0];
+  const url  = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${fmt(from)}/${fmt(to)}?adjusted=true&sort=asc&limit=${limit}&apiKey=${apiKey}`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error(`Polygon ${res.status}: ${res.statusText}`);
+  const data = await res.json();
+  if (!data.results || data.results.length === 0) throw new Error('No data returned from Polygon');
+  return data.results.map(r => ({ o:r.o, h:r.h, l:r.l, c:r.c, v:r.v, t:r.t }));
+}
+
+// ── UI Helpers ────────────────────────────────────────────────────
+function colorClass(val, neutralOk) {
+  if (val === 'B2O' || val === 'Get On' || val === 'North' || val === true) return 'c-lime';
+  if (val === 'S2O' || val === 'Get Off' || val === 'South' || val === false) return 'c-red';
+  if (val === 'Caution') return 'c-orange';
+  if (val === 'Wait' || val === 'Balance') return 'c-gray';
+  return neutralOk ? 'c-white' : 'c-gray';
+}
+
+function setCell(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = cls || '';
+}
+
+function fmtPrice(v) { return typeof v === 'number' ? v.toFixed(2) : '—'; }
+function fmtPct(v)   { return typeof v === 'number' ? v.toFixed(1)+'%' : '—'; }
+function fmtNum(v,d=3){ return typeof v === 'number' ? v.toFixed(d) : '—'; }
+
+function getBadgeClass(action) {
+  if (action === 'B2O') return 'bg-lime';
+  if (action === 'S2O') return 'bg-red';
+  if (action === 'Caution') return 'bg-orange';
+  if (action === 'Get Off') return 'bg-red';
+  return '';
+}
+
+function stateColor(state) {
+  const map = { 0:'c-gray', 1:'c-yellow', 2:'c-orange', 3:'c-blue', 4:'c-teal', 5:'c-lime', 6:'c-orange', 7:'c-red' };
+  return map[state] || 'c-gray';
+}
+
+// ── State Machine Visual ──────────────────────────────────────────
+function renderSMSteps(state) {
+  const steps = [
+    { id:1, label:'Compress' },
+    { id:2, label:'Expand'   },
+    { id:3, label:'Midline'  },
+    { id:4, label:'SAR+VWAP' },
+    { id:5, label:'Volume'   },
+  ];
+  const container = document.getElementById('smSteps');
+  container.innerHTML = '';
+
+  steps.forEach(step => {
+    const div = document.createElement('div');
+    div.className = 'sm-step';
+    let dotClass = '';
+    if (state === 6) dotClass = 'caution';
+    else if (state === 7) dotClass = 'getoff';
+    else if (state === step.id) dotClass = 'active';
+    else if (state > step.id) dotClass = 'passed';
+
+    div.innerHTML = `
+      <div class="sm-dot ${dotClass}">${step.id}</div>
+      <div class="sm-label">${step.label}</div>
+    `;
+    container.appendChild(div);
+  });
+
+  // Add caution/getoff nodes
+  ['Caution','GetOff'].forEach((name, idx) => {
+    const stateId = idx === 0 ? 6 : 7;
+    const div = document.createElement('div');
+    div.className = 'sm-step';
+    let dotClass = state === stateId ? (stateId === 6 ? 'caution' : 'getoff') : '';
+    div.innerHTML = `
+      <div class="sm-dot ${dotClass}">${stateId === 6 ? '⚠' : '✕'}</div>
+      <div class="sm-label">${name}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ── Log ───────────────────────────────────────────────────────────
+function addLog(tf, msg, type) {
+  const body = document.getElementById('logBody');
+  const now  = new Date().toTimeString().slice(0,8);
+  const div  = document.createElement('div');
+  div.className = 'log-entry';
+  const msgClass = type === 'b2o' ? 'b2o' : type === 's2o' ? 's2o' : type === 'caut' ? 'caut' : type === 'off' ? 'off' : '';
+  div.innerHTML = `<span class="log-time">${now}</span><span class="log-tf">${tf}</span><span class="log-msg ${msgClass}">${msg}</span>`;
+  body.insertBefore(div, body.firstChild);
+  // keep max 80 entries
+  while (body.children.length > 80) body.removeChild(body.lastChild);
+}
+
+function clearLog() {
+  document.getElementById('logBody').innerHTML = '';
+}
+
+// ── Update TF Card ────────────────────────────────────────────────
+function updateTFCard(prefix, result, tf) {
+  if (!result) return;
+  const badge = document.getElementById(`badge${prefix}`);
+  badge.textContent = result.action;
+  badge.className   = 'badge ' + getBadgeClass(result.action);
+
+  setCell(`s${prefix}_state`, result.stateName, stateColor(result.state));
+  setCell(`s${prefix}_bbw`,   fmtNum(result.bb.width, 5), result.bb.expanding ? 'c-lime' : result.bb.squeezing ? 'c-yellow' : 'c-white');
+  setCell(`s${prefix}_sar`,   result.sarBull ? 'Bullish' : 'Bearish', result.sarBull ? 'c-lime' : 'c-red');
+  setCell(`s${prefix}_rvol`,  fmtNum(result.vol.rvol, 2) + 'x', result.vol.rvol >= P.rvolHot ? 'c-lime' : result.vol.rvol <= P.rvolWeak ? 'c-red' : 'c-white');
+  setCell(`s${prefix}_score`, fmtNum(result.scalpScore > result.intradayScore ? result.scalpScore : result.intradayScore, 3), 'c-white');
+}
+
+// ── Main Update Cycle ─────────────────────────────────────────────
+async function runUpdate() {
+  const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
+  if (!ticker || !apiKey) return;
+
+  const dot = document.getElementById('statusDot');
+
+  try {
+    // Stagger requests to respect free-tier rate limit (5/min)
+    const [c1, c5, c15] = await Promise.all([
+      fetchCandles(ticker, 1,  'minute', apiKey, 150),
+      fetchCandles(ticker, 5,  'minute', apiKey, 150),
+      fetchCandles(ticker, 15, 'minute', apiKey, 150),
+    ]);
+
+    const r1  = runStateMachine('1',  c1);
+    const r5  = runStateMachine('5',  c5);
+    const r15 = runStateMachine('15', c15);
+
+    if (!r15) return;
+
+    const currentPrice = r1 ? r1.close : r15.close;
+
+    // ── Update TF cards ────────────────────────────────────────
+    updateTFCard('1m',  r1,  '1m');
+    updateTFCard('5m',  r5,  '5m');
+    updateTFCard('15m', r15, '15m');
+
+    // ── Primary action from 15m (anchor) ──────────────────────
+    const primary = r15;
+    const dir     = primary.dir;
+    const dirText = dir === 1 ? 'North' : dir === -1 ? 'South' : 'Balance';
+
+    // Simple ladder placeholders (real impl needs full MTF pivots)
+    const atrV    = primary.atr;
+    const stop1   = dir === 1 ? currentPrice - atrV * 0.5  : currentPrice + atrV * 0.5;
+    const stop2   = dir === 1 ? currentPrice - atrV * 1.0  : currentPrice + atrV * 1.0;
+    const station = dir === 1 ? currentPrice + atrV * 1.618 : currentPrice - atrV * 1.618;
+    const dist    = Math.abs(station - currentPrice);
+    const distPct = currentPrice > 0 ? (dist / currentPrice * 100) : 0;
+
+    // Arrive Today (session-based — approximate from 15m candles)
+    const sessionLow  = Math.min(...c15.map(c=>c.l));
+    const sessionHigh = Math.max(...c15.map(c=>c.h));
+    let arrivePct = NaN;
+    if (dir === 1 && station > sessionLow)
+      arrivePct = clamp(((currentPrice - sessionLow) / (station - sessionLow)) * 100, 0, 100);
+    else if (dir === -1 && station < sessionHigh)
+      arrivePct = clamp(((sessionHigh - currentPrice) / (sessionHigh - station)) * 100, 0, 100);
+
+    // Certainty
+    const smTrust   = [0,20,45,60,75,90,35,5][primary.state] ?? 20;
+    const flowOK    = dir === 1 ? currentPrice > primary.bb.basis : dir === -1 ? currentPrice < primary.bb.basis : false;
+    const engTemp   = clamp(Math.abs(primary.bbScore + primary.sarScore) / 2 * 100, 0, 100);
+    const arrTrust  = isNaN(arrivePct) ? 50 : arrivePct;
+    const flowTrust = flowOK ? 80 : 40;
+    let certainty   = dir === 0 ? 0 : clamp(engTemp*0.40 + smTrust*0.25 + arrTrust*0.20 + flowTrust*0.15, 0, 100);
+    certainty = clamp(certainty, 0, 100);
+
+    // ── Dashboard cells ────────────────────────────────────────
+    setCell('dTicker',    ticker,               'c-white');
+    setCell('dPrice',     fmtPrice(currentPrice),'price-big c-white');
+    setCell('dStop1',     fmtPrice(stop1),       colorClass(dirText));
+    setCell('dStop2',     fmtPrice(stop2),       colorClass(dirText));
+    setCell('dStation',   fmtPrice(station),     colorClass(dirText));
+    setCell('dDist',      fmtPrice(dist) + ' (' + distPct.toFixed(2) + '%)', 'c-white');
+    setCell('dArrive',    isNaN(arrivePct) ? '—' : fmtPct(arrivePct),
+      arrivePct >= 75 ? 'c-lime' : arrivePct >= 50 ? 'c-blue' : arrivePct >= 25 ? 'c-orange' : 'c-white');
+
+    setCell('dDir',       dirText,             colorClass(dirText));
+
+    const sigDisp = sig => sig === 'Wait' ? 'Wait' : 'Get On';
+    const sigCol  = sig => sig === 'Wait' ? 'c-orange' : 'c-lime';
+    setCell('dScalp',    sigDisp(primary.scalpSig),    sigCol(primary.scalpSig));
+    setCell('dIntraday', sigDisp(primary.intradaySig), sigCol(primary.intradaySig));
+    setCell('dSwing',    sigDisp(primary.swingSig),    sigCol(primary.swingSig));
+
+    setCell('dState',     primary.stateName,    stateColor(primary.state));
+    setCell('dAction',    primary.action,
+      primary.action === 'B2O'      ? 'c-lime'   :
+      primary.action === 'S2O'      ? 'c-red'    :
+      primary.action === 'Caution'  ? 'c-orange' :
+      primary.action === 'Get Off'  ? 'c-red'    : 'c-gray');
+
+    setCell('dCertainty', fmtPct(certainty),
+      certainty >= 75 ? 'c-lime' : certainty >= 50 ? 'c-blue' : certainty >= 25 ? 'c-orange' : 'c-red');
+    setCell('dRvol',      fmtNum(primary.vol.rvol, 2) + 'x',
+      primary.vol.rvol >= P.rvolHot ? 'c-lime' : primary.vol.rvol <= P.rvolWeak ? 'c-red' : 'c-white');
+
+    // Certainty bar
+    const bar = document.getElementById('certBar');
+    bar.style.width = certainty + '%';
+    bar.style.background = certainty >= 75 ? 'var(--lime)' : certainty >= 50 ? 'var(--blue)' : certainty >= 25 ? 'var(--orange)' : 'var(--red)';
+
+    // SM steps visual
+    renderSMSteps(primary.state);
+    document.getElementById('smTfBadge').textContent = '15m';
+
+    // Last update
+    document.getElementById('lastUpdate').textContent = new Date().toTimeString().slice(0,8);
+
+    // Log state changes
+    if (primary.action !== lastAction) {
+      const type = primary.action === 'B2O' ? 'b2o'
+                 : primary.action === 'S2O' ? 's2o'
+                 : primary.action === 'Caution' ? 'caut'
+                 : primary.action === 'Get Off'  ? 'off' : '';
+      addLog('15m', `${primary.action} — State: ${primary.stateName} | Dir: ${dirText} | Certainty: ${fmtPct(certainty)}`, type);
+      lastAction = primary.action;
+    }
+
+    dot.className = 'status-dot live';
+
+  } catch (err) {
+    dot.className = 'status-dot error';
+    addLog('ERR', err.message, 'off');
+    console.error(err);
+  }
+}
+
+// ── Engine control ────────────────────────────────────────────────
+function startEngine() {
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
+  const ticker = document.getElementById('tickerInput').value.trim();
+  if (!apiKey) { alert('Please enter your Polygon.io API key.'); return; }
+  if (!ticker) { alert('Please enter a ticker symbol.'); return; }
+
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display  = '';
+
+  // Reset state machines
+  smStates  = { '1': 0, '5': 0, '15': 0 };
+  prevDirs  = { '1': 0, '5': 0, '15': 0 };
+  lastAction = '';
+
+  addLog('SYS', `Engine started — ${ticker}`, '');
+  runUpdate();
+
+  const ms = parseInt(document.getElementById('refreshSelect').value);
+  intervalId = setInterval(runUpdate, ms);
+}
+
+function stopEngine() {
+  clearInterval(intervalId);
+  intervalId = null;
+  document.getElementById('btnStart').style.display = '';
+  document.getElementById('btnStop').style.display  = 'none';
+  document.getElementById('statusDot').className = 'status-dot';
+  addLog('SYS', 'Engine stopped.', '');
+}
+
+// ── Init SM steps on load ─────────────────────────────────────────
+renderSMSteps(-1);
+</script>
+</body>
+</html>
 
