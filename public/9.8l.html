@@ -11,10 +11,10 @@
   --bg:      #090c10;
   --bg2:     #0d1117;
   --bg3:     #131920;
-  --border:  #1e2a35;
-  --border2: #243040;
-  --txt:     #c8d8e8;
-  --dim:     #4a6070;
+  --border:  #2a3d50;
+  --border2: #334455;
+  --txt:     #f0f6ff;
+  --dim:     #8aaabf;
   --mono:    'Share Tech Mono', monospace;
   --sans:    'Barlow Condensed', sans-serif;
   --lime:    #00ff88;
@@ -23,7 +23,7 @@
   --blue:    #00aaff;
   --teal:    #00ccbb;
   --yellow:  #ffe566;
-  --gray:    #445566;
+  --gray:    #6688aa;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -63,7 +63,7 @@ header {
   display: block;
   font-size: 11px;
   font-weight: 300;
-  color: var(--dim);
+  color: var(--txt);
   letter-spacing: 0.05em;
   margin-top: 1px;
 }
@@ -161,7 +161,7 @@ button {
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: var(--txt);
 }
 
 .action-value {
@@ -193,7 +193,7 @@ button {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  color: var(--dim);
+  color: var(--txt);
   margin-bottom: 4px;
 }
 
@@ -212,7 +212,7 @@ button {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: var(--txt);
   margin-bottom: 8px;
 }
 
@@ -247,7 +247,7 @@ button {
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: var(--txt);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -265,15 +265,15 @@ button {
 .dash-table tr:last-child { border-bottom: none; }
 
 .dash-table td {
-  padding: 9px 14px;
-  font-size: 14px;
+  padding: 10px 14px;
+  font-size: 15px;
 }
 
 .dash-table td:first-child {
-  color: var(--dim);
-  font-size: 11px;
+  color: #9fc0d8;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   width: 50%;
 }
@@ -336,7 +336,7 @@ button {
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: var(--dim);
+  color: var(--txt);
   font-family: var(--mono);
   transition: all 0.3s;
 }
@@ -350,7 +350,7 @@ button {
   font-size: 9px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: var(--txt);
   text-align: center;
   line-height: 1.2;
 }
@@ -382,7 +382,7 @@ button {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: var(--txt);
 }
 
 .tf-badge {
@@ -394,7 +394,7 @@ button {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   background: rgba(68,85,102,0.3);
-  color: var(--dim);
+  color: var(--txt);
 }
 
 .tf-badge.b2o  { background: rgba(0,255,136,0.15); color: var(--lime); }
@@ -414,18 +414,18 @@ button {
   flex-direction: column;
 }
 
-.tf-item .lbl {
+.tf-item .lbl { color: #8aaabf !important;
   font-size: 9px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: var(--txt);
   line-height: 1;
 }
 
 .tf-item .val {
   font-family: var(--mono);
-  font-size: 12px;
-  color: var(--txt);
+  font-size: 13px;
+  color: #f0f6ff;
   line-height: 1.3;
 }
 
@@ -446,7 +446,7 @@ button {
 }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-3px)} to{opacity:1;transform:none} }
 
-.log-t  { color: var(--dim); flex-shrink: 0; }
+.log-t  { color: #7a9db8; flex-shrink: 0; }
 .log-tf { color: var(--blue); flex-shrink: 0; min-width: 32px; }
 .log-m  { color: var(--txt); flex: 1; word-break: break-word; }
 .log-m.b2o  { color: var(--lime); font-weight: bold; }
@@ -467,7 +467,7 @@ button {
 .last-upd {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--dim);
+  color: var(--txt);
 }
 
 .badge-sm {
