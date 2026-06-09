@@ -155,6 +155,7 @@ canvas#miniChart { display:block; }
     <span class="pulse" id="scanPulse"></span>
     <span id="scanStatus">Ready — enter API key and press Scan</span>
     <span id="scanProgress"></span>
+    <span id="latestBarInfo" style="margin-left:auto;color:#444;font-size:10px;"></span>
   </div>
   <div class="mobile-hint">↑ Tap any ticker for full details &nbsp;|&nbsp; Landscape = all columns</div>
   <div class="scanner-wrap">
@@ -257,18 +258,32 @@ function switchTab(name, el) {
 // ═══════════════════════════════════════════════════════
 function getKey() { return document.getElementById('apiKey').value.trim(); }
 
+// EST-aware date: market timezone offset = EDT UTC-4 (safe during US market hours)
+function estDateStr(offsetDays = 0) {
+  const now = new Date();
+  const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const estMs = utcMs - (4 * 3600000); // EDT = UTC-4
+  const est   = new Date(estMs + offsetDays * 86400000);
+  const y = est.getFullYear();
+  const m = String(est.getMonth() + 1).padStart(2, '0');
+  const d = String(est.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 async function fetchCandles(ticker, tf, mult, days) {
-  const key = getKey();
-  const to   = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - days);
-  const toStr   = to.toISOString().split('T')[0];
-  const fromStr = from.toISOString().split('T')[0];
+  const key     = getKey();
+  const fromStr = estDateStr(-days);   // e.g. 20 trading days back
+  const toStr   = estDateStr(1);       // +1 day forward to include today's intraday session
   const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${mult}/${tf}/${fromStr}/${toStr}?adjusted=true&sort=asc&limit=5000&apiKey=${key}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const d = await r.json();
-  return (d.results||[]).map(c=>({t:c.t,o:c.o,h:c.h,l:c.l,c:c.c,v:c.v}));
+  const bars = (d.results || []).map(c => ({t:c.t, o:c.o, h:c.h, l:c.l, c:c.c, v:c.v}));
+  if (bars.length > 0) {
+    const latest = new Date(bars[bars.length - 1].t);
+    console.log(`${ticker} | ${bars.length} bars | latest bar: ${latest.toLocaleString()}`);
+  }
+  return bars;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -860,6 +875,12 @@ async function runScan() {
   document.getElementById('scanProgress').textContent='';
   document.getElementById('lastScan').textContent="Last scan: "+new Date().toLocaleTimeString();
   setStatus(`Scan complete — ${scanResults.length} tickers loaded`,"");
+  // Show the latest bar timestamp from the first result to confirm data freshness
+  if (scanResults.length > 0) {
+    const latest = new Date(scanResults[0].barTime);
+    document.getElementById('latestBarInfo').textContent =
+      `Latest bar: ${latest.toLocaleString()} EST`;
+  }
   renderScanner();
 }
 function stopScan(){scanAbort=true;scanning=false;document.getElementById('scanPulse').className="pulse";setStatus("Scan stopped","");}
