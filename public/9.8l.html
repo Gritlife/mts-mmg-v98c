@@ -131,6 +131,37 @@ body {
 .pulse.yellow { background: var(--yellow); }
 .pulse.red { background: var(--red); }
 
+/* ── MOBILE: hide secondary columns under 640px ── */
+@media (max-width: 639px) {
+  .col-cycle,
+  .col-trend,
+  .col-edge,
+  .col-risk,
+  .col-momentum,
+  .col-price { display: none !important; }
+
+  .api-row input { width: 160px; }
+
+  table.scanner tbody td { padding: 8px 8px; font-size: 13px; }
+  table.scanner thead th { padding: 8px 8px; }
+
+  /* make score bar narrower on mobile */
+  .score-mini-bar { width: 40px; }
+
+  /* tap hint */
+  .mobile-hint { display: block; }
+}
+@media (min-width: 640px) {
+  .mobile-hint { display: none; }
+}
+.mobile-hint {
+  font-size: 10px;
+  color: #444;
+  text-align: center;
+  padding: 4px 0 2px;
+  letter-spacing: 0.5px;
+}
+
 /* ── SCANNER TABLE ── */
 .scanner-wrap { overflow-x: auto; }
 table.scanner {
@@ -354,18 +385,19 @@ canvas#miniChart { display: block; }
     <span id="scanStatus">Ready — enter API key and press Scan</span>
     <span id="scanProgress"></span>
   </div>
+  <div class="mobile-hint">↑ Tap any ticker to see full details &nbsp;|&nbsp; Turn landscape for all columns</div>
   <div class="scanner-wrap">
     <table class="scanner" id="scannerTable">
       <thead>
         <tr>
           <th onclick="sortBy('ticker')">Ticker</th>
-          <th onclick="sortBy('price')">Price</th>
+          <th onclick="sortBy('price')" class="col-price">Price</th>
           <th onclick="sortBy('dir')">Direction</th>
-          <th onclick="sortBy('cycle')">Market Cycle</th>
-          <th onclick="sortBy('trend')">Trend</th>
-          <th onclick="sortBy('edge')">Edge %</th>
-          <th onclick="sortBy('risk')">Risk Level</th>
-          <th onclick="sortBy('momentum')">Momentum</th>
+          <th onclick="sortBy('cycle')" class="col-cycle">Market Cycle</th>
+          <th onclick="sortBy('trend')" class="col-trend">Trend</th>
+          <th onclick="sortBy('edge')" class="col-edge">Edge %</th>
+          <th onclick="sortBy('risk')" class="col-risk">Risk Level</th>
+          <th onclick="sortBy('momentum')" class="col-momentum">Momentum</th>
           <th onclick="sortBy('score')">Signal Score</th>
           <th onclick="sortBy('action')">Action</th>
         </tr>
