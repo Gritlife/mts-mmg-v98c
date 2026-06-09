@@ -1,957 +1,1242 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>MMG V9.8L</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MMG V9.9K-3 Scanner</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:      #090c10;
-  --bg2:     #0d1117;
-  --bg3:     #131920;
-  --border:  #2a3d50;
-  --border2: #334455;
-  --txt:     #f0f6ff;
-  --dim:     #8aaabf;
-  --mono:    'Share Tech Mono', monospace;
-  --sans:    'Barlow Condensed', sans-serif;
-  --lime:    #00ff88;
-  --red:     #ff3355;
-  --orange:  #ff9900;
-  --blue:    #00aaff;
-  --teal:    #00ccbb;
-  --yellow:  #ffe566;
-  --gray:    #6688aa;
+  --bg:       #0b0b0b;
+  --panel:    #111111;
+  --border:   #222222;
+  --label:    #141414;
+  --txt:      #e8e8e8;
+  --muted:    #555;
+  --lime:     #00e676;
+  --red:      #ef5350;
+  --yellow:   #ffd600;
+  --blue:     #1565c0;
+  --orange:   #e65100;
+  --green-bg: #1b5e20;
+  --yellow-bg:#f9a825;
+  --red-bg:   #b71c1c;
 }
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
   color: var(--txt);
-  font-family: var(--sans);
-  font-size: 15px;
-  -webkit-text-size-adjust: 100%;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  min-height: 100vh;
 }
 
 /* ── HEADER ── */
-header {
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 14px;
-}
-
-.header-top {
+.header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.logo {
-  font-family: var(--sans);
-  font-weight: 900;
-  font-size: 20px;
-  letter-spacing: 0.1em;
-  color: var(--lime);
-  text-shadow: 0 0 10px rgba(0,255,136,0.4);
-}
-
-.logo small {
-  display: block;
-  font-size: 11px;
-  font-weight: 300;
-  color: var(--txt);
-  letter-spacing: 0.05em;
-  margin-top: 1px;
-}
-
-.status-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.status-dot {
-  width: 9px; height: 9px;
-  border-radius: 50%;
-  background: var(--gray);
-  flex-shrink: 0;
-}
-.status-dot.live  { background: var(--lime); animation: pulse 1.5s infinite; box-shadow: 0 0 8px rgba(0,255,136,0.5); }
-.status-dot.error { background: var(--red); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-.header-inputs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.header-inputs input,
-.header-inputs select {
-  width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  color: var(--txt);
-  font-family: var(--mono);
-  font-size: 13px;
-  padding: 8px 10px;
-  border-radius: 5px;
-  outline: none;
-  -webkit-appearance: none;
-}
-
-.header-inputs input:focus { border-color: var(--blue); }
-
-.header-btns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-button {
-  font-family: var(--sans);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 10px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  width: 100%;
-}
-
-.btn-start { background: var(--lime); color: #000; }
-.btn-stop  { background: var(--red);  color: #fff; }
-
-/* ── PAGE ── */
-.page {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
   gap: 12px;
-  max-width: 600px;
-  margin: 0 auto;
+  flex-wrap: wrap;
 }
-
-/* ── ACTION HERO ── */
-.action-hero {
-  border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  transition: background 0.4s, border-color 0.4s;
-}
-
-.action-hero.b2o   { background: rgba(0,255,136,0.1);  border-color: var(--lime); }
-.action-hero.s2o   { background: rgba(255,51,85,0.1);   border-color: var(--red); }
-.action-hero.caut  { background: rgba(255,153,0,0.1);   border-color: var(--orange); }
-.action-hero.off   { background: rgba(255,51,85,0.08);  border-color: var(--red); }
-
-.action-label {
+.header-title { font-size: 11px; letter-spacing: 1.5px; color: #777; text-transform: uppercase; }
+.api-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.api-row input {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: var(--txt);
+  padding: 4px 8px;
+  font-family: inherit;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--txt);
+  width: 240px;
+  border-radius: 2px;
 }
-
-.action-value {
-  font-size: 42px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  color: var(--gray);
-  transition: color 0.4s;
-}
-
-.action-hero.b2o  .action-value { color: var(--lime); }
-.action-hero.s2o  .action-value { color: var(--red); }
-.action-hero.caut .action-value { color: var(--orange); }
-.action-hero.off  .action-value { color: var(--red); }
-
-.action-right {
-  text-align: right;
-}
-
-.price-display {
-  font-family: var(--mono);
-  font-size: 26px;
-  color: #fff;
-  line-height: 1;
-}
-
-.ticker-display {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--txt);
-  margin-bottom: 4px;
-}
-
-/* ── CERT BAR ── */
-.cert-wrap {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
-}
-
-.cert-header {
-  display: flex;
-  justify-content: space-between;
+.api-row input::placeholder { color: #444; }
+.btn {
+  background: #1e1e1e;
+  color: #bbb;
+  border: 1px solid #444;
+  padding: 4px 12px;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--txt);
-  margin-bottom: 8px;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s;
+  white-space: nowrap;
 }
+.btn:hover { background: #2a2a2a; color: #fff; border-color: #888; }
+.btn.primary { background: #1a3a1a; border-color: #2e7d32; color: #66bb6a; }
+.btn.primary:hover { background: #2e7d32; color: #fff; }
+.btn.active { background: #1a2a3a; border-color: #1565c0; color: #64b5f6; }
 
-.cert-val { font-family: var(--mono); font-size: 13px; }
-
-.cert-track {
-  height: 6px;
-  background: var(--bg3);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.cert-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.6s ease, background 0.6s;
-  background: var(--gray);
-}
-
-/* ── PANEL ── */
-.panel {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.panel-hdr {
-  padding: 9px 14px;
+/* ── TABS ── */
+.tabs {
+  display: flex;
   border-bottom: 1px solid var(--border);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
+  background: var(--panel);
+}
+.tab {
+  padding: 9px 20px;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--txt);
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab:hover { color: #aaa; }
+.tab.active { color: #fff; border-bottom-color: #2196f3; }
+
+/* ── TAB PANELS ── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── SCANNER TAB ── */
+.scanner-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
+.scanner-controls label { color: #777; font-size: 11px; }
+.scanner-controls select {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: var(--txt);
+  padding: 3px 8px;
+  font-family: inherit;
+  font-size: 11px;
+  border-radius: 2px;
+}
+.status-bar {
+  padding: 5px 14px;
+  font-size: 10px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 26px;
+}
+.pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #333; }
+.pulse.green { background: var(--lime); box-shadow: 0 0 6px var(--lime); }
+.pulse.yellow { background: var(--yellow); }
+.pulse.red { background: var(--red); }
 
-/* ── DASH TABLE ── */
-.dash-table {
+/* ── SCANNER TABLE ── */
+.scanner-wrap { overflow-x: auto; }
+table.scanner {
   width: 100%;
   border-collapse: collapse;
 }
-
-.dash-table tr {
-  border-bottom: 1px solid var(--border);
-}
-.dash-table tr:last-child { border-bottom: none; }
-
-.dash-table td {
-  padding: 10px 14px;
-  font-size: 15px;
-}
-
-.dash-table td:first-child {
-  color: #9fc0d8;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+table.scanner thead th {
+  background: #0f0f0f;
+  color: #666;
+  font-size: 10px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  width: 50%;
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+table.scanner thead th:hover { color: #aaa; }
+table.scanner thead th.sort-asc::after  { content: " ▲"; font-size: 9px; }
+table.scanner thead th.sort-desc::after { content: " ▼"; font-size: 9px; }
+table.scanner tbody tr {
+  border-bottom: 1px solid #181818;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+table.scanner tbody tr:hover { background: #161616; }
+table.scanner tbody tr.selected { background: #0d1a2a; }
+table.scanner tbody td {
+  padding: 6px 10px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.ticker-cell { font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+.price-cell  { color: #ccc; }
+.score-cell-tbl { font-weight: 700; }
+
+/* score bar in scanner */
+.score-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.score-mini-bar {
+  width: 60px;
+  height: 6px;
+  background: #222;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.score-mini-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s;
+}
+.action-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
-.dash-table td:last-child {
-  font-family: var(--mono);
+/* legend chips in scanner */
+.chip {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border-radius: 2px;
+  margin-right: 2px;
+}
+.chip.g { background: #2e7d32; }
+.chip.y { background: #f9a825; }
+.chip.r { background: #c62828; }
+
+/* ── DASHBOARD TAB ── */
+.dash-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px;
+  gap: 16px;
+}
+@media (min-width: 700px) {
+  .dash-panel { flex-direction: row; align-items: flex-start; }
+}
+.dash-left { display: flex; flex-direction: column; gap: 16px; }
+
+/* dashboard table */
+table.dashboard {
+  border-collapse: collapse;
+  border: 1px solid #2a2a2a;
+  width: 300px;
+  min-width: 260px;
+}
+table.dashboard td {
+  border: 1px solid #222;
+  padding: 7px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+table.dashboard td.lbl {
+  background: var(--label);
+  color: #ccc;
+  width: 110px;
+  font-weight: 600;
+}
+table.dashboard td.val {
+  background: var(--label);
+  color: #fff;
   text-align: right;
 }
 
-.dash-divider td {
-  padding: 0;
-  height: 1px;
-  background: var(--border2);
-}
+/* score row in dashboard */
+.dscore-cell { position: relative; padding: 0 !important; overflow: hidden; }
+.dscore-bar  { position: absolute; top:0; left:0; bottom:0; opacity: 0.28; transition: width 0.4s; }
+.dscore-txt  { position: relative; z-index:1; display:block; padding: 7px 10px; text-align: right; font-weight: 700; }
 
-.big-row td {
-  padding: 11px 14px;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-/* ── STATE MACHINE ── */
-.sm-track {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 14px 10px;
-  gap: 0;
-  overflow-x: auto;
-}
-
-.sm-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  flex: 1;
-  min-width: 52px;
-  position: relative;
-}
-
-.sm-node::after {
-  content: '›';
-  position: absolute;
-  right: -6px;
-  top: 10px;
-  color: var(--border2);
-  font-size: 18px;
-  line-height: 1;
-}
-.sm-node:last-child::after { display: none; }
-
-.sm-dot {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  border: 2px solid var(--border2);
-  background: var(--bg3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--txt);
-  font-family: var(--mono);
-  transition: all 0.3s;
-}
-
-.sm-dot.passed  { border-color: var(--teal);   background: rgba(0,204,187,0.1);  color: var(--teal); }
-.sm-dot.active  { border-color: var(--lime);   background: rgba(0,255,136,0.12); color: var(--lime); box-shadow: 0 0 10px rgba(0,255,136,0.3); }
-.sm-dot.caution { border-color: var(--orange); background: rgba(255,153,0,0.12); color: var(--orange); }
-.sm-dot.getoff  { border-color: var(--red);    background: rgba(255,51,85,0.12); color: var(--red); }
-
-.sm-lbl {
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--txt);
-  text-align: center;
-  line-height: 1.2;
-}
-
-/* ── TF CARDS — horizontal row ── */
-.tf-row-wrap {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-.tf-card {
-  background: var(--bg2);
+/* mini chart */
+.chart-box {
+  background: #0e0e0e;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   overflow: hidden;
+  width: 300px;
+  min-width: 260px;
 }
-
-.tf-hdr {
-  padding: 8px 10px;
+.chart-box-header {
+  padding: 5px 10px;
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 0.5px;
   border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.tf-hdr-name {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--txt);
+}
+canvas#miniChart { display: block; }
+
+/* empty state */
+.empty-state {
+  padding: 40px 20px;
+  color: #444;
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 0.5px;
 }
 
-.tf-badge {
+/* color helpers */
+.bg-green  { background: #1b5e20 !important; }
+.bg-yellow { background: #f9a825 !important; }
+.bg-red    { background: #b71c1c !important; }
+.bg-blue   { background: #1565c0 !important; }
+.bg-orange { background: #e65100 !important; }
+.bg-dark   { background: var(--label) !important; }
+.txt-white  { color: #fff !important; }
+.txt-black  { color: #000 !important; }
+.txt-lime   { color: #00e676 !important; }
+.txt-red    { color: #ef5350 !important; }
+.txt-yellow { color: #ffd600 !important; }
+.txt-gray   { color: #777 !important; }
+.txt-north  { color: #00e676 !important; }
+.txt-south  { color: #ef5350 !important; }
+.txt-bal    { color: #777 !important; }
+
+/* loading spinner */
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid #333;
+  border-top-color: #888;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
   display: inline-block;
-  padding: 2px 7px;
-  border-radius: 3px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: rgba(68,85,102,0.3);
-  color: var(--txt);
 }
-
-.tf-badge.b2o  { background: rgba(0,255,136,0.15); color: var(--lime); }
-.tf-badge.s2o  { background: rgba(255,51,85,0.15);  color: var(--red); }
-.tf-badge.caut { background: rgba(255,153,0,0.15);  color: var(--orange); }
-.tf-badge.off  { background: rgba(255,51,85,0.12);  color: var(--red); }
-
-.tf-body {
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.tf-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.tf-item .lbl { color: #8aaabf !important;
-  font-size: 9px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--txt);
-  line-height: 1;
-}
-
-.tf-item .val {
-  font-family: var(--mono);
-  font-size: 13px;
-  color: #f0f6ff;
-  line-height: 1.3;
-}
-
-/* ── LOG ── */
-.log-body {
-  max-height: 150px;
-  overflow-y: auto;
-  font-family: var(--mono);
-  font-size: 11px;
-}
-
-.log-entry {
-  padding: 5px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-  display: flex;
-  gap: 8px;
-  animation: fadeIn 0.3s ease;
-}
-@keyframes fadeIn { from{opacity:0;transform:translateY(-3px)} to{opacity:1;transform:none} }
-
-.log-t  { color: #7a9db8; flex-shrink: 0; }
-.log-tf { color: var(--blue); flex-shrink: 0; min-width: 32px; }
-.log-m  { color: var(--txt); flex: 1; word-break: break-word; }
-.log-m.b2o  { color: var(--lime); font-weight: bold; }
-.log-m.s2o  { color: var(--red);  font-weight: bold; }
-.log-m.caut { color: var(--orange); }
-.log-m.off  { color: var(--red); }
-
-/* ── UTILITIES ── */
-.c-lime   { color: var(--lime)   !important; }
-.c-red    { color: var(--red)    !important; }
-.c-orange { color: var(--orange) !important; }
-.c-blue   { color: var(--blue)   !important; }
-.c-teal   { color: var(--teal)   !important; }
-.c-yellow { color: var(--yellow) !important; }
-.c-gray   { color: var(--gray)   !important; }
-.c-white  { color: #fff          !important; }
-
-.last-upd {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--txt);
-}
-
-.badge-sm {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: rgba(0,170,255,0.15);
-  color: var(--blue);
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
-<header>
-  <div class="header-top">
-    <div class="logo">
-      MMG V9.8L
-      <small>Train of Fortune — State Machine</small>
-    </div>
-    <div class="status-row">
-      <span class="status-dot" id="statusDot"></span>
-      <span class="last-upd" id="lastUpdate">—</span>
-    </div>
+<div class="header">
+  <div class="header-title">MMG V9.9K-3 &mdash; Five Legend Scanner</div>
+  <div class="api-row">
+    <input id="apiKey" type="password" placeholder="Paste Polygon.io API Key here…" autocomplete="off">
+    <button class="btn primary" onclick="runScan()">&#9654; Scan</button>
+    <button class="btn" onclick="stopScan()">&#9646;&#9646; Stop</button>
+    <span id="lastScan" style="color:#444;font-size:10px;"></span>
   </div>
+</div>
 
-  <div class="header-inputs">
-    <input type="text"     id="tickerInput" placeholder="Ticker" value="TSLA"/>
-    <input type="password" id="apiKeyInput" placeholder="Polygon API Key"/>
-    <select id="refreshSelect">
-      <option value="15000">Refresh 15s</option>
-      <option value="30000" selected>Refresh 30s</option>
-      <option value="60000">Refresh 60s</option>
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('scanner',this)" id="tab-scanner">&#128269; Scanner</div>
+  <div class="tab" onclick="switchTab('dashboard',this)" id="tab-dashboard">&#128200; Dashboard</div>
+</div>
+
+<!-- ═══════════════════════ TAB 1: SCANNER ═══════════════════════ -->
+<div class="tab-panel active" id="panel-scanner">
+  <div class="scanner-controls">
+    <label>Sort by:</label>
+    <select id="sortSelect" onchange="applySortUI()">
+      <option value="score-desc">Signal Score ▼</option>
+      <option value="score-asc">Signal Score ▲</option>
+      <option value="action">Action (B2O first)</option>
+      <option value="ticker">Ticker A–Z</option>
     </select>
-    <div></div>
+    <label style="margin-left:10px">Filter:</label>
+    <select id="filterSelect" onchange="applyFilter()">
+      <option value="all">All</option>
+      <option value="b2o">B2O only</option>
+      <option value="s2o">S2O only</option>
+      <option value="geton">Get On (any)</option>
+      <option value="getoff">Get Off</option>
+      <option value="wait">Wait</option>
+      <option value="score80">Score ≥ 80</option>
+      <option value="score60">Score ≥ 60</option>
+    </select>
+    <span id="countLabel" style="color:#555;font-size:10px;margin-left:auto;"></span>
   </div>
-
-  <div class="header-btns">
-    <button class="btn-start" id="btnStart" onclick="startEngine()">▶ Start</button>
-    <button class="btn-stop"  id="btnStop"  onclick="stopEngine()" style="display:none">■ Stop</button>
+  <div class="status-bar">
+    <span class="pulse" id="scanPulse"></span>
+    <span id="scanStatus">Ready — enter API key and press Scan</span>
+    <span id="scanProgress"></span>
   </div>
-</header>
-
-<!-- PAGE -->
-<div class="page">
-
-  <!-- ACTION HERO -->
-  <div class="action-hero" id="actionHero">
-    <div>
-      <div class="action-label">Action</div>
-      <div class="action-value" id="heroAction">—</div>
-      <div style="font-size:12px;color:var(--dim);margin-top:4px;" id="heroState">Idle</div>
-    </div>
-    <div class="action-right">
-      <div class="ticker-display" id="heroTicker">—</div>
-      <div class="price-display"  id="heroPrice">—</div>
-      <div style="font-size:12px;color:var(--dim);margin-top:4px;" id="heroDir">—</div>
-    </div>
-  </div>
-
-  <!-- CERTAINTY BAR -->
-  <div class="cert-wrap">
-    <div class="cert-header">
-      <span>Certainty</span>
-      <span class="cert-val" id="certVal">—</span>
-    </div>
-    <div class="cert-track">
-      <div class="cert-fill" id="certBar" style="width:0%"></div>
-    </div>
-  </div>
-
-  <!-- DASHBOARD TABLE -->
-  <div class="panel">
-    <div class="panel-hdr">
-      <span>Live Dashboard</span>
-      <span class="badge-sm">15m Anchor</span>
-    </div>
-    <table class="dash-table">
-      <tr><td>Stop 1</td>        <td id="dStop1"    class="c-gray">—</td></tr>
-      <tr><td>Stop 2</td>        <td id="dStop2"    class="c-gray">—</td></tr>
-      <tr><td>Next Station</td>  <td id="dStation"  class="c-gray">—</td></tr>
-      <tr><td>Dist to Station</td><td id="dDist"    class="c-gray">—</td></tr>
-      <tr><td>Arrive Today %</td><td id="dArrive"   class="c-gray">—</td></tr>
-      <tr class="dash-divider"><td colspan="2"></td></tr>
-      <tr><td>Direction</td>     <td id="dDir"      class="c-gray">—</td></tr>
-      <tr><td>Scalp</td>         <td id="dScalp"    class="c-gray">—</td></tr>
-      <tr><td>Intraday</td>      <td id="dIntraday" class="c-gray">—</td></tr>
-      <tr><td>Swing</td>         <td id="dSwing"    class="c-gray">—</td></tr>
-      <tr class="dash-divider"><td colspan="2"></td></tr>
-      <tr><td>RVOL (15m)</td>    <td id="dRvol"     class="c-gray">—</td></tr>
+  <div class="scanner-wrap">
+    <table class="scanner" id="scannerTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy('ticker')">Ticker</th>
+          <th onclick="sortBy('price')">Price</th>
+          <th onclick="sortBy('dir')">Direction</th>
+          <th onclick="sortBy('cycle')">Market Cycle</th>
+          <th onclick="sortBy('trend')">Trend</th>
+          <th onclick="sortBy('edge')">Edge %</th>
+          <th onclick="sortBy('risk')">Risk Level</th>
+          <th onclick="sortBy('momentum')">Momentum</th>
+          <th onclick="sortBy('score')">Signal Score</th>
+          <th onclick="sortBy('action')">Action</th>
+        </tr>
+      </thead>
+      <tbody id="scannerBody">
+        <tr><td colspan="10" class="empty-state">Press Scan to load live data from Polygon.io</td></tr>
+      </tbody>
     </table>
   </div>
+</div>
 
-  <!-- STATE MACHINE -->
-  <div class="panel">
-    <div class="panel-hdr">
-      <span>Sequential Gate Progress</span>
-      <span class="badge-sm" id="smStateBadge">Idle</span>
-    </div>
-    <div class="sm-track" id="smSteps"></div>
-  </div>
-
-  <!-- TF CARDS -->
-  <div class="tf-row-wrap">
-    <div class="tf-card">
-      <div class="tf-hdr">
-        <span class="tf-hdr-name">1m Scalp</span>
-        <span class="tf-badge" id="badge1m">—</span>
+<!-- ═══════════════════════ TAB 2: DASHBOARD ═══════════════════════ -->
+<div class="tab-panel" id="panel-dashboard">
+  <div id="dashEmpty" class="empty-state">Click any ticker in the Scanner to load its dashboard</div>
+  <div id="dashContent" style="display:none">
+    <div class="dash-panel">
+      <div class="dash-left">
+        <div style="font-size:10px;color:#555;letter-spacing:1px;text-transform:uppercase;padding-bottom:4px">
+          <span id="dashTicker" style="color:#fff;font-size:16px;font-weight:700;letter-spacing:2px"></span>
+          &nbsp;— 15m Live Dashboard
+        </div>
+        <table class="dashboard" id="dashTable">
+          <tr><td class="lbl">Price</td>     <td class="val bg-dark txt-white" id="d-price">—</td></tr>
+          <tr><td class="lbl">Station</td>   <td class="val bg-dark" id="d-station">—</td></tr>
+          <tr><td class="lbl">Direction</td> <td class="val bg-dark" id="d-direction">—</td></tr>
+          <tr><td class="lbl">Market Cycle</td><td class="val" id="d-cycle">—</td></tr>
+          <tr><td class="lbl">Trend</td>     <td class="val" id="d-trend">—</td></tr>
+          <tr><td class="lbl">Edge %</td>    <td class="val" id="d-edge">—</td></tr>
+          <tr><td class="lbl">Risk Level</td><td class="val" id="d-risk">—</td></tr>
+          <tr><td class="lbl">Momentum</td>  <td class="val" id="d-momentum">—</td></tr>
+          <tr><td class="lbl">Signal Score</td>
+              <td class="val dscore-cell" id="d-score">
+                <div class="dscore-bar" id="d-score-bar"></div>
+                <span class="dscore-txt" id="d-score-txt">—</span>
+              </td></tr>
+          <tr><td class="lbl">Entry</td>     <td class="val bg-dark txt-white" id="d-entry">—</td></tr>
+          <tr><td class="lbl">T1</td>        <td class="val bg-dark" id="d-t1">—</td></tr>
+          <tr><td class="lbl">T2</td>        <td class="val bg-dark" id="d-t2">—</td></tr>
+          <tr><td class="lbl" id="d-action-lbl">Action</td>
+              <td class="val" id="d-action">—</td></tr>
+        </table>
       </div>
-      <div class="tf-body">
-        <div class="tf-item"><span class="lbl">State</span>   <span class="val" id="s1m_state">—</span></div>
-        <div class="tf-item"><span class="lbl">BB W</span>    <span class="val" id="s1m_bbw">—</span></div>
-        <div class="tf-item"><span class="lbl">SAR</span>     <span class="val" id="s1m_sar">—</span></div>
-        <div class="tf-item"><span class="lbl">RVOL</span>    <span class="val" id="s1m_rvol">—</span></div>
-        <div class="tf-item"><span class="lbl">Score</span>   <span class="val" id="s1m_score">—</span></div>
-      </div>
-    </div>
-    <div class="tf-card">
-      <div class="tf-hdr">
-        <span class="tf-hdr-name">5m Intra</span>
-        <span class="tf-badge" id="badge5m">—</span>
-      </div>
-      <div class="tf-body">
-        <div class="tf-item"><span class="lbl">State</span>   <span class="val" id="s5m_state">—</span></div>
-        <div class="tf-item"><span class="lbl">BB W</span>    <span class="val" id="s5m_bbw">—</span></div>
-        <div class="tf-item"><span class="lbl">SAR</span>     <span class="val" id="s5m_sar">—</span></div>
-        <div class="tf-item"><span class="lbl">RVOL</span>    <span class="val" id="s5m_rvol">—</span></div>
-        <div class="tf-item"><span class="lbl">Score</span>   <span class="val" id="s5m_score">—</span></div>
-      </div>
-    </div>
-    <div class="tf-card">
-      <div class="tf-hdr">
-        <span class="tf-hdr-name">15m Anch</span>
-        <span class="tf-badge" id="badge15m">—</span>
-      </div>
-      <div class="tf-body">
-        <div class="tf-item"><span class="lbl">State</span>   <span class="val" id="s15m_state">—</span></div>
-        <div class="tf-item"><span class="lbl">BB W</span>    <span class="val" id="s15m_bbw">—</span></div>
-        <div class="tf-item"><span class="lbl">SAR</span>     <span class="val" id="s15m_sar">—</span></div>
-        <div class="tf-item"><span class="lbl">RVOL</span>    <span class="val" id="s15m_rvol">—</span></div>
-        <div class="tf-item"><span class="lbl">Score</span>   <span class="val" id="s15m_score">—</span></div>
+      <div>
+        <div class="chart-box">
+          <div class="chart-box-header" id="chartLabel">Price Chart (15m)</div>
+          <canvas id="miniChart" width="420" height="220"></canvas>
+        </div>
       </div>
     </div>
   </div>
-
-  <!-- LOG -->
-  <div class="panel">
-    <div class="panel-hdr">
-      <span>Signal Log</span>
-      <button onclick="clearLog()" style="background:transparent;border:1px solid var(--border2);color:var(--dim);padding:3px 10px;font-size:10px;letter-spacing:0.08em;width:auto;">CLEAR</button>
-    </div>
-    <div class="log-body" id="logBody">
-      <div class="log-entry">
-        <span class="log-t">--:--:--</span>
-        <span class="log-tf">—</span>
-        <span class="log-m">Waiting for engine start...</span>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /page -->
+</div>
 
 <script>
-// ══════════════════════════════════════════════════════════════════
-// MMG V9.8L — Full State Machine (JS port)
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// TOP 80 S&P 500 TICKERS
+// ═══════════════════════════════════════════════════════════════════
+const TICKERS = [
+  'AAPL','MSFT','NVDA','AMZN','META','GOOGL','GOOG','TSLA','BRK.B','AVGO',
+  'JPM','LLY','UNH','XOM','V','MA','JNJ','PG','HD','COST',
+  'MRK','ABBV','CVX','WMT','BAC','NFLX','KO','AMD','PEP','ADBE',
+  'CRM','ORCL','TMO','ACN','MCD','CSCO','ABT','LIN','DHR','INTC',
+  'NKE','NEE','DIS','PM','TXN','AMGN','WFC','RTX','HON','QCOM',
+  'IBM','INTU','UPS','CAT','GE','BA','SPGI','GS','LOW','ISRG',
+  'BKNG','DE','ELV','CI','REGN','MMM','VRTX','AXP','ADI','MDLZ',
+  'PLD','BLK','SYK','GILD','AMT','MO','SBUX','TJX','ZTS','EOG'
+];
 
-const P = {
-  emaLen:14, atrLen:14, bbLen:20, bbMult:2.0, bbWidthLen:20,
-  bbMidlineLookback:3, bbCompressLen:5, bbExpandMinBars:2, bbWeakenBars:3,
-  sarStart:0.02, sarInc:0.02, sarMax:0.20,
-  volLen:20, rvolHot:1.50, rvolWeak:0.75,
-  rsiLen:14, scalpTrigger:0.25, intradayTrigger:0.22, swingTrigger:0.18,
-};
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+let scanResults = [];
+let scanning = false;
+let scanAbort = false;
+let sortState = { col: 'score', dir: 'desc' };
+let selectedTicker = null;
+let chartCandles = [];
 
-let intervalId = null;
-let smStates   = { '1':0, '5':0, '15':0 };
-let prevDirs   = { '1':0, '5':0, '15':0 };
-let lastAction = '';
-
-const clamp = (v,lo,hi) => Math.max(lo,Math.min(v,hi));
-
-function sma(arr,len){ if(arr.length<len)return NaN; const s=arr.slice(-len); return s.reduce((a,b)=>a+b,0)/len; }
-function ema(arr,len){ if(!arr.length)return NaN; const k=2/(len+1); let e=arr[0]; for(let i=1;i<arr.length;i++)e=arr[i]*k+e*(1-k); return e; }
-function stdev(arr,len){ if(arr.length<len)return NaN; const s=arr.slice(-len),m=s.reduce((a,b)=>a+b,0)/len; return Math.sqrt(s.reduce((a,b)=>a+(b-m)**2,0)/len); }
-function atr(hi,lo,cl,len){ if(cl.length<2)return NaN; const tr=[]; for(let i=1;i<cl.length;i++)tr.push(Math.max(hi[i]-lo[i],Math.abs(hi[i]-cl[i-1]),Math.abs(lo[i]-cl[i-1]))); return sma(tr,Math.min(len,tr.length)); }
-function rsi(cl,len){ if(cl.length<len+1)return 50; const s=cl.slice(-(len+1)); let g=0,l=0; for(let i=1;i<s.length;i++){const d=s[i]-s[i-1]; if(d>0)g+=d; else l-=d;} g/=len;l/=len; if(l===0)return 100; return 100-100/(1+g/l); }
-
-function calcSAR(hi,lo,st,inc,mx){
-  if(hi.length<2)return{sar:lo[lo.length-1],bull:true};
-  let bull=true,sar=lo[0],ep=hi[0],af=st;
-  for(let i=1;i<hi.length;i++){
-    sar=sar+af*(ep-sar);
-    if(bull){
-      if(lo[i]<sar){bull=false;sar=ep;ep=lo[i];af=st;}
-      else{if(hi[i]>ep){ep=hi[i];af=Math.min(af+inc,mx);}sar=Math.min(sar,lo[Math.max(i-1,0)],lo[Math.max(i-2,0)]);}
-    }else{
-      if(hi[i]>sar){bull=true;sar=ep;ep=hi[i];af=st;}
-      else{if(lo[i]<ep){ep=lo[i];af=Math.min(af+inc,mx);}sar=Math.max(sar,hi[Math.max(i-1,0)],hi[Math.max(i-2,0)]);}
-    }
-  }
-  return{sar,bull};
+// ═══════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
 }
 
-function calcBB(cl,len,mult,wl){
-  if(cl.length<len)return null;
-  const basis=sma(cl,len),dev=stdev(cl,len)*mult;
-  const upper=basis+dev,lower=basis-dev;
-  const width=basis!==0?(upper-lower)/basis:0;
-  const wa=[];
-  for(let i=Math.max(0,cl.length-wl-10);i<cl.length;i++){
-    const sl=cl.slice(Math.max(0,i-len+1),i+1);
-    if(sl.length<len)continue;
-    const b=sma(sl,len),s=stdev(sl,len)*mult;
-    wa.push(b!==0?(2*s)/b:0);
+// ═══════════════════════════════════════════════════════════════════
+// POLYGON FETCH
+// ═══════════════════════════════════════════════════════════════════
+function getKey() { return document.getElementById('apiKey').value.trim(); }
+
+async function fetchCandles(ticker, tf, multiplier, days) {
+  const key = getKey();
+  const to   = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  const toStr   = to.toISOString().split('T')[0];
+  const fromStr = from.toISOString().split('T')[0];
+  const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${multiplier}/${tf}/${fromStr}/${toStr}?adjusted=true&sort=asc&limit=500&apiKey=${key}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const d = await r.json();
+  return (d.results || []).map(c => ({
+    t: c.t, o: c.o, h: c.h, l: c.l, c: c.c, v: c.v
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MATH HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function sma(arr, len) {
+  const out = new Array(arr.length).fill(NaN);
+  for (let i = len - 1; i < arr.length; i++) {
+    let s = 0;
+    for (let j = i - len + 1; j <= i; j++) s += arr[j];
+    out[i] = s / len;
   }
-  const widthAvg=sma(wa,Math.min(wl,wa.length));
-  const pW=wa.length>1?wa[wa.length-2]:width;
-  const close=cl[cl.length-1],pc=cl[cl.length-2]??close;
-  const sl2=cl.slice(Math.max(0,cl.length-len-1),cl.length-1);
-  const pBasis=sl2.length>=len?sma(sl2,len):basis;
-  return{
-    basis,upper,lower,width,widthAvg,prevWidth:pW,wa,
-    bull:close>basis&&close>pBasis, bear:close<basis&&close<pBasis,
-    upperPush:close>upper, lowerPush:close<lower,
-    expanding:width>widthAvg&&width>pW, squeezing:width<widthAvg&&width<pW,
-    crossBull:pc<=basis&&close>basis, crossBear:pc>=basis&&close<basis,
-    regimeBull:close>basis, regimeBear:close<basis,
+  return out;
+}
+
+function ema(arr, len) {
+  const out = new Array(arr.length).fill(NaN);
+  const k = 2 / (len + 1);
+  let started = false;
+  for (let i = 0; i < arr.length; i++) {
+    if (!started) {
+      if (!isNaN(arr[i])) { out[i] = arr[i]; started = true; }
+    } else {
+      out[i] = arr[i] * k + out[i-1] * (1 - k);
+    }
+  }
+  return out;
+}
+
+function stdev(arr, len) {
+  const out = new Array(arr.length).fill(NaN);
+  for (let i = len - 1; i < arr.length; i++) {
+    const slice = arr.slice(i - len + 1, i + 1);
+    const m = slice.reduce((a,b) => a+b,0) / len;
+    const v = slice.reduce((a,b) => a + (b-m)**2, 0) / len;
+    out[i] = Math.sqrt(v);
+  }
+  return out;
+}
+
+function rsi(closes, len) {
+  const out = new Array(closes.length).fill(NaN);
+  for (let i = len; i < closes.length; i++) {
+    let gains = 0, losses = 0;
+    for (let j = i - len + 1; j <= i; j++) {
+      const d = closes[j] - closes[j-1];
+      if (d > 0) gains += d; else losses -= d;
+    }
+    const rs = losses === 0 ? 100 : gains / losses;
+    out[i] = 100 - 100 / (1 + rs);
+  }
+  return out;
+}
+
+function macd(closes, fast, slow, signal) {
+  const eFast = ema(closes, fast);
+  const eSlow = ema(closes, slow);
+  const line   = closes.map((_, i) => isNaN(eFast[i]) || isNaN(eSlow[i]) ? NaN : eFast[i] - eSlow[i]);
+  const sig    = ema(line, signal);
+  const hist   = line.map((v, i) => isNaN(v) || isNaN(sig[i]) ? NaN : v - sig[i]);
+  return { line, sig, hist };
+}
+
+function atr(highs, lows, closes, len) {
+  const out = new Array(closes.length).fill(NaN);
+  for (let i = 1; i < closes.length; i++) {
+    const tr = Math.max(highs[i]-lows[i], Math.abs(highs[i]-closes[i-1]), Math.abs(lows[i]-closes[i-1]));
+    if (i < len) { out[i] = tr; continue; }
+    if (isNaN(out[i-1])) { out[i] = tr; continue; }
+    out[i] = (out[i-1] * (len-1) + tr) / len;
+  }
+  return out;
+}
+
+function vwap(highs, lows, closes, vols) {
+  const out = new Array(closes.length).fill(NaN);
+  let cumPV = 0, cumV = 0;
+  for (let i = 0; i < closes.length; i++) {
+    const hlc3 = (highs[i] + lows[i] + closes[i]) / 3;
+    cumPV += hlc3 * vols[i];
+    cumV  += vols[i];
+    out[i] = cumV > 0 ? cumPV / cumV : NaN;
+  }
+  return out;
+}
+
+function sar(highs, lows, start, inc, max) {
+  const n = highs.length;
+  const out = new Array(n).fill(NaN);
+  if (n < 2) return out;
+  let bull = true;
+  let sarV = lows[0];
+  let ep   = highs[0];
+  let af   = start;
+  out[0]   = sarV;
+  for (let i = 1; i < n; i++) {
+    let newSar = sarV + af * (ep - sarV);
+    if (bull) {
+      newSar = Math.min(newSar, lows[i-1], i>1 ? lows[i-2] : lows[i-1]);
+      if (lows[i] < newSar) {
+        bull = false; newSar = ep; ep = lows[i]; af = start;
+      } else {
+        if (highs[i] > ep) { ep = highs[i]; af = Math.min(af + inc, max); }
+      }
+    } else {
+      newSar = Math.max(newSar, highs[i-1], i>1 ? highs[i-2] : highs[i-1]);
+      if (highs[i] > newSar) {
+        bull = true; newSar = ep; ep = highs[i]; af = start;
+      } else {
+        if (lows[i] < ep) { ep = lows[i]; af = Math.min(af + inc, max); }
+      }
+    }
+    out[i] = newSar;
+  }
+  return out;
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function last(arr) { for (let i=arr.length-1;i>=0;i--) if(!isNaN(arr[i])) return arr[i]; return NaN; }
+function prev(arr, idx, n=1) { return idx-n >= 0 ? arr[idx-n] : NaN; }
+
+// ═══════════════════════════════════════════════════════════════════
+// CORE ENGINE — mirrors Pine logic on candle array
+// ═══════════════════════════════════════════════════════════════════
+function computeEngine(candles) {
+  if (!candles || candles.length < 30) return null;
+
+  const n = candles.length;
+  const O = candles.map(c=>c.o), H = candles.map(c=>c.h),
+        L = candles.map(c=>c.l), C = candles.map(c=>c.c),
+        V = candles.map(c=>c.v);
+  const i = n - 1; // latest bar index
+
+  // — EMA 21, VWAP, ATR 14
+  const ema21  = ema(C, 21);
+  const vwapV  = vwap(H, L, C, V);
+  const atr14  = atr(H, L, C, 14);
+  const emaNow = ema21[i], vwapNow = vwapV[i], atrNow = atr14[i];
+
+  // — BB(20,2)
+  const bbBasis  = sma(C, 20);
+  const bbDev    = stdev(C, 20).map((s,j) => s * 2);
+  const bbUpper  = bbBasis.map((b,j) => b + bbDev[j]);
+  const bbLower  = bbBasis.map((b,j) => b - bbDev[j]);
+  const bbWidth  = bbBasis.map((b,j) => b>0 ? (bbUpper[j]-bbLower[j])/b : NaN);
+  const bbWAvg   = sma(bbWidth, 20);
+  const bbBasisN = bbBasis[i], bbWidthN = bbWidth[i], bbWAvgN = bbWAvg[i];
+
+  const bbExpanding = !isNaN(bbWidthN) && !isNaN(bbWAvgN) && bbWidthN > bbWAvgN && bbWidthN > prev(bbWidth,i) && prev(bbWidth,i) > prev(bbWidth,i,2);
+  const bbSqueezing = !isNaN(bbWidthN) && !isNaN(bbWAvgN) && bbWidthN < bbWAvgN && bbWidthN < prev(bbWidth,i);
+  const bbBull = C[i] > bbBasisN && C[i] > prev(C,i);
+  const bbBear = C[i] < bbBasisN && C[i] < prev(C,i);
+  const bbUpperPush = C[i] > bbUpper[i];
+  const bbLowerPush = C[i] < bbLower[i];
+  const bbCrossBull = prev(C,i) <= prev(bbBasis,i) && C[i] > bbBasisN;
+  const bbCrossBear = prev(C,i) >= prev(bbBasis,i) && C[i] < bbBasisN;
+  let bbScore = 0;
+  bbScore += bbBull ? 0.35 : bbBear ? -0.35 : 0;
+  bbScore += bbExpanding && bbBull ? 0.25 : bbExpanding && bbBear ? -0.25 : 0;
+  bbScore += bbUpperPush ? 0.20 : bbLowerPush ? -0.20 : 0;
+  bbScore = clamp(bbScore, -1, 1);
+
+  // — SAR(0.02,0.02,0.20)
+  const sarV   = sar(H, L, 0.02, 0.02, 0.20);
+  const sarNow = sarV[i];
+  const sarBull = C[i] > sarNow;
+  const sarBear = C[i] < sarNow;
+  const sarFlipBull = sarBull && prev(C,i) <= prev(sarV,i);
+  const sarFlipBear = sarBear && prev(C,i) >= prev(sarV,i);
+  let sarScore = 0;
+  sarScore += sarBull ? 0.55 : sarBear ? -0.55 : 0;
+  sarScore += sarFlipBull ? 0.30 : sarFlipBear ? -0.30 : 0;
+  sarScore = clamp(sarScore, -1, 1);
+
+  // — Volume / RVOL
+  const volAvgA = sma(V, 20);
+  const volAvgN = volAvgA[i];
+  const rvol    = volAvgN > 0 ? V[i] / volAvgN : NaN;
+  const volGreen  = C[i] > O[i];
+  const volRed    = C[i] < O[i];
+  const volRising = V[i] > prev(V,i);
+  const volFading = V[i] < prev(V,i) && V[i] < prev(V,i,2);
+  let volumeScore = 0;
+  if (!isNaN(rvol)) {
+    volumeScore += rvol >= 1.5 && volGreen ? 0.45 : rvol >= 1.5 && volRed ? -0.45 : 0;
+    volumeScore += volRising && volGreen ? 0.20 : volRising && volRed ? -0.20 : 0;
+    volumeScore += rvol <= 0.75 ? -0.10 : 0;
+    volumeScore = clamp(volumeScore, -1, 1);
+  }
+
+  // — Momentum (RSI, MACD, ROC)
+  const rsiA = rsi(C, 14);
+  const rsiN = rsiA[i];
+  const { hist: macdHist } = macd(C, 12, 26, 9);
+  const macdN = macdHist[i], macdPrev = prev(macdHist,i);
+  const rocLen = 10;
+  const rocN = C[i] > 0 && i >= rocLen ? ((C[i] - C[i-rocLen]) / C[i-rocLen]) * 100 : 0;
+  const momBull = rsiN > 50 && rocN > 0 && macdN > 0;
+  const momBear = rsiN < 50 && rocN < 0 && macdN < 0;
+  const momBullStrong = rsiN > 60 && rocN > 0 && macdN > macdPrev;
+  const momBearStrong = rsiN < 40 && rocN < 0 && macdN < macdPrev;
+  let momentumScore = 0;
+  momentumScore += momBull ? 0.35 : momBear ? -0.35 : 0;
+  momentumScore += momBullStrong ? 0.25 : momBearStrong ? -0.25 : 0;
+  momentumScore = clamp(momentumScore, -1, 1);
+
+  // — Fib (100-bar swing)
+  const fibLB = Math.min(100, n);
+  const fibH  = Math.max(...H.slice(n-fibLB));
+  const fibL  = Math.min(...L.slice(n-fibLB));
+  const fibR  = fibH - fibL;
+  const fib382 = fibL + fibR * 0.382;
+  const fibMid = fibL + fibR * 0.50;
+  const fib618 = fibL + fibR * 0.618;
+  const fibAboveMid  = fibR > 0 && C[i] > fibMid;
+  const fibBelowMid  = fibR > 0 && C[i] < fibMid;
+  const fibBreak618  = fibR > 0 && C[i] > fib618 && prev(C,i) <= fib618;
+  const fibBreak382  = fibR > 0 && C[i] < fib382 && prev(C,i) >= fib382;
+  let fibScore = 0;
+  if (fibR > 0) {
+    fibScore += fibAboveMid ? 0.20 : fibBelowMid ? -0.20 : 0;
+    fibScore += fibBreak618 ? 0.35 : fibBreak382 ? -0.35 : 0;
+    fibScore = clamp(fibScore, -1, 1);
+  }
+
+  // — Liq zone (pivot high/low, len=5)
+  let liqHigh = NaN, liqLow = NaN;
+  for (let j = i - 5; j >= 5; j--) {
+    if (!isNaN(liqHigh) && !isNaN(liqLow)) break;
+    let ph = true, pl = true;
+    for (let k = j-5; k <= j+5; k++) {
+      if (k===j || k<0 || k>=n) continue;
+      if (H[k] > H[j]) ph = false;
+      if (L[k] < L[j]) pl = false;
+    }
+    if (ph && isNaN(liqHigh)) liqHigh = H[j];
+    if (pl && isNaN(liqLow))  liqLow  = L[j];
+  }
+  const nearLiqHigh = !isNaN(liqHigh) && Math.abs(C[i]-liqHigh) <= atrNow * 0.5;
+  const liqBreakUp  = !isNaN(liqHigh) && C[i] > liqHigh && prev(C,i) <= liqHigh;
+  const liqBreakDn  = !isNaN(liqLow)  && C[i] < liqLow  && prev(C,i) >= liqLow;
+  const liqRejectH  = nearLiqHigh && C[i] < O[i];
+  const liqRejectL  = !isNaN(liqLow) && Math.abs(C[i]-liqLow) <= atrNow * 0.5 && C[i] > O[i];
+  let liqScore = 0;
+  liqScore += liqBreakUp ? 0.45 : liqBreakDn ? -0.45 : 0;
+  liqScore += liqRejectL ? 0.25 : liqRejectH ? -0.25 : 0;
+  liqScore = clamp(liqScore, -1, 1);
+
+  // — Direction score
+  const nativeBullFlow = C[i] > emaNow && C[i] > vwapNow;
+  const nativeBearFlow = C[i] < emaNow && C[i] < vwapNow;
+  let pressureScore = 0;
+  pressureScore += nativeBullFlow ? 0.60 : nativeBearFlow ? -0.60 : 0;
+  pressureScore += sarBull ? 0.25 : sarBear ? -0.25 : 0;
+  pressureScore += bbBull  ? 0.15 : bbBear  ? -0.15 : 0;
+  pressureScore = clamp(pressureScore, -1, 1);
+
+  const confirmWeight   = 0.15;
+  const enabledCount    = 6;
+  const rawConfirmScore = (bbScore + sarScore + volumeScore + momentumScore + liqScore + fibScore) / enabledCount;
+  const directionScore  = clamp(pressureScore + rawConfirmScore * confirmWeight, -1, 1);
+
+  let dir = 0;
+  if (directionScore > 0.10)       dir =  1;
+  else if (directionScore < -0.10) dir = -1;
+
+  const confirmAligned  = dir ===  1 ? rawConfirmScore >  0.15 : dir === -1 ? rawConfirmScore < -0.15 : false;
+  const confirmConflict = dir ===  1 ? rawConfirmScore < -0.15 : dir === -1 ? rawConfirmScore >  0.15 : false;
+
+  // — Sigma targets (Simons)
+  const sigma = stdev(C, 20);
+  const sigNow = sigma[i];
+  const callRisk = Math.abs(C[i] - sarNow);
+  const putRisk  = Math.abs(C[i] - sarNow);
+  const callT1 = C[i] + sigNow;
+  const callT2 = C[i] + sigNow * 1.5;
+  const putT1  = C[i] - sigNow;
+  const putT2  = C[i] - sigNow * 1.5;
+  const callRR1 = callRisk > 0 ? Math.abs(callT1 - C[i]) / callRisk : 0;
+  const callRR2 = callRisk > 0 ? Math.abs(callT2 - C[i]) / callRisk : 0;
+  const putRR1  = putRisk  > 0 ? Math.abs(C[i] - putT1)  / putRisk  : 0;
+  const putRR2  = putRisk  > 0 ? Math.abs(C[i] - putT2)  / putRisk  : 0;
+  const qualityOK = dir === 1 ? callRR1 >= 1.5 : dir === -1 ? putRR1 >= 1.5 : false;
+
+  // — Train mode / action (simplified campaign)
+  const emaSlope3 = emaNow - (i>=3 ? ema21[i-3] : ema21[0]);
+  const emaVwapTangled = Math.abs(emaNow - vwapNow) <= atrNow * 0.18;
+  const priceNearMid   = Math.abs(C[i] - bbBasisN) <= atrNow * 0.18;
+  const manipPhase     = bbSqueezing && emaVwapTangled && priceNearMid;
+
+  const longTurn  = sarFlipBull || (bbCrossBull && C[i] > emaNow) || (C[i] > bbBasisN && prev(C,i) <= prev(bbBasis,i));
+  const shortTurn = sarFlipBear || (bbCrossBear && C[i] < emaNow) || (C[i] < bbBasisN && prev(C,i) >= prev(bbBasis,i));
+
+  const longTrigger  = !manipPhase && longTurn  && C[i] > emaNow && C[i] > bbBasisN && emaSlope3 >= 0;
+  const shortTrigger = !manipPhase && shortTurn && C[i] < emaNow && C[i] < bbBasisN && emaSlope3 <= 0;
+
+  let activeDir = 0, lastSig = "None", action = "Wait";
+  if (dir === 1 && longTrigger  && !confirmConflict) { activeDir =  1; lastSig = "B2O"; action = "Get On"; }
+  else if (dir === -1 && shortTrigger && !confirmConflict) { activeDir = -1; lastSig = "S2O"; action = "Get On"; }
+  else if (dir !== 0 && (sarFlipBear && dir === 1 || sarFlipBull && dir === -1)) { action = "Get Off"; }
+  else { action = dir === 0 ? "Wait" : "Wait"; }
+  if (confirmConflict) action = "Wait";
+
+  const opportunityDir = activeDir !== 0 ? activeDir : dir;
+
+  // — Wyckoff (Market Cycle)
+  const isAccumulation = bbSqueezing && Math.abs(C[i]-bbBasisN) <= atrNow * 0.65 && (isNaN(rvol) || rvol < 1.5);
+  const isMarkUp   = bbExpanding && C[i] > bbBasisN && sarBull && momentumScore > 0;
+  const isMarkDown = bbExpanding && C[i] < bbBasisN && sarBear && momentumScore < 0;
+  const isDistrib  = (nearLiqHigh || bbUpperPush) && (volFading || !isNaN(rvol) && rvol >= 1.5) && !isMarkUp;
+  let cycleText = isAccumulation ? "Accumulation" : isMarkUp ? "Mark-Up" : isDistrib ? "Distribution" : isMarkDown ? "Mark-Down" : "Balance";
+
+  const wyBullTrap = cycleText === "Mark-Up"   && dir === -1;
+  const wyBearTrap = cycleText === "Mark-Down" && dir ===  1;
+  let wyckoffText = wyBullTrap ? "Bull Trap" : wyBearTrap ? "Bear Trap" :
+    (cycleText === "Accumulation" || cycleText === "Mark-Up")   ? "Inst Buying"  :
+    (cycleText === "Distribution" || cycleText === "Mark-Down") ? "Inst Selling" :
+    manipPhase ? "Manipulation" : "Balance";
+  const wyGreen  = (opportunityDir ===  1 && wyckoffText === "Inst Buying") || (opportunityDir === -1 && wyckoffText === "Inst Selling");
+  const wyYellow = ["Bull Trap","Bear Trap","Manipulation","Balance"].includes(wyckoffText);
+
+  // — Livermore (Trend)
+  const livUp   = C[i] > emaNow && C[i] > vwapNow && sarBull;
+  const livDown = C[i] < emaNow && C[i] < vwapNow && sarBear;
+  const livText  = livUp ? "Uptrend" : livDown ? "Downtrend" : "Transition";
+  const livGreen  = (opportunityDir ===  1 && livUp) || (opportunityDir === -1 && livDown);
+  const livYellow = livText === "Transition";
+
+  // — Seykota (Momentum)
+  const trendComposite = clamp(directionScore * 0.45 + rawConfirmScore * 0.35 + bbScore * 0.20, -1, 1);
+  const seykotaText = manipPhase || bbSqueezing ? "Compression" :
+    Math.abs(trendComposite) >= 0.70 && bbExpanding ? "Strong Trend" :
+    Math.abs(trendComposite) >= 0.35 ? "Trend" : "Weak Trend";
+  const seykotaGreen  = seykotaText === "Strong Trend" || seykotaText === "Trend";
+  const seykotaYellow = seykotaText === "Weak Trend";
+
+  // — Certainty / Edge %
+  const flowAligned   = dir ===  1 ? nativeBullFlow : dir === -1 ? nativeBearFlow : false;
+  const engineTempPct = clamp(Math.abs(directionScore) * 100, 0, 100);
+  const flowTrust     = flowAligned ? 80 : 40;
+  const atrPct        = C[i] > 0 ? (atrNow / C[i]) * 100 : NaN;
+  const trendScore    = activeDir ===  1 ? (C[i]>emaNow?20:0)+(C[i]>vwapNow?20:0)+(sarBull?20:0) :
+                        activeDir === -1 ? (C[i]<emaNow?20:0)+(C[i]<vwapNow?20:0)+(sarBear?20:0) : 0;
+  const rrScore       = (dir===1 ? callRR1 : putRR1) >= 1.5 ? 20 : 0;
+  const quality       = trendScore + rrScore;
+  const modeTrust     = action === "Get On" ? 75 : action === "Get Off" ? 20 : 25;
+  const baseCert      = dir === 0 ? 0 : clamp(engineTempPct*0.40 + modeTrust*0.25 + 50*0.20 + flowTrust*0.15, 0, 100);
+  const confirmPct    = clamp(Math.abs(rawConfirmScore) * 100, 0, 100);
+  let certaintyPct    = baseCert + (confirmAligned ? 8 : 0) - (confirmConflict ? 10 : 0);
+  certaintyPct        = clamp(certaintyPct, 0, 100);
+  const edgePct       = clamp(certaintyPct * 0.55 + confirmPct * 0.25 + quality * 0.20, 0, 100);
+
+  // — Dennis (Risk Level)
+  let riskText = isNaN(atrPct) ? "Medium" : atrPct <= 1.2 && quality >= 60 ? "Low" : atrPct >= 2.5 || quality < 40 ? "High" : "Medium";
+
+  // — Dennis green check
+  const dennisGreen = riskText === "Low";
+
+  // — Signal Score 0-100 (5 × 20)
+  const signalScore = (wyGreen?20:0) + (livGreen?20:0) + (edgePct>=75?20:0) + (dennisGreen?20:0) + (seykotaGreen?20:0);
+
+  // — Entry / T1 / T2
+  let entryPrice = null, activeT1 = null, activeT2 = null, rr1 = null, rr2 = null;
+  if (action === "Get On") {
+    entryPrice = C[i];
+    if (activeDir ===  1) { activeT1 = callT1; activeT2 = callT2; rr1 = callRR1; rr2 = callRR2; }
+    if (activeDir === -1) { activeT1 = putT1;  activeT2 = putT2;  rr1 = putRR1;  rr2 = putRR2; }
+  }
+
+  // — Station (next key level)
+  let stationPrice = null;
+  if (dir ===  1 && !isNaN(liqHigh) && liqHigh > C[i]) stationPrice = liqHigh;
+  else if (dir === -1 && !isNaN(liqLow) && liqLow < C[i]) stationPrice = liqLow;
+  else if (dir ===  1) stationPrice = C[i] + atrNow * 1.618;
+  else if (dir === -1) stationPrice = C[i] - atrNow * 1.618;
+
+  const stationDistPct = stationPrice && C[i] > 0 ? (Math.abs(stationPrice - C[i]) / C[i]) * 100 : null;
+
+  return {
+    close: C[i], atrPct, dir, opportunityDir,
+    wyckoffText, wyGreen, wyYellow,
+    livText, livGreen, livYellow,
+    edgePct, riskText, dennisGreen,
+    seykotaText, seykotaGreen, seykotaYellow,
+    signalScore,
+    action, lastSig, activeDir,
+    entryPrice, activeT1, activeT2, rr1, rr2,
+    stationPrice, stationDistPct,
+    trendComposite, manipPhase,
+    bbExpanding, bbSqueezing,
+    // for chart
+    bbBasisArr: bbBasis, bbUpperArr: bbUpper, bbLowerArr: bbLower,
+    ema21Arr: ema21, sarArr: sarV
   };
 }
 
-function runStateMachine(tf,candles){
-  const cl=candles.map(c=>c.c),hi=candles.map(c=>c.h),lo=candles.map(c=>c.l),op=candles.map(c=>c.o),vl=candles.map(c=>c.v);
-  const n=cl.length;
-  if(n<30)return null;
-  const close=cl[n-1],close1=cl[n-2];
-  const bb=calcBB(cl,P.bbLen,P.bbMult,P.bbWidthLen);
-  if(!bb)return null;
-  const sarRes=calcSAR(hi,lo,P.sarStart,P.sarInc,P.sarMax);
-  const sarBull=sarRes.bull;
-  const sarPrev=calcSAR(hi.slice(0,-1),lo.slice(0,-1),P.sarStart,P.sarInc,P.sarMax);
-  const sarFlipBull=sarBull&&!sarPrev.bull, sarFlipBear=!sarBull&&sarPrev.bull;
-  const volAvg=sma(vl,Math.min(P.volLen,vl.length));
-  const vol=vl[n-1],rvol=volAvg>0?vol/volAvg:1;
-  const vGreen=close>op[n-1],vRed=close<op[n-1];
-  const vRising=vol>vl[n-2]??vol;
-  const vFading=vol<(vl[n-2]??vol)&&vol<(vl[n-3]??vol);
-  const rsiVal=rsi(cl,P.rsiLen);
-  const roc=n>10?(cl[n-1]-cl[n-11])/cl[n-11]*100:0;
-  const e12=ema(cl.slice(-26),12),e26=ema(cl.slice(-26),26),hist=e12-e26;
-  const momBull=rsiVal>50&&roc>0&&hist>0, momBear=rsiVal<50&&roc<0&&hist<0;
-  const momBS=rsiVal>60&&roc>0, momBrS=rsiVal<40&&roc<0;
-  const atrV=atr(hi,lo,cl,P.atrLen);
-  const bbScore=clamp((bb.bull?0.35:bb.bear?-0.35:0)+(bb.expanding&&bb.bull?0.25:bb.expanding&&bb.bear?-0.25:0)+(bb.upperPush?0.20:bb.lowerPush?-0.20:0),-1,1);
-  const sarScore=clamp(sarBull?0.55:-0.55,-1,1);
-  const volScore=clamp((rvol>=P.rvolHot&&vGreen?0.45:rvol>=P.rvolHot&&vRed?-0.45:0)+(vRising&&vGreen?0.20:vRising&&vRed?-0.20:0)+(rvol<=P.rvolWeak?-0.10:0),-1,1);
-  const momScore=clamp((momBull?0.35:momBear?-0.35:0)+(momBS?0.25:momBrS?-0.25:0),-1,1);
-  const rawScore=(bbScore*0.30+sarScore*0.35+momScore*0.25+volScore*0.10);
-  let dir=0; if(rawScore>0.10)dir=1; else if(rawScore<-0.10)dir=-1;
-  const emaV=ema(cl.slice(-Math.max(n,P.emaLen)),P.emaLen);
-  const vwapOK=dir===1?close>emaV:dir===-1?close<emaV:false;
-  const wa=bb.wa;
-  let compressionPresent=true;
-  if(wa.length>=P.bbCompressLen){
-    for(let i=0;i<P.bbCompressLen;i++){
-      const w=wa[wa.length-1-i],avg=sma(wa.slice(0,wa.length-i),P.bbWidthLen);
-      if(isNaN(avg)||w>=avg){compressionPresent=false;break;}
+// ═══════════════════════════════════════════════════════════════════
+// SCAN LOOP
+// ═══════════════════════════════════════════════════════════════════
+async function runScan() {
+  if (!getKey()) { setStatus("⚠ Enter Polygon.io API key first", "yellow"); return; }
+  if (scanning) return;
+  scanning = true; scanAbort = false;
+  scanResults = [];
+  document.getElementById('scanPulse').className = "pulse green";
+  document.getElementById('scannerBody').innerHTML = '<tr><td colspan="10" class="empty-state"><span class="spinner"></span> Scanning…</td></tr>';
+
+  const total = TICKERS.length;
+  for (let t = 0; t < total; t++) {
+    if (scanAbort) break;
+    const ticker = TICKERS[t];
+    setStatus(`Fetching ${ticker} (${t+1}/${total})…`, "green");
+    document.getElementById('scanProgress').textContent = `${Math.round((t/total)*100)}%`;
+    try {
+      const candles = await fetchCandles(ticker, 'minute', 15, 10);
+      if (candles.length >= 30) {
+        const result = computeEngine(candles);
+        if (result) {
+          scanResults.push({ ticker, ...result, candles });
+        }
+      }
+    } catch(e) {
+      console.warn(ticker, e.message);
     }
-  }else{compressionPresent=false;}
-  let expansionPresent=!isNaN(bb.widthAvg)&&bb.width>bb.widthAvg;
-  if(expansionPresent&&P.bbExpandMinBars>1){
-    for(let i=0;i<Math.min(P.bbExpandMinBars,wa.length-1);i++){
-      if(wa[wa.length-1-i]<=wa[wa.length-2-i]){expansionPresent=false;break;}
-    }
+    // small delay to respect rate limits
+    await new Promise(r => setTimeout(r, 80));
   }
-  const wb=P.bbWeakenBars,w0=bb.width,w1=wa[wa.length-2]??w0,wN=wa[wa.length-1-wb]??w0,w2N=wa[wa.length-1-wb*2]??wN;
-  const expansionWeakening=w0<=w1||(w0-wN)<(wN-w2N);
-  const expansionDead=!isNaN(bb.widthAvg)&&bb.width<bb.widthAvg&&bb.width<(wa[wa.length-2]??bb.width+0.001);
-  const midlineHeld=dir===1?(close>bb.basis&&(bb.crossBull||close>close1)):dir===-1?(close<bb.basis&&(bb.crossBear||close<close1)):false;
-  const midlineLost=dir===1?close<bb.basis:dir===-1?close>bb.basis:false;
-  const sarAligned=dir===1?sarBull:dir===-1?!sarBull:false;
-  const sarDisagreed=dir===1?!sarBull:dir===-1?sarBull:false;
-  const sarLost=dir===1?sarFlipBear:dir===-1?sarFlipBull:false;
-  const volConfirmed=dir===1?((rvol>=P.rvolHot&&vGreen)||(vRising&&vGreen)):dir===-1?((rvol>=P.rvolHot&&vRed)||(vRising&&vRed)):false;
-  const volFadingDir=dir===1?(vFading&&vGreen)||!vGreen:dir===-1?(vFading&&vRed)||!vRed:false;
-  const prevDir=prevDirs[tf]??0;
-  const dirFlipped=dir!==prevDir;
-  prevDirs[tf]=dir;
-  let state=smStates[tf]??0;
-  if(dir===0||dirFlipped)state=0;
-  else if(state===0){if(compressionPresent)state=1;}
-  else if(state===1){if(expansionPresent)state=2;else if(!compressionPresent&&!expansionPresent)state=0;}
-  else if(state===2){if(expansionDead)state=7;else if(midlineHeld&&vwapOK)state=3;else if(expansionWeakening)state=6;}
-  else if(state===3){if(midlineLost||expansionDead)state=7;else if(sarAligned&&vwapOK)state=4;else if(sarDisagreed||expansionWeakening)state=6;}
-  else if(state===4){if(midlineLost||sarLost||expansionDead)state=7;else if(volConfirmed)state=5;else if(volFadingDir||expansionWeakening)state=6;}
-  else if(state===5){if(midlineLost||sarLost||expansionDead)state=7;else if(expansionWeakening||sarDisagreed||volFadingDir)state=6;}
-  else if(state===6){if(midlineLost||sarLost||expansionDead)state=7;else if(sarAligned&&volConfirmed&&!expansionWeakening)state=5;else if(!expansionPresent&&!compressionPresent)state=0;}
-  else if(state===7){if(compressionPresent&&!expansionPresent)state=1;else if(dir===0)state=0;}
-  smStates[tf]=state;
-  const sn=['Idle','Compressing','Expanding','Midline','Confirmed','ACTIVE','Caution','Get Off'];
-  const action=state===5?(dir===1?'B2O':'S2O'):state===6?'Caution':state===7?'Get Off':'Wait';
-  const scalpScore=clamp(bbScore*0.25+sarScore*0.25+momScore*0.20+volScore*0.15,-1,1);
-  const intradayScore=clamp(bbScore*0.22+sarScore*0.22+momScore*0.18+volScore*0.13,-1,1);
-  const swingScore=clamp(rawScore*0.40+bbScore*0.18+sarScore*0.14+volScore*0.14,-1,1);
-  const sig=(s,t)=>s>t?'Get On':s<-t?'Get Off':'Wait';
-  return{close,atr:atrV,dir,state,stateName:sn[state],action,bb,sarBull,vol:{rvol,volGreen:vGreen,volRed:vRed,volRising:vRising,volFading:vFading},bbScore,sarScore,volScore,momScore,scalpScore,intradayScore,swingScore,scalpSig:sig(scalpScore,P.scalpTrigger),intradaySig:sig(intradayScore,P.intradayTrigger),swingSig:sig(swingScore,P.swingTrigger)};
+
+  scanning = false;
+  document.getElementById('scanPulse').className = "pulse";
+  document.getElementById('scanProgress').textContent = '';
+  document.getElementById('lastScan').textContent = "Last scan: " + new Date().toLocaleTimeString();
+  setStatus(`Scan complete — ${scanResults.length} tickers loaded`, "");
+  renderScanner();
 }
 
-async function fetchCandles(ticker,mult,span,key,limit=150){
-  const to=new Date(),from=new Date(to-5*24*60*60*1000);
-  const fmt=d=>d.toISOString().split('T')[0];
-  const url=`https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${mult}/${span}/${fmt(from)}/${fmt(to)}?adjusted=true&sort=asc&limit=${limit}&apiKey=${key}`;
-  const res=await fetch(url);
-  if(!res.ok)throw new Error(`Polygon ${res.status}`);
-  const data=await res.json();
-  if(!data.results||!data.results.length)throw new Error('No data from Polygon');
-  return data.results.map(r=>({o:r.o,h:r.h,l:r.l,c:r.c,v:r.v,t:r.t}));
+function stopScan() {
+  scanAbort = true;
+  scanning  = false;
+  document.getElementById('scanPulse').className = "pulse";
+  setStatus("Scan stopped", "");
 }
 
-function setCell(id,text,cls){const el=document.getElementById(id);if(!el)return;el.textContent=text;el.className=cls||'';}
-function fmtP(v){return typeof v==='number'?v.toFixed(2):'—';}
-function fmtPct(v){return typeof v==='number'?v.toFixed(1)+'%':'—';}
-function fmtN(v,d=3){return typeof v==='number'?v.toFixed(d):'—';}
+function setStatus(msg, pulse) {
+  document.getElementById('scanStatus').textContent = msg;
+  const p = document.getElementById('scanPulse');
+  if (pulse) p.className = "pulse " + pulse;
+}
 
-function actionClass(a){return a==='B2O'?'b2o':a==='S2O'?'s2o':a==='Caution'?'caut':a==='Get Off'?'off':'';}
-function dirCol(d){return d==='North'?'c-lime':d==='South'?'c-red':'c-gray';}
-function stateCol(s){return['c-gray','c-yellow','c-orange','c-blue','c-teal','c-lime','c-orange','c-red'][s]||'c-gray';}
-function sigCol(s){return s==='Wait'?'c-orange':'c-lime';}
-function sigDisp(s){return s==='Wait'?'Wait':'Get On';}
+// ═══════════════════════════════════════════════════════════════════
+// RENDER SCANNER TABLE
+// ═══════════════════════════════════════════════════════════════════
+function legendChip(green, yellow) {
+  const cls = green ? "g" : yellow ? "y" : "r";
+  return `<span class="chip ${cls}"></span>`;
+}
 
-function renderSMSteps(state){
-  const steps=[{id:1,lbl:'Compress'},{id:2,lbl:'Expand'},{id:3,lbl:'Midline'},{id:4,lbl:'SAR'},{id:5,lbl:'Volume'},{id:6,lbl:'⚠Caution'},{id:7,lbl:'✕ Off'}];
-  const c=document.getElementById('smSteps');
-  c.innerHTML='';
-  steps.forEach(s=>{
-    let dc='';
-    if(state===6&&s.id===6)dc='caution';
-    else if(state===7&&s.id===7)dc='getoff';
-    else if(state===s.id)dc='active';
-    else if(state>s.id&&s.id<=5)dc='passed';
-    const d=document.createElement('div');
-    d.className='sm-node';
-    d.innerHTML=`<div class="sm-dot ${dc}">${s.id<=5?s.id:s.id===6?'⚠':'✕'}</div><div class="sm-lbl">${s.lbl}</div>`;
-    c.appendChild(d);
+function actionBadge(action, lastSig, activeDir) {
+  let bg = "#333", color = "#fff", label = action;
+  if (lastSig === "B2O" || (action === "Get On" && activeDir === 1))  { bg="#1565c0"; label="B2O"; }
+  else if (lastSig === "S2O" || (action === "Get On" && activeDir===-1)) { bg="#b71c1c"; label="S2O"; }
+  else if (action === "Get Off") { bg="#4a148c"; label="Get Off"; }
+  else { bg="#333"; color="#888"; label="Wait"; }
+  return `<span class="action-badge" style="background:${bg};color:${color}">${label}</span>`;
+}
+
+function scoreColor(score) {
+  if (score >= 80) return { bg: "#1b5e20", txt: "#00e676", bar: "#00e676" };
+  if (score >= 60) return { bg: "#4a3800", txt: "#ffd600", bar: "#ffd600" };
+  return { bg: "#3b0000", txt: "#ef5350", bar: "#ef5350" };
+}
+
+function dirText(d)  { return d === 1 ? "↑ North" : d === -1 ? "↓ South" : "— Balance"; }
+function dirStyle(d) { return d === 1 ? "color:#00e676" : d === -1 ? "color:#ef5350" : "color:#666"; }
+
+function renderScanner() {
+  const filter  = document.getElementById('filterSelect').value;
+  const body    = document.getElementById('scannerBody');
+
+  let data = [...scanResults];
+
+  // filter
+  data = data.filter(r => {
+    if (filter === "all")     return true;
+    if (filter === "b2o")     return r.lastSig === "B2O" || (r.action==="Get On" && r.activeDir===1);
+    if (filter === "s2o")     return r.lastSig === "S2O" || (r.action==="Get On" && r.activeDir===-1);
+    if (filter === "geton")   return r.action === "Get On";
+    if (filter === "getoff")  return r.action === "Get Off";
+    if (filter === "wait")    return r.action === "Wait";
+    if (filter === "score80") return r.signalScore >= 80;
+    if (filter === "score60") return r.signalScore >= 60;
+    return true;
   });
-  const badge=document.getElementById('smStateBadge');
-  const names=['Idle','Compressing','Expanding','Midline','Confirmed','ACTIVE','Caution','Get Off'];
-  badge.textContent=names[state]??'Idle';
-}
 
-function updateTFCard(pfx,r){
-  if(!r)return;
-  const b=document.getElementById('badge'+pfx);
-  const ac=actionClass(r.action);
-  b.textContent=r.action;
-  b.className='tf-badge'+(ac?' '+ac:'');
-  setCell('s'+pfx+'_state',r.stateName,stateCol(r.state));
-  setCell('s'+pfx+'_bbw',fmtN(r.bb.width,5),r.bb.expanding?'c-lime':r.bb.squeezing?'c-yellow':'c-white');
-  setCell('s'+pfx+'_sar',r.sarBull?'Bull':'Bear',r.sarBull?'c-lime':'c-red');
-  setCell('s'+pfx+'_rvol',fmtN(r.vol.rvol,2)+'x',r.vol.rvol>=P.rvolHot?'c-lime':r.vol.rvol<=P.rvolWeak?'c-red':'c-white');
-  setCell('s'+pfx+'_score',fmtN(Math.max(r.scalpScore,r.intradayScore),3),'c-white');
-}
-
-function addLog(tf,msg,type){
-  const body=document.getElementById('logBody');
-  const now=new Date().toTimeString().slice(0,8);
-  const d=document.createElement('div');
-  d.className='log-entry';
-  d.innerHTML=`<span class="log-t">${now}</span><span class="log-tf">${tf}</span><span class="log-m ${type||''}">${msg}</span>`;
-  body.insertBefore(d,body.firstChild);
-  while(body.children.length>60)body.removeChild(body.lastChild);
-}
-
-function clearLog(){document.getElementById('logBody').innerHTML='';}
-
-async function runUpdate(){
-  const ticker=document.getElementById('tickerInput').value.trim().toUpperCase();
-  const apiKey=document.getElementById('apiKeyInput').value.trim();
-  if(!ticker||!apiKey)return;
-  const dot=document.getElementById('statusDot');
-  try{
-    const[c1,c5,c15]=await Promise.all([
-      fetchCandles(ticker,1,'minute',apiKey),
-      fetchCandles(ticker,5,'minute',apiKey),
-      fetchCandles(ticker,15,'minute',apiKey),
-    ]);
-    const r1=runStateMachine('1',c1);
-    const r5=runStateMachine('5',c5);
-    const r15=runStateMachine('15',c15);
-    if(!r15)return;
-    const price=r1?r1.close:r15.close;
-    updateTFCard('1m',r1);
-    updateTFCard('5m',r5);
-    updateTFCard('15m',r15);
-    const p=r15,dir=p.dir;
-    const dirText=dir===1?'North':dir===-1?'South':'Balance';
-    const atrV=p.atr;
-    const stop1=dir===1?price-atrV*0.5:price+atrV*0.5;
-    const stop2=dir===1?price-atrV*1.0:price+atrV*1.0;
-    const station=dir===1?price+atrV*1.618:price-atrV*1.618;
-    const dist=Math.abs(station-price);
-    const distPct=price>0?dist/price*100:0;
-    const sLow=Math.min(...c15.map(c=>c.l)),sHigh=Math.max(...c15.map(c=>c.h));
-    let arr=NaN;
-    if(dir===1&&station>sLow)arr=clamp(((price-sLow)/(station-sLow))*100,0,100);
-    else if(dir===-1&&station<sHigh)arr=clamp(((sHigh-price)/(sHigh-station))*100,0,100);
-    const smTrust=[0,20,45,60,75,90,35,5][p.state]??20;
-    const flowOK=dir===1?price>p.bb.basis:dir===-1?price<p.bb.basis:false;
-    const engTemp=clamp(Math.abs(p.bbScore+p.sarScore)/2*100,0,100);
-    const arrT=isNaN(arr)?50:arr;
-    let cert=dir===0?0:clamp(engTemp*0.40+smTrust*0.25+arrT*0.20+(flowOK?80:40)*0.15,0,100);
-
-    // Hero
-    const hero=document.getElementById('actionHero');
-    const ac=actionClass(p.action);
-    hero.className='action-hero'+(ac?' '+ac:'');
-    document.getElementById('heroAction').textContent=p.action==='Wait'?'—':p.action;
-    document.getElementById('heroState').textContent=p.stateName;
-    document.getElementById('heroTicker').textContent=ticker;
-    document.getElementById('heroPrice').textContent=fmtP(price);
-    const dEl=document.getElementById('heroDir');
-    dEl.textContent=dirText;
-    dEl.className=dirCol(dirText);
-
-    // Certainty bar
-    document.getElementById('certVal').textContent=fmtPct(cert);
-    document.getElementById('certVal').className='cert-val '+(cert>=75?'c-lime':cert>=50?'c-blue':cert>=25?'c-orange':'c-red');
-    const bar=document.getElementById('certBar');
-    bar.style.width=cert+'%';
-    bar.style.background=cert>=75?'var(--lime)':cert>=50?'var(--blue)':cert>=25?'var(--orange)':'var(--red)';
-
-    // Table
-    setCell('dStop1',fmtP(stop1),dirCol(dirText));
-    setCell('dStop2',fmtP(stop2),dirCol(dirText));
-    setCell('dStation',fmtP(station),dirCol(dirText));
-    setCell('dDist',fmtP(dist)+' ('+distPct.toFixed(2)+'%)','c-white');
-    setCell('dArrive',isNaN(arr)?'—':fmtPct(arr),arr>=75?'c-lime':arr>=50?'c-blue':arr>=25?'c-orange':'c-white');
-    setCell('dDir',dirText,dirCol(dirText));
-    setCell('dScalp',sigDisp(p.scalpSig),sigCol(p.scalpSig));
-    setCell('dIntraday',sigDisp(p.intradaySig),sigCol(p.intradaySig));
-    setCell('dSwing',sigDisp(p.swingSig),sigCol(p.swingSig));
-    setCell('dRvol',fmtN(p.vol.rvol,2)+'x',p.vol.rvol>=P.rvolHot?'c-lime':p.vol.rvol<=P.rvolWeak?'c-red':'c-white');
-
-    renderSMSteps(p.state);
-    document.getElementById('lastUpdate').textContent=new Date().toTimeString().slice(0,8);
-
-    if(p.action!==lastAction){
-      addLog('15m',`${p.action} — ${p.stateName} | ${dirText} | ${fmtPct(cert)}`,actionClass(p.action));
-      lastAction=p.action;
+  // sort
+  data.sort((a, b) => {
+    const { col, dir } = sortState;
+    let va, vb;
+    if (col === "score")  { va=a.signalScore; vb=b.signalScore; }
+    else if (col==="price")  { va=a.close; vb=b.close; }
+    else if (col==="ticker") { va=a.ticker; vb=b.ticker; }
+    else if (col==="dir")    { va=a.dir; vb=b.dir; }
+    else if (col==="edge")   { va=a.edgePct; vb=b.edgePct; }
+    else if (col==="action") {
+      const rank = s => s==="Get On"?0:s==="Get Off"?1:2;
+      va=rank(a.action); vb=rank(b.action);
     }
-    dot.className='status-dot live';
-  }catch(err){
-    dot.className='status-dot error';
-    addLog('ERR',err.message,'off');
+    else { va=a.signalScore; vb=b.signalScore; }
+    if (typeof va === "string") return dir==="asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+    return dir === "asc" ? va - vb : vb - va;
+  });
+
+  document.getElementById('countLabel').textContent = `${data.length} tickers`;
+
+  if (!data.length) {
+    body.innerHTML = '<tr><td colspan="10" class="empty-state">No results match the current filter</td></tr>';
+    return;
+  }
+
+  body.innerHTML = data.map(r => {
+    const sc   = scoreColor(r.signalScore);
+    const sel  = r.ticker === selectedTicker ? " selected" : "";
+    return `<tr class="${sel}" onclick="selectTicker('${r.ticker}')">
+      <td class="ticker-cell">${r.ticker}</td>
+      <td class="price-cell">$${r.close.toFixed(2)}</td>
+      <td style="${dirStyle(r.dir)}">${dirText(r.dir)}</td>
+      <td>${legendChip(r.wyGreen, r.wyYellow)}${r.wyckoffText}</td>
+      <td>${legendChip(r.livGreen, r.livYellow)}${r.livText}</td>
+      <td>${r.edgePct.toFixed(1)}%</td>
+      <td style="color:${r.riskText==="Low"?"#00e676":r.riskText==="Medium"?"#ffd600":"#ef5350"}">${r.riskText}</td>
+      <td>${legendChip(r.seykotaGreen, r.seykotaYellow)}${r.seykotaText}</td>
+      <td>
+        <div class="score-wrap">
+          <span style="color:${sc.txt};font-weight:700;min-width:32px">${r.signalScore}</span>
+          <div class="score-mini-bar"><div class="score-mini-fill" style="width:${r.signalScore}%;background:${sc.bar}"></div></div>
+        </div>
+      </td>
+      <td>${actionBadge(r.action, r.lastSig, r.activeDir)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SORT / FILTER
+// ═══════════════════════════════════════════════════════════════════
+function sortBy(col) {
+  if (sortState.col === col) sortState.dir = sortState.dir === 'desc' ? 'asc' : 'desc';
+  else { sortState.col = col; sortState.dir = 'desc'; }
+  document.querySelectorAll('table.scanner thead th').forEach(th => th.classList.remove('sort-asc','sort-desc'));
+  const cols = ['ticker','price','dir','cycle','trend','edge','risk','momentum','score','action'];
+  const idx  = cols.indexOf(col);
+  if (idx >= 0) {
+    const ths = document.querySelectorAll('table.scanner thead th');
+    ths[idx].classList.add(sortState.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+  }
+  renderScanner();
+}
+function applySortUI() {
+  const v = document.getElementById('sortSelect').value;
+  if (v==='score-desc') { sortState={col:'score',dir:'desc'}; }
+  else if (v==='score-asc')  { sortState={col:'score',dir:'asc'}; }
+  else if (v==='action')     { sortState={col:'action',dir:'asc'}; }
+  else if (v==='ticker')     { sortState={col:'ticker',dir:'asc'}; }
+  renderScanner();
+}
+function applyFilter() { renderScanner(); }
+
+// ═══════════════════════════════════════════════════════════════════
+// SELECT TICKER → DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+function selectTicker(ticker) {
+  selectedTicker = ticker;
+  const r = scanResults.find(x => x.ticker === ticker);
+  if (!r) return;
+
+  // highlight row
+  document.querySelectorAll('table.scanner tbody tr').forEach(tr => tr.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+
+  // switch to dashboard tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-dashboard').classList.add('active');
+  document.getElementById('panel-dashboard').classList.add('active');
+
+  populateDashboard(r);
+  drawChart(r);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// POPULATE DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+function fmt2(v) { return isNaN(v)||v===null ? "—" : v.toFixed(2); }
+function fmtPrice(v) { return v === null || isNaN(v) ? "—" : "$" + v.toFixed(2); }
+
+function legendClasses(green, yellow) {
+  if (green)  return "val bg-green txt-white";
+  if (yellow) return "val bg-yellow txt-black";
+  return "val bg-red txt-white";
+}
+function simonsCls(e) { return e>=75?"val bg-green txt-white":e>=55?"val bg-yellow txt-black":"val bg-red txt-white"; }
+function dennisCls(r) { return r==="Low"?"val bg-green txt-white":r==="Medium"?"val bg-yellow txt-black":"val bg-red txt-white"; }
+function scoreCls(s)  { return s>=80?{bg:"#1b5e20",txt:"#00e676",bar:"#00e676"}:s>=60?{bg:"#4a3800",txt:"#ffd600",bar:"#ffd600"}:{bg:"#b71c1c",txt:"#ef5350",bar:"#ef5350"}; }
+
+function setDCell(id, text, cls) {
+  const el = document.getElementById(id);
+  el.className = cls;
+  el.textContent = text;
+}
+
+function populateDashboard(r) {
+  document.getElementById('dashEmpty').style.display = "none";
+  document.getElementById('dashContent').style.display = "block";
+  document.getElementById('dashTicker').textContent = r.ticker;
+  document.getElementById('chartLabel').textContent = r.ticker + " — Price Chart (15m, last 50 bars)";
+
+  const dirTxt  = r.dir ===  1 ? "North" : r.dir === -1 ? "South" : "Balance";
+  const dirCls  = r.dir ===  1 ? "val bg-dark txt-north" : r.dir === -1 ? "val bg-dark txt-south" : "val bg-dark txt-bal";
+
+  setDCell("d-price",    "$" + r.close.toFixed(2), "val bg-dark txt-white");
+  const staTxt = r.stationPrice ? fmtPrice(r.stationPrice) + " / " + (r.stationDistPct ? r.stationDistPct.toFixed(2)+"%" : "—") : "—";
+  setDCell("d-station",  staTxt, dirCls);
+  setDCell("d-direction", dirTxt, dirCls);
+  setDCell("d-cycle",    r.wyckoffText, legendClasses(r.wyGreen, r.wyYellow));
+  setDCell("d-trend",    r.livText,     legendClasses(r.livGreen, r.livYellow));
+  setDCell("d-edge",     r.edgePct.toFixed(1)+"%", simonsCls(r.edgePct));
+  setDCell("d-risk",     r.riskText + (r.atrPct ? " " + r.atrPct.toFixed(2)+"%" : ""), dennisCls(r.riskText));
+  setDCell("d-momentum", r.seykotaText, legendClasses(r.seykotaGreen, r.seykotaYellow));
+
+  // Signal Score bar
+  const sc = scoreCls(r.signalScore);
+  const scoreCell = document.getElementById("d-score");
+  scoreCell.className = "val dscore-cell";
+  scoreCell.style.background = sc.bg;
+  document.getElementById("d-score-bar").style.cssText = `width:${r.signalScore}%;background:${sc.bar}`;
+  const stxt = document.getElementById("d-score-txt");
+  stxt.textContent = r.signalScore + " / 100";
+  stxt.style.color = sc.txt;
+
+  setDCell("d-entry", r.entryPrice ? fmtPrice(r.entryPrice) : "—", "val bg-dark txt-white");
+
+  const t1txt = r.activeT1 ? fmtPrice(r.activeT1) + " (" + fmt2(r.rr1) + "R)" : "—";
+  const t1cls = r.rr1 ? r.rr1>=1?"val bg-dark txt-lime":r.rr1>=0.5?"val bg-dark txt-yellow":"val bg-dark txt-red" : "val bg-dark txt-gray";
+  setDCell("d-t1", t1txt, t1cls);
+
+  const t2txt = r.activeT2 ? fmtPrice(r.activeT2) + " (" + fmt2(r.rr2) + "R)" : "—";
+  const t2cls = r.rr2 ? r.rr2>=2?"val bg-dark txt-lime":r.rr2>=1?"val bg-dark txt-yellow":"val bg-dark txt-red" : "val bg-dark txt-gray";
+  setDCell("d-t2", t2txt, t2cls);
+
+  // Action row
+  let actBg = "#333", actTxt = "#888", actLabel = "Wait";
+  if (r.lastSig==="B2O"||(r.action==="Get On"&&r.activeDir===1))  { actBg="#1565c0"; actTxt="#fff"; actLabel="B2O / Hold"; }
+  else if (r.lastSig==="S2O"||(r.action==="Get On"&&r.activeDir===-1)) { actBg="#b71c1c"; actTxt="#fff"; actLabel="S2O / Hold"; }
+  else if (r.action==="Get Off") { actBg="#4a148c"; actTxt="#fff"; actLabel="Get Off"; }
+  const actEl = document.getElementById("d-action");
+  actEl.className = "val";
+  actEl.style.background = actBg;
+  actEl.style.color = actTxt;
+  actEl.textContent = actLabel;
+  const actLbl = document.getElementById("d-action-lbl");
+  actLbl.style.background = actBg;
+  actLbl.style.color = actTxt;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MINI CHART (canvas — candlestick + EMA + BB)
+// ═══════════════════════════════════════════════════════════════════
+function drawChart(r) {
+  const canvas = document.getElementById('miniChart');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const pad = { t:12, r:12, b:28, l:52 };
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+
+  const candles = r.candles.slice(-50);
+  const n = candles.length;
+  if (!n) return;
+
+  // Get last 50 indices of indicator arrays
+  const emaSlice  = r.ema21Arr.slice(-50);
+  const bbBSlice  = r.bbBasisArr.slice(-50);
+  const bbUSlice  = r.bbUpperArr.slice(-50);
+  const bbLSlice  = r.bbLowerArr.slice(-50);
+
+  // Price range
+  let pHi = -Infinity, pLo = Infinity;
+  candles.forEach(c => { pHi = Math.max(pHi, c.h); pLo = Math.min(pLo, c.l); });
+  [bbUSlice, bbLSlice].forEach(a => a.forEach(v => { if(!isNaN(v)){pHi=Math.max(pHi,v);pLo=Math.min(pLo,v);} }));
+  const range = pHi - pLo || 1;
+  const py = v => pad.t + (1 - (v - pLo) / range) * ch;
+
+  const bw = Math.max(2, (cw / n) * 0.65);
+  const cx = j => pad.l + (j + 0.5) * (cw / n);
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#0e0e0e";
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const y = pad.t + g * (ch / 4);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
+    const price = pHi - (g / 4) * range;
+    ctx.fillStyle = "#444"; ctx.font = "9px Courier New"; ctx.textAlign = "right";
+    ctx.fillText("$" + price.toFixed(2), pad.l - 4, y + 3);
+  }
+
+  // BB fill
+  ctx.beginPath();
+  for (let j = 0; j < n; j++) { const v = bbUSlice[j]; if (!isNaN(v)) { j===0?ctx.moveTo(cx(j),py(v)):ctx.lineTo(cx(j),py(v)); } }
+  for (let j = n-1; j >= 0; j--) { const v = bbLSlice[j]; if (!isNaN(v)) ctx.lineTo(cx(j),py(v)); }
+  ctx.closePath();
+  ctx.fillStyle = "rgba(33,150,243,0.06)"; ctx.fill();
+
+  // BB lines
+  function drawLine(arr, color, dash=[]) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash(dash);
+    ctx.beginPath(); let started = false;
+    arr.forEach((v,j) => { if(isNaN(v)) return; started ? ctx.lineTo(cx(j),py(v)) : (ctx.moveTo(cx(j),py(v)), started=true); });
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  drawLine(bbUSlice, "rgba(239,83,80,0.5)");
+  drawLine(bbLSlice, "rgba(0,230,118,0.5)");
+  drawLine(bbBSlice, "rgba(33,150,243,0.5)", [3,3]);
+  drawLine(emaSlice, "#ff9800");
+
+  // SAR dots
+  const sarSlice = r.sarArr.slice(-50);
+  sarSlice.forEach((v,j) => {
+    if (isNaN(v)) return;
+    const bull = candles[j].c > v;
+    ctx.beginPath();
+    ctx.arc(cx(j), py(v), 1.5, 0, Math.PI*2);
+    ctx.fillStyle = bull ? "#00e676" : "#ef5350";
+    ctx.fill();
+  });
+
+  // Candles
+  candles.forEach((c, j) => {
+    const bull = c.c >= c.o;
+    const color = bull ? "#00e676" : "#ef5350";
+    const x = cx(j);
+    // wick
+    ctx.strokeStyle = color; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, py(c.h)); ctx.lineTo(x, py(c.l)); ctx.stroke();
+    // body
+    const top = py(Math.max(c.o, c.c)), bot = py(Math.min(c.o, c.c));
+    const ht  = Math.max(1, bot - top);
+    ctx.fillStyle = bull ? "#1b5e20" : "#b71c1c";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.fillRect(x - bw/2, top, bw, ht);
+    ctx.strokeRect(x - bw/2, top, bw, ht);
+  });
+
+  // X-axis time labels
+  ctx.fillStyle = "#444"; ctx.font = "9px Courier New"; ctx.textAlign = "center";
+  const step = Math.floor(n / 5);
+  for (let j = 0; j < n; j += step) {
+    const d = new Date(candles[j].t);
+    const lbl = d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padStart(2,"0");
+    ctx.fillText(lbl, cx(j), H - 8);
   }
 }
-
-function startEngine(){
-  const k=document.getElementById('apiKeyInput').value.trim();
-  const t=document.getElementById('tickerInput').value.trim();
-  if(!k){alert('Enter your Polygon API key.');return;}
-  if(!t){alert('Enter a ticker symbol.');return;}
-  document.getElementById('btnStart').style.display='none';
-  document.getElementById('btnStop').style.display='';
-  smStates={'1':0,'5':0,'15':0};prevDirs={'1':0,'5':0,'15':0};lastAction='';
-  addLog('SYS','Engine started — '+t,'');
-  runUpdate();
-  const ms=parseInt(document.getElementById('refreshSelect').value);
-  intervalId=setInterval(runUpdate,ms);
-}
-
-function stopEngine(){
-  clearInterval(intervalId);intervalId=null;
-  document.getElementById('btnStart').style.display='';
-  document.getElementById('btnStop').style.display='none';
-  document.getElementById('statusDot').className='status-dot';
-  addLog('SYS','Engine stopped.','');
-}
-
-renderSMSteps(-1);
 </script>
 </body>
 </html>
