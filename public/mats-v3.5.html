@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MATS V3.5 — Equal Weight Legendary Engine</title>
+<style>
+:root{
+  --bg:#05080d;--panel:#0d1520;--panel2:#111d2b;--line:#23364a;--text:#eef6ff;--muted:#9fb0c2;
+  --green:#22c55e;--red:#ef4444;--yellow:#facc15;--orange:#fb923c;--blue:#38bdf8;--purple:#a78bfa;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+button,input,select{font-family:inherit}
+.hidden{display:none!important}
+.app{min-height:100vh}
+
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top,#122238,#05080d 60%)}
+.login-card{width:min(480px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 20px 70px rgba(0,0,0,.4)}
+.logo{font-size:28px;font-weight:900;letter-spacing:.5px}
+.subtitle{color:var(--muted);margin:8px 0 18px}
+.input{width:100%;background:#07101a;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:12px}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.role-btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:15px;border-radius:14px;font-weight:800;cursor:pointer}
+.role-btn:hover{border-color:var(--blue)}
+.error{color:var(--red);font-size:13px;margin-top:10px;font-weight:800}
+
+.topbar{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:#07101a;position:sticky;top:0;z-index:10}
+.brand{font-weight:900;font-size:18px}
+.role-pill{color:#001018;background:var(--blue);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900}
+.logout{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
+
+.tabs{display:flex;gap:8px;overflow:auto;padding:10px 12px;border-bottom:1px solid var(--line);background:#08111c;position:sticky;top:58px;z-index:9}
+.tab{white-space:nowrap;background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:9px 14px;cursor:pointer;font-weight:800}
+.tab.active{color:#001018;background:var(--blue);border-color:var(--blue)}
+
+.content{padding:14px;max-width:1400px;margin:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.page-title{font-size:22px;font-weight:900;margin-bottom:4px}
+.status{color:var(--muted);font-size:13px}
+.home-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:13px}
+.metric-label{font-size:12px;color:var(--muted);font-weight:900}
+.metric-value{font-size:22px;font-weight:900;margin-top:6px}
+.metric.goodv .metric-value{color:var(--green)}
+.metric.badv .metric-value{color:var(--red)}
+.metric.warnv .metric-value{color:var(--yellow)}
+
+.scanner-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.subtabs{display:flex;gap:8px;overflow:auto;margin-top:12px}
+.subtab{background:#0b1320;color:var(--muted);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;font-weight:800}
+.subtab.active{background:#13283a;color:var(--text);border-color:var(--blue)}
+
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;margin-top:12px}
+table{border-collapse:collapse;width:100%;min-width:980px}
+th,td{padding:10px 9px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;font-size:13px}
+th{color:var(--muted);background:#0a1320;position:sticky;top:0}
+tr.clickable{cursor:pointer}
+tr.clickable:hover{background:#111c2a}
+
+.badge{display:inline-block;border-radius:999px;padding:4px 8px;font-weight:900;font-size:12px}
+.good{background:rgba(34,197,94,.18);color:var(--green);border:1px solid rgba(34,197,94,.35)}
+.warn{background:rgba(250,204,21,.16);color:var(--yellow);border:1px solid rgba(250,204,21,.35)}
+.bad{background:rgba(239,68,68,.16);color:var(--red);border:1px solid rgba(239,68,68,.35)}
+.blue{background:rgba(56,189,248,.18);color:var(--blue);border:1px solid rgba(56,189,248,.35)}
+.purple{background:rgba(167,139,250,.18);color:var(--purple);border:1px solid rgba(167,139,250,.35)}
+
+.mobile-list{display:none;margin-top:12px}
+.scan-card,.trade-card{border:1px solid var(--line);background:#0b1522;border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer}
+.scan-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.scan-ticker{font-size:22px;font-weight:900}
+.scan-mid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.scan-label{font-size:11px;color:var(--muted);font-weight:800}
+.scan-value{font-size:14px;font-weight:900;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.dashboard-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+.dash-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ticker-big{font-size:28px;font-weight:900}
+.signal-big{font-size:16px;font-weight:900}
+.dash-table td:first-child{color:var(--muted);font-weight:800}
+.dash-table td:last-child{text-align:right;font-weight:900}
+.result-cell{border-radius:10px;padding:6px 8px;display:inline-block;min-width:120px;text-align:center;color:#06110a}
+.result-green{background:var(--green)}
+.result-yellow{background:var(--yellow);color:#161100}
+.result-red{background:var(--red);color:#fff}
+.dash-compact{display:none}
+.compact-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.compact-box{background:#0b1522;border:1px solid var(--line);border-radius:12px;padding:8px;min-height:54px}
+.compact-label{font-size:11px;color:var(--muted);font-weight:900}
+.compact-value{font-size:14px;font-weight:900;margin-top:4px;line-height:1.15}
+.compact-pill{border-radius:10px;padding:7px 8px;text-align:center;color:#071018;font-weight:900;margin-top:4px}
+.action-row{display:flex;gap:10px;margin-top:14px}
+.primary,.danger,.neutral{flex:1;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:900;cursor:pointer}
+.primary{background:var(--green);color:#06110a}
+.danger{background:var(--red);color:white}
+.neutral{background:#1f2937;color:white;border:1px solid var(--line)}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.kpi-label{font-size:12px;color:var(--muted);font-weight:800}
+.kpi-value{font-size:20px;font-weight:900;margin-top:5px}
+.small-note{color:var(--muted);font-size:12px;margin-top:10px;line-height:1.4}
+.empty{color:var(--muted);text-align:center;padding:28px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.save{background:var(--blue);color:#001018;border:0;border-radius:12px;padding:12px;font-weight:900;cursor:pointer}
+
+
+.breakdown{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.break-dot{border-radius:10px;padding:7px 5px;text-align:center;font-weight:900;font-size:11px;border:1px solid var(--line);background:#0b1522}
+.break-dot.on{background:rgba(34,197,94,.22);color:var(--green);border-color:rgba(34,197,94,.45)}
+.break-dot.off{background:rgba(239,68,68,.16);color:var(--red);border-color:rgba(239,68,68,.35)}
+.engine-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.35}
+
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.analytics-box{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.analytics-title{font-size:14px;font-weight:900;margin-bottom:8px}
+.mini-table{width:100%;min-width:0;border-collapse:collapse}
+.mini-table th,.mini-table td{font-size:12px;padding:7px 5px;border-bottom:1px solid rgba(255,255,255,.08)}
+.mini-table th{color:var(--muted);text-align:left;background:transparent}
+.mini-table td{text-align:left}
+
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 8px}
+.section-title{font-weight:900;font-size:16px}
+.divider{height:1px;background:var(--line);margin:14px 0}
+
+@media(max-width:900px){
+  .dashboard-grid{grid-template-columns:1fr}
+  .role-grid{grid-template-columns:1fr}
+  .home-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:700px){
+  .topbar{height:54px;padding:0 14px}
+  .brand{font-size:24px}
+  .role-pill{font-size:15px;padding:7px 12px}
+  .logout{padding:8px 12px;font-size:14px;border-radius:14px}
+  .tabs{top:54px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;overflow:hidden;padding:8px 8px}
+  .tab{padding:8px 2px;font-size:11px;border-radius:999px;text-align:center;overflow:hidden;text-overflow:ellipsis}
+  .content{padding:10px}
+  .card{padding:10px;border-radius:14px}
+  .scanner-title{font-size:22px}
+  .scanner-desc{display:none}
+  .subtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;overflow:hidden;margin-top:10px}
+  .subtab{padding:9px 5px;font-size:12px;border-radius:12px;text-align:center;white-space:nowrap}
+  .table-wrap.scanner-table,.table-wrap.trade-table{display:none}
+  .mobile-list{display:block}
+  .ticker-big{font-size:26px}
+  .signal-big{font-size:13px;padding:4px 8px}
+  .dash-table-wrap{display:none}
+  .dash-compact{display:block}
+  .dashboard-grid{gap:8px}
+  .live-panel{display:none}
+  .action-row{gap:8px;margin-top:10px}
+  .primary,.danger,.neutral{padding:12px;font-size:18px;border-radius:14px}
+  .settings-grid{grid-template-columns:1fr}
+  .home-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .analytics-grid{grid-template-columns:1fr;gap:8px}
+  .metric{padding:10px}
+  .metric-value{font-size:18px}
+}
+@media(max-width:430px){
+  .brand{font-size:22px}
+  .tab{font-size:10px;padding:8px 1px}
+  .scan-ticker{font-size:20px}
+  .scan-value{font-size:13px}
+  .ticker-big{font-size:24px}
+  .compact-grid{gap:6px}
+  .compact-box{padding:7px;min-height:50px}
+  .compact-label{font-size:10px}
+  .compact-value{font-size:13px}
+  .compact-pill{font-size:13px;padding:6px}
+}
+</style>
+</head>
+<body>
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="logo">MATS V3.5</div>
+    <div class="subtitle">Mongol Auto Trading System — Equal Weight Legendary Engine</div>
+    <label class="status">Password</label>
+    <input id="passwordInput" class="input" type="password" placeholder="Enter password" />
+    <div class="role-grid">
+      <button class="role-btn" onclick="login('Admin')">Admin Login</button>
+      <button class="role-btn" onclick="login('Trader')">Trader Login</button>
+      <button class="role-btn" onclick="login('Trial User')">Trial User Login</button>
+      <button class="role-btn" onclick="login('Automation')">Automation Login</button>
+    </div>
+    <div id="loginError" class="error hidden">Wrong password.</div>
+    <div class="small-note">Prototype passwords: Admin = mats2026. Users = mongol2026.</div>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <div class="topbar">
+    <div><span class="brand">MATS V3.5</span> <span id="rolePill" class="role-pill"></span></div>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-page="home" onclick="showPage('home')">Home</button>
+    <button class="tab" data-page="scanner" onclick="showPage('scanner')">Scanner</button>
+    <button class="tab" data-page="dashboard" onclick="showPage('dashboard')">Dash</button>
+    <button class="tab" data-page="tradelog" onclick="showPage('tradelog')">Log</button>
+    <button class="tab" data-page="settings" onclick="showPage('settings')">Settings</button>
+  </div>
+
+  <main class="content">
+    <section id="home" class="page">
+      <div class="card">
+        <div class="page-title">Home</div>
+        <div class="status">Trade intelligence, performance metrics, and setup analysis.</div>
+        <div id="homeMetrics" class="home-grid" style="margin-top:12px"></div>
+        <div class="engine-note">V3.5 scoring is locked at equal weights: Smart Money 20 + Trend 20 + Edge 20 + Risk/Reward 20 + Momentum 20. Scanner shows 60+ only.</div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div class="section-title">Trade Intelligence</div>
+          <span class="status">Closed trades only</span>
+        </div>
+        <div class="analytics-grid">
+          <div class="analytics-box">
+            <div class="analytics-title">Signal Performance</div>
+            <div id="signalAnalytics"></div>
+          </div>
+          <div class="analytics-box">
+            <div class="analytics-title">Legendary Buckets</div>
+            <div id="legendAnalytics"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="scanner" class="page hidden">
+      <div class="card">
+        <div class="scanner-head">
+          <div>
+            <b class="scanner-title">Legendary Scanner</b>
+            <div class="status scanner-desc">Runs when a universe tab is opened. Live data preferred; 30-sec fallback.</div>
+          </div>
+          <div id="scanStatus" class="status">Ready</div>
+        </div>
+
+        <div class="subtabs">
+          <button class="subtab active" onclick="openUniverse('sp500')">S&P 500</button>
+          <button class="subtab" onclick="openUniverse('nasdaq')">NASDAQ</button>
+          <button class="subtab" onclick="openUniverse('russell')">RUSSELL</button>
+        </div>
+
+        <div class="table-wrap scanner-table">
+          <table>
+            <thead><tr><th>Ticker</th><th>Signal</th><th>Score</th><th>Smart Money</th><th>Trend</th><th>Edge</th><th>Risk/Reward</th><th>Momentum</th><th>Action</th></tr></thead>
+            <tbody id="scannerBody"></tbody>
+          </table>
+        </div>
+        <div id="scannerCards" class="mobile-list"></div>
+      </div>
+    </section>
+
+    <section id="dashboard" class="page hidden">
+      <div id="dashboardEmpty" class="card empty">Tap a scanner result or open trade to view dashboard.</div>
+      <div id="dashboardContent" class="hidden dashboard-grid">
+        <div class="card">
+          <div class="dash-title">
+            <div>
+              <div id="dashTicker" class="ticker-big">—</div>
+              <div id="dashSub" class="status">Legendary Dashboard</div>
+            </div>
+            <div id="dashSignal" class="signal-big badge blue">—</div>
+          </div>
+          <div class="table-wrap dash-table-wrap"><table class="dash-table"><tbody id="dashTable"></tbody></table></div>
+          <div id="dashCompact" class="dash-compact"></div>
+          <div class="action-row">
+            <button id="passBtn" class="danger" onclick="passTrade()">Pass</button>
+            <button id="acceptExitBtn" class="primary" onclick="acceptOrExitTrade()">Accept</button>
+          </div>
+        </div>
+
+        <div class="card live-panel">
+          <b>Live Data Panel</b>
+          <div class="kpi-grid" id="kpis"></div>
+          <div class="small-note">Prototype values use Polygon where available and mock Legendary calculations until the full V9.9K-3 JS engine is ported.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tradelog" class="page hidden">
+      <div class="card">
+        <div class="section-head"><div class="section-title">Open Trades</div><span class="status">Tap to open dashboard and exit</span></div>
+        <div class="table-wrap trade-table">
+          <table><thead><tr><th>Ticker</th><th>Signal</th><th>Entry</th><th>Entry Time</th><th>Score</th><th>Status</th></tr></thead><tbody id="openTradeBody"></tbody></table>
+        </div>
+        <div id="openTradeCards" class="mobile-list"></div>
+
+        <div class="divider"></div>
+
+        <div class="section-head"><div class="section-title">Closed Trades</div><span class="status">Completed records</span></div>
+        <div class="table-wrap trade-table">
+          <table><thead><tr><th>Ticker</th><th>Signal</th><th>Entry</th><th>Exit</th><th>P/L %</th><th>Duration</th><th>Score</th></tr></thead><tbody id="closedTradeBody"></tbody></table>
+        </div>
+        <div id="closedTradeCards" class="mobile-list"></div>
+      </div>
+    </section>
+
+    <section id="settings" class="page hidden">
+      <div class="card">
+        <b>Prototype Settings</b>
+        <div class="settings-grid" style="margin-top:12px">
+          <div><label class="status">Polygon API Key</label><input id="apiKeyInput" class="input" placeholder="Paste Polygon key for local/private testing" /></div>
+          <div><label class="status">Refresh Fallback</label><select id="refreshSelect" class="input"><option value="30000">30 seconds</option><option value="60000">60 seconds</option><option value="300000">5 minutes</option></select></div>
+          <div><label class="status">Minimum Legendary Score</label><input id="minScoreInput" class="input" value="60" readonly /></div>
+        </div>
+        <button class="save" style="margin-top:12px" onclick="saveSettings()">Save Settings</button>
+        <div class="small-note">Do not publish a live key in a public GitHub repo. For production, move keys to a backend or Netlify Function.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const DEFAULT_POLYGON_API_KEY = "PASTE_POLYGON_API_KEY_HERE";
+const ADMIN_PASSWORD = "mats2026";
+const USER_PASSWORD = "mongol2026";
+const LEGENDARY_MIN_SCORE = 60;
+const LEGENDARY_WEIGHTS = {
+  smartMoney: 20,
+  trend: 20,
+  edge: 20,
+  riskReward: 20,
+  momentum: 20
+};
+
+let POLYGON_API_KEY = localStorage.getItem('polygonKey') || DEFAULT_POLYGON_API_KEY;
+let fallbackMs = Number(localStorage.getItem('refreshMs') || 30000);
+let currentRole = null, currentUniverse = 'sp500', selected = null, selectedTradeId = null, refreshTimer = null;
+let scannerRows = [];
+let tradeLog = JSON.parse(localStorage.getItem('matsTradeLog') || '[]');
+
+const universes = {
+  sp500:['NVDA','MSFT','AAPL','AMZN','META','GOOGL','AVGO','TSLA','JPM','WMT','LLY','ORCL','V','MA','NFLX','XOM','COST','HD','PG','JNJ','BAC','PLTR','AMD','CRM','ABBV','KO','PEP','CSCO','CVX','WFC','MCD','IBM','GE','ABT','PM','TMO','GS','MRK','RTX','CAT','AXP','NOW','ISRG','QCOM','DIS','INTU','UBER','BKNG','VZ','T'],
+  nasdaq:['NVDA','MSFT','AAPL','AMZN','META','GOOGL','AVGO','TSLA','COST','NFLX','AMD','PEP','CSCO','TMUS','ADBE','INTU','QCOM','TXN','AMAT','MU','PANW','LRCX','KLAC','ISRG','BKNG','REGN','VRTX','ADP','MELI','PYPL','MRVL','CRWD','ABNB','ADSK','SBUX','GILD','MDLZ','CSX','MAR','ORLY','FTNT','TEAM','DDOG','ROST','IDXX','KDP','EA','CTAS','FAST','ODFL'],
+  russell:['SMCI','MSTR','COIN','RIVN','SOFI','HOOD','IONQ','RKLB','AFRM','UPST','CVNA','DKNG','LCID','CHWY','BROS','AI','PATH','FUBO','QS','PLUG','OPEN','RIOT','MARA','WULF','HIMS','TOST','CAVA','CELH','WING','DUOL','APP','U','RBLX','SNOW','NET','MDB','ZS','OKTA','TTD','DOCU','ROKU','PINS','ETSY','BILL','RUN','ENPH','FSLR','SEDG','BE','BLNK']
+};
+
+function login(role){
+  const pw=document.getElementById('passwordInput').value.trim();
+  const ok = role==='Admin' ? pw===ADMIN_PASSWORD : pw===USER_PASSWORD;
+  if(!ok){document.getElementById('loginError').classList.remove('hidden');return;}
+  currentRole=role;
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('rolePill').textContent=role;
+  showPage('home');
+  openUniverse('sp500', false);
+  renderTradeLog();
+  renderHome();
+}
+function logout(){location.reload()}
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.page===id));
+  if(id==='home') renderHome();
+  if(id==='tradelog') renderTradeLog();
+}
+function openUniverse(u, switchPage=true){
+  currentUniverse=u;
+  document.querySelectorAll('.subtab').forEach((b,i)=>b.classList.toggle('active',['sp500','nasdaq','russell'][i]===u));
+  if(switchPage) showPage('scanner');
+  runScan();
+}
+function saveSettings(){
+  POLYGON_API_KEY=document.getElementById('apiKeyInput').value.trim()||DEFAULT_POLYGON_API_KEY;
+  fallbackMs=Number(document.getElementById('refreshSelect').value);
+  localStorage.setItem('polygonKey',POLYGON_API_KEY);
+  localStorage.setItem('refreshMs',fallbackMs);
+  runScan();
+}
+function hashNum(s){let h=0;for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;return h}
+function badgeClass(score){return score>=80?'good':score>=70?'warn':'bad'}
+function signalClass(sig){return sig==='B2O'?'blue':sig==='S2O'?'bad':sig==='S2C'?'good':sig==='B2C'?'warn':'warn'}
+function opportunity(score){return score>=70?'result-green':score>=40?'result-yellow':'result-red'}
+async function getPrice(ticker){
+  if(!POLYGON_API_KEY||POLYGON_API_KEY.includes('PASTE_')) return 50+(hashNum(ticker)%250)+(Math.random()*2-1);
+  try{const r=await fetch(`https://api.polygon.io/v2/last/trade/${ticker}?apiKey=${POLYGON_API_KEY}`);const j=await r.json();return j?.results?.p || 50+(hashNum(ticker)%250)}
+  catch(e){return 50+(hashNum(ticker)%250)+(Math.random()*2-1)}
+}
+function mockLegendary(ticker, price){
+  const h=hashNum(ticker+currentUniverse);
+  const sig=['B2O','S2O','Wait','B2O','S2C'][h%5];
+
+  // V3.5 Equal Weight Legendary Engine
+  // Each green light = 20 points. Score can only be 0/20/40/60/80/100.
+  const smartGreen = sig==='B2O' || sig==='S2O' || h%7===0;
+  const trendGreen = sig==='B2O' || sig==='S2O' || h%11===0;
+  const edgeGreen = (h % 100) >= 38;
+  const rrRaw = ((h%30)/10+1);
+  const rrGreen = rrRaw >= 2.0;
+  const momentumGreen = (h % 5) >= 2;
+
+  const components = {
+    smartMoney: smartGreen ? 20 : 0,
+    trend: trendGreen ? 20 : 0,
+    edge: edgeGreen ? 20 : 0,
+    riskReward: rrGreen ? 20 : 0,
+    momentum: momentumGreen ? 20 : 0
+  };
+
+  const score = components.smartMoney + components.trend + components.edge + components.riskReward + components.momentum;
+  const greenLights = score / 20;
+  const edge = edgeGreen ? 80 + (h%20) : 35 + (h%25);
+  const rr = rrRaw.toFixed(1);
+
+  const smart=sig==='S2O'?'Institution Selling':sig==='B2O'?'Institution Buying':h%3===0?'Manipulation':h%3===1?'Bull Trap':'Bear Trap';
+  const trend=sig==='S2O'?'Downtrend':sig==='B2O'?'Uptrend':'Transition';
+  const mom=momentumGreen?'Strong':'Weak';
+  const t1=sig==='S2O'?price*0.985:price*1.015, t2=sig==='S2O'?price*0.97:price*1.03;
+
+  return {
+    ticker,price,signal:sig,score,smart,trend,edge,rr,momentum:mom,
+    station:t2,direction:sig==='S2O'?'South':sig==='B2O'?'North':'Balance',
+    entry:null,t1,t2,action:'New',components,greenLights
+  };
+}
+async function runScan(){
+  clearInterval(refreshTimer);
+  document.getElementById('scanStatus').textContent='Scanning '+currentUniverse.toUpperCase()+'...';
+  const list=universes[currentUniverse], rows=[];
+  for(const t of list){
+    const alreadyOpen=tradeLog.some(x=>x.ticker===t&&x.status==='Open');
+    if(alreadyOpen) continue;
+    const p=await getPrice(t);
+    rows.push(mockLegendary(t,p));
+  }
+  rows.sort((a,b)=>b.score-a.score);
+  const qualified = rows.filter(r=>r.score>=LEGENDARY_MIN_SCORE);
+  scannerRows=qualified.slice(0,currentUniverse==='sp500'?50:Math.ceil(qualified.length*.5));
+  renderScanner();
+  document.getElementById('scanStatus').textContent='Last refresh: '+new Date().toLocaleTimeString();
+  refreshTimer=setInterval(runScan,fallbackMs);
+}
+function renderScanner(){
+  const tb=document.getElementById('scannerBody'), cards=document.getElementById('scannerCards');
+  tb.innerHTML=''; cards.innerHTML='';
+  scannerRows.forEach(r=>{
+    const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=()=>openDashboardFromScan(r.ticker);
+    tr.innerHTML=`<td><b>${r.ticker}</b></td><td><span class="badge ${signalClass(r.signal)}">${r.signal}</span></td><td><span class="badge ${badgeClass(r.score)}">${r.score}/100</span></td><td>${r.smart}</td><td>${r.trend}</td><td>${r.edge}/100</td><td>${r.rr} R/R</td><td>${r.momentum}</td><td>${r.action}</td>`;
+    tb.appendChild(tr);
+    const card=document.createElement('div'); card.className='scan-card'; card.onclick=()=>openDashboardFromScan(r.ticker);
+    card.innerHTML=`<div class="scan-top"><div class="scan-ticker">${r.ticker}</div><span class="badge ${signalClass(r.signal)}">${r.signal}</span><span class="badge ${badgeClass(r.score)}">${r.score}/100</span></div><div class="scan-mid">${scanField('Smart Money',r.smart)}${scanField('Trend',r.trend)}${scanField('Edge',r.edge+'/100')}${scanField('R/R',r.rr+' R/R')}${scanField('Momentum',r.momentum)}${scanField('Action',r.action)}</div>${breakdownDots(r.components)}`;
+    cards.appendChild(card);
+  });
+}
+function scanField(k,v){return `<div><div class="scan-label">${k}</div><div class="scan-value">${v}</div></div>`}
+function breakdownDots(c){
+  if(!c) return '';
+  return `<div class="breakdown">
+    <div class="break-dot ${c.smartMoney? 'on':'off'}">SM</div>
+    <div class="break-dot ${c.trend? 'on':'off'}">TR</div>
+    <div class="break-dot ${c.edge? 'on':'off'}">ED</div>
+    <div class="break-dot ${c.riskReward? 'on':'off'}">RR</div>
+    <div class="break-dot ${c.momentum? 'on':'off'}">MO</div>
+  </div>`;
+}
+function openDashboardFromScan(ticker){
+  selected=scannerRows.find(r=>r.ticker===ticker); selectedTradeId=null;
+  showPage('dashboard'); showDashboardContent(); renderDashboard();
+}
+async function openDashboardFromTrade(id){
+  const tr=tradeLog.find(x=>x.id===id); if(!tr) return;
+  const p=await getPrice(tr.ticker);
+  selected=mockLegendary(tr.ticker,p);
+  selected.signal=tr.signal; selected.score=tr.score; selected.entry=tr.entry; selected.action='Accepted'; selected.components=tr.components || selected.components; selected.greenLights=tr.greenLights || selected.greenLights;
+  selectedTradeId=id;
+  showPage('dashboard'); showDashboardContent(); renderDashboard();
+}
+function showDashboardContent(){
+  document.getElementById('dashboardEmpty').classList.add('hidden');
+  document.getElementById('dashboardContent').classList.remove('hidden');
+}
+function renderDashboard(){
+  if(!selected)return;
+  document.getElementById('dashTicker').textContent=selected.ticker;
+  document.getElementById('dashSignal').textContent=selected.signal;
+  document.getElementById('dashSignal').className='signal-big badge '+signalClass(selected.signal);
+  document.getElementById('dashSub').textContent=`${selected.direction} • Score ${selected.score}/100`;
+  const legendScore=selected.greenLights ?? Math.round((selected.score||0)/20);
+  const stationPct=Math.abs((selected.station-selected.price)/selected.price*100).toFixed(2), t1rr=selected.rr, t2rr=(Number(selected.rr)*1.5).toFixed(1);
+  const rows=[['Price',selected.price.toFixed(2),''],['Station',`${selected.station.toFixed(2)} / ${stationPct}%`,''],['Direction',selected.direction,''],['Smart Money',selected.smart,selected.smart.includes('Institution')?'result-green':'result-yellow'],['Trend',selected.trend,selected.trend==='Transition'?'result-yellow':'result-green'],['Edge',selected.edge+'/100',opportunity(selected.edge)],['Risk/Reward',selected.rr+' R/R',Number(selected.rr)>=2?'result-green':Number(selected.rr)>=1?'result-yellow':'result-red'],['Momentum',selected.momentum,selected.momentum==='Strong'?'result-green':selected.momentum==='Medium'?'result-yellow':'result-red'],['Legend Score',legendScore+'/5',legendScore>=4?'result-green':legendScore>=3?'result-yellow':'result-red'],['Score Math',`${selected.score}/100`,selected.score>=80?'result-green':selected.score>=60?'result-yellow':'result-red'],['Entry',selected.entry?selected.entry.toFixed(2):'-',''],['T1',`${selected.t1.toFixed(2)} (${t1rr}R)`,''],['T2',`${selected.t2.toFixed(2)} (${t2rr}R)`,''],['Action',selected.action,selected.action==='Accepted'?'result-green':selected.action==='New'?'result-yellow':'result-red']];
+  document.getElementById('dashTable').innerHTML=rows.map(([k,v,c])=>`<tr><td>${k}</td><td>${c?`<span class="result-cell ${c}">${v}</span>`:v}</td></tr>`).join('');
+  document.getElementById('dashCompact').innerHTML=`<div class="compact-grid">${compactBox('Price',selected.price.toFixed(2))}${compactBox('Station',`${selected.station.toFixed(2)} / ${stationPct}%`)}${compactBox('Direction',selected.direction)}${compactBox('Signal',selected.signal)}${compactPill('SM',selected.smart,selected.smart.includes('Institution')?'result-green':'result-yellow')}${compactPill('Trend',selected.trend,selected.trend==='Transition'?'result-yellow':'result-green')}${compactPill('Edge',selected.edge+'/100',opportunity(selected.edge))}${compactPill('R/R',selected.rr+' R/R',Number(selected.rr)>=2?'result-green':Number(selected.rr)>=1?'result-yellow':'result-red')}${compactPill('Mom',selected.momentum,selected.momentum==='Strong'?'result-green':selected.momentum==='Medium'?'result-yellow':'result-red')}${compactPill('Score',legendScore+'/5',legendScore>=4?'result-green':legendScore>=3?'result-yellow':'result-red')}${compactBox('Entry',selected.entry?selected.entry.toFixed(2):'-')}${compactBox('T1',`${selected.t1.toFixed(2)} (${t1rr}R)`)}${compactBox('T2',`${selected.t2.toFixed(2)} (${t2rr}R)`)}${compactPill('Action',selected.action,selected.action==='Accepted'?'result-green':selected.action==='New'?'result-yellow':'result-red')}</div>${breakdownDots(selected.components)}`;
+  document.getElementById('acceptExitBtn').textContent=selected.action==='Accepted'?'Exit':'Accept';
+  document.getElementById('passBtn').classList.toggle('hidden', selected.action==='Accepted');
+  document.getElementById('kpis').innerHTML=[['Live Price',selected.price.toFixed(2)],['Signal',selected.signal],['Score',selected.score+'/100'],['Refresh',new Date().toLocaleTimeString()]].map(([a,b])=>`<div class="kpi"><div class="kpi-label">${a}</div><div class="kpi-value">${b}</div></div>`).join('');
+}
+function compactBox(label,value){return `<div class="compact-box"><div class="compact-label">${label}</div><div class="compact-value">${value}</div></div>`}
+function compactPill(label,value,cls){return `<div class="compact-box"><div class="compact-label">${label}</div><div class="compact-pill ${cls}">${value}</div></div>`}
+function passTrade(){
+  if(!selected || selected.action==='Accepted')return;
+  scannerRows=scannerRows.filter(r=>r.ticker!==selected.ticker);
+  resetDashboard(); renderScanner(); showPage('scanner');
+}
+function acceptOrExitTrade(){
+  if(!selected)return;
+  if(selected.action!=='Accepted'){
+    selected.action='Accepted'; selected.entry=selected.price;
+    const id=Date.now();
+    selectedTradeId=id;
+    tradeLog.push({id,ticker:selected.ticker,signal:selected.signal,entry:selected.price,entryTime:new Date().toLocaleString(),exit:null,exitTime:null,score:selected.score,status:'Open',smart:selected.smart,trend:selected.trend,edge:selected.edge,rr:selected.rr,momentum:selected.momentum,components:selected.components,greenLights:selected.greenLights});
+    scannerRows=scannerRows.filter(r=>r.ticker!==selected.ticker);
+    localStorage.setItem('matsTradeLog',JSON.stringify(tradeLog));
+    renderScanner(); renderTradeLog(); renderHome(); renderDashboard();
+  }else{
+    const item=tradeLog.find(x=>x.id===selectedTradeId) || [...tradeLog].reverse().find(x=>x.ticker===selected.ticker&&x.status==='Open');
+    if(item){
+      item.exit=selected.price; item.exitTime=new Date().toLocaleString();
+      item.pnl=((item.exit-item.entry)/item.entry*100)*(item.signal==='S2O'?-1:1);
+      item.status='Closed'; item.duration=calcDuration(item.entryTime,item.exitTime);
+    }
+    localStorage.setItem('matsTradeLog',JSON.stringify(tradeLog));
+    renderTradeLog(); renderHome(); resetDashboard(); showPage('tradelog');
+  }
+}
+function resetDashboard(){
+  selected=null; selectedTradeId=null;
+  document.getElementById('dashboardContent').classList.add('hidden');
+  document.getElementById('dashboardEmpty').classList.remove('hidden');
+}
+function calcDuration(a,b){
+  const d=(new Date(b)-new Date(a))/60000;
+  if(!isFinite(d)) return '-';
+  if(d<60) return Math.round(d)+'m';
+  if(d<1440) return (d/60).toFixed(1)+'h';
+  return (d/1440).toFixed(1)+'d';
+}
+function renderTradeLog(){
+  const open=tradeLog.filter(x=>x.status==='Open'), closed=tradeLog.filter(x=>x.status==='Closed').slice().reverse();
+  const ob=document.getElementById('openTradeBody'), cb=document.getElementById('closedTradeBody'), oc=document.getElementById('openTradeCards'), cc=document.getElementById('closedTradeCards');
+  ob.innerHTML=''; cb.innerHTML=''; oc.innerHTML=''; cc.innerHTML='';
+  if(!open.length){ob.innerHTML='<tr><td colspan="6" class="empty">No open trades.</td></tr>'; oc.innerHTML='<div class="empty">No open trades.</div>'}
+  open.slice().reverse().forEach(x=>{
+    const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=()=>openDashboardFromTrade(x.id);
+    tr.innerHTML=`<td><b>${x.ticker}</b></td><td>${x.signal}</td><td>${x.entry.toFixed(2)}</td><td>${x.entryTime}</td><td>${x.score}/100</td><td>${x.status}</td>`;
+    ob.appendChild(tr);
+    const card=document.createElement('div'); card.className='trade-card'; card.onclick=()=>openDashboardFromTrade(x.id);
+    card.innerHTML=`<div class="scan-top"><div class="scan-ticker">${x.ticker}</div><span class="badge ${signalClass(x.signal)}">${x.signal}</span><span class="badge good">Open</span></div><div class="scan-mid">${scanField('Entry',x.entry.toFixed(2))}${scanField('Score',x.score+'/100')}${scanField('Time',x.entryTime)}${scanField('Tap','Open Dashboard')}</div>`;
+    oc.appendChild(card);
+  });
+  if(!closed.length){cb.innerHTML='<tr><td colspan="7" class="empty">No closed trades.</td></tr>'; cc.innerHTML='<div class="empty">No closed trades.</div>'}
+  closed.forEach(x=>{
+    const pnlClass=x.pnl>=0?'good':'bad';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><b>${x.ticker}</b></td><td>${x.signal}</td><td>${x.entry.toFixed(2)}</td><td>${x.exit.toFixed(2)}</td><td><span class="badge ${pnlClass}">${x.pnl.toFixed(2)}%</span></td><td>${x.duration||'-'}</td><td>${x.score}/100</td>`;
+    cb.appendChild(tr);
+    const card=document.createElement('div'); card.className='trade-card';
+    card.innerHTML=`<div class="scan-top"><div class="scan-ticker">${x.ticker}</div><span class="badge ${signalClass(x.signal)}">${x.signal}</span><span class="badge ${pnlClass}">${x.pnl.toFixed(2)}%</span></div><div class="scan-mid">${scanField('Entry',x.entry.toFixed(2))}${scanField('Exit',x.exit.toFixed(2))}${scanField('Duration',x.duration||'-')}${scanField('Score',x.score+'/100')}</div>`;
+    cc.appendChild(card);
+  });
+}
+function renderHome(){
+  const closed=tradeLog.filter(x=>x.status==='Closed'), open=tradeLog.filter(x=>x.status==='Open');
+  const total=closed.reduce((a,x)=>a+(x.pnl||0),0);
+  const wins=closed.filter(x=>(x.pnl||0)>0), losses=closed.filter(x=>(x.pnl||0)<0);
+  const avgWin=wins.length?wins.reduce((a,x)=>a+x.pnl,0)/wins.length:0;
+  const avgLoss=losses.length?losses.reduce((a,x)=>a+x.pnl,0)/losses.length:0;
+  const grossWin=wins.reduce((a,x)=>a+(x.pnl||0),0);
+  const grossLoss=Math.abs(losses.reduce((a,x)=>a+(x.pnl||0),0));
+  const profitFactor=grossLoss>0?grossWin/grossLoss:(grossWin>0?99:0);
+  const expectancy=closed.length?total/closed.length:0;
+  const best=closed.length?Math.max(...closed.map(x=>x.pnl||0)):0;
+  const worst=closed.length?Math.min(...closed.map(x=>x.pnl||0)):0;
+  const avgScore=tradeLog.length?tradeLog.reduce((a,x)=>a+(x.score||0),0)/tradeLog.length:0;
+  const avgHold=avgHoldTime(closed);
+  const now=new Date();
+  const today=tradeLog.filter(x=>sameDay(new Date(x.entryTime),now)).length;
+  const week=tradeLog.filter(x=>daysBetween(new Date(x.entryTime),now)<=7).length;
+  const month=tradeLog.filter(x=>daysBetween(new Date(x.entryTime),now)<=30).length;
+
+  const metrics=[
+    ['Total P/L',total.toFixed(2)+'%',total>=0?'goodv':'badv'],
+    ['Expectancy',expectancy.toFixed(2)+'% / trade',expectancy>=0?'goodv':'badv'],
+    ['Profit Factor',profitFactor>=99?'∞':profitFactor.toFixed(2),profitFactor>=1.5?'goodv':profitFactor>=1?'warnv':'badv'],
+    ['Win Rate',closed.length?((wins.length/closed.length)*100).toFixed(1)+'%':'0%',wins.length?'goodv':''],
+    ['Open Trades',open.length,'warnv'],
+    ['Closed Trades',closed.length,''],
+    ['Trades Today',today,''],
+    ['Trades 7D',week,''],
+    ['Trades 30D',month,''],
+    ['Avg Hold',avgHold,'warnv'],
+    ['Avg Win',avgWin.toFixed(2)+'%','goodv'],
+    ['Avg Loss',avgLoss.toFixed(2)+'%','badv'],
+    ['Best Trade',best.toFixed(2)+'%','goodv'],
+    ['Worst Trade',worst.toFixed(2)+'%','badv'],
+    ['Avg Score',avgScore.toFixed(1)+'/100','warnv']
+  ];
+
+  document.getElementById('homeMetrics').innerHTML=metrics.map(([k,v,c])=>`<div class="metric ${c}"><div class="metric-label">${k}</div><div class="metric-value">${v}</div></div>`).join('');
+  renderAnalyticsTables(closed);
+}
+
+function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
+function daysBetween(a,b){return Math.abs((b-a)/86400000)}
+function avgHoldTime(closed){
+  const mins=closed.map(x=>{
+    const d=(new Date(x.exitTime)-new Date(x.entryTime))/60000;
+    return isFinite(d)?d:null;
+  }).filter(x=>x!==null);
+  if(!mins.length)return '-';
+  const avg=mins.reduce((a,b)=>a+b,0)/mins.length;
+  if(avg<60)return Math.round(avg)+'m';
+  if(avg<1440)return (avg/60).toFixed(1)+'h';
+  return (avg/1440).toFixed(1)+'d';
+}
+function bucketScore(score){
+  if(score>=100)return '100';
+  if(score>=80)return '80';
+  if(score>=60)return '60';
+  if(score>=40)return '40';
+  return '<40';
+}
+function summarizeGroup(items){
+  const n=items.length;
+  const wins=items.filter(x=>(x.pnl||0)>0).length;
+  const pnl=items.reduce((a,x)=>a+(x.pnl||0),0);
+  const wr=n?((wins/n)*100).toFixed(0)+'%':'0%';
+  return {n,wr,pnl:pnl.toFixed(2)+'%'};
+}
+function renderAnalyticsTables(closed){
+  const signalBox=document.getElementById('signalAnalytics');
+  const legendBox=document.getElementById('legendAnalytics');
+  if(!closed.length){
+    signalBox.innerHTML='<div class="empty">No closed trades yet.</div>';
+    legendBox.innerHTML='<div class="empty">No closed trades yet.</div>';
+    return;
+  }
+
+  const signals=['B2O','S2O','S2C','B2C','Wait'];
+  const signalRows=signals.map(s=>[s,closed.filter(x=>x.signal===s)]).filter(([s,arr])=>arr.length);
+  signalBox.innerHTML=`<table class="mini-table"><thead><tr><th>Signal</th><th>Trades</th><th>WR</th><th>P/L</th></tr></thead><tbody>${
+    signalRows.map(([s,arr])=>{const m=summarizeGroup(arr);return `<tr><td>${s}</td><td>${m.n}</td><td>${m.wr}</td><td>${m.pnl}</td></tr>`}).join('')
+  }</tbody></table>`;
+
+  const buckets=['100','80','60','40','<40'];
+  const bucketRows=buckets.map(b=>[b,closed.filter(x=>bucketScore(x.score||0)===b)]).filter(([b,arr])=>arr.length);
+  legendBox.innerHTML=`<table class="mini-table"><thead><tr><th>Score</th><th>Trades</th><th>WR</th><th>P/L</th></tr></thead><tbody>${
+    bucketRows.map(([b,arr])=>{const m=summarizeGroup(arr);return `<tr><td>${b}</td><td>${m.n}</td><td>${m.wr}</td><td>${m.pnl}</td></tr>`}).join('')
+  }</tbody></table>`;
+}
+document.getElementById('passwordInput').addEventListener('keydown',e=>{if(e.key==='Enter')login('Trader')});
+document.getElementById('apiKeyInput').value=POLYGON_API_KEY.includes('PASTE_')?'':POLYGON_API_KEY;
+document.getElementById('refreshSelect').value=String(fallbackMs);
+const minScoreEl=document.getElementById('minScoreInput'); if(minScoreEl) minScoreEl.value=String(LEGENDARY_MIN_SCORE);
+</script>
+</body>
+</html>
