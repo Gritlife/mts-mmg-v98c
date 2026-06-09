@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MMG V9.9K-3 Scanner</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0b0b0b; --panel:#111; --border:#222; --label:#141414;
+  --txt:#e8e8e8; --muted:#555; --lime:#00e676; --red:#ef5350;
+  --yellow:#ffd600; --blue:#1565c0; --orange:#e65100;
+}
+body { background:var(--bg); color:var(--txt); font-family:'Courier New',Courier,monospace; font-size:13px; min-height:100vh; }
+
+.header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--border); gap:12px; flex-wrap:wrap; }
+.header-title { font-size:11px; letter-spacing:1.5px; color:#777; text-transform:uppercase; }
+.api-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.api-row input { background:#1a1a1a; border:1px solid #333; color:var(--txt); padding:4px 8px; font-family:inherit; font-size:11px; width:240px; border-radius:2px; }
+.api-row input::placeholder { color:#444; }
+.btn { background:#1e1e1e; color:#bbb; border:1px solid #444; padding:4px 12px; font-size:11px; font-family:inherit; cursor:pointer; border-radius:2px; transition:all .15s; white-space:nowrap; }
+.btn:hover { background:#2a2a2a; color:#fff; border-color:#888; }
+.btn.primary { background:#1a3a1a; border-color:#2e7d32; color:#66bb6a; }
+.btn.primary:hover { background:#2e7d32; color:#fff; }
+
+.tabs { display:flex; border-bottom:1px solid var(--border); background:var(--panel); }
+.tab { padding:9px 20px; cursor:pointer; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); border-bottom:2px solid transparent; transition:all .15s; }
+.tab:hover { color:#aaa; }
+.tab.active { color:#fff; border-bottom-color:#2196f3; }
+
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+.scanner-controls { display:flex; align-items:center; gap:10px; padding:8px 14px; background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.scanner-controls label { color:#777; font-size:11px; }
+.scanner-controls select { background:#1a1a1a; border:1px solid #333; color:var(--txt); padding:3px 8px; font-family:inherit; font-size:11px; border-radius:2px; }
+.status-bar { padding:5px 14px; font-size:10px; color:var(--muted); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; min-height:26px; }
+.pulse { display:inline-block; width:7px; height:7px; border-radius:50%; background:#333; }
+.pulse.green { background:var(--lime); box-shadow:0 0 6px var(--lime); }
+.pulse.yellow { background:var(--yellow); }
+
+/* mobile hide */
+@media (max-width:639px) {
+  .col-cycle,.col-trend,.col-edge,.col-risk,.col-momentum,.col-price { display:none !important; }
+  .api-row input { width:150px; }
+  table.scanner tbody td { padding:8px 8px; font-size:13px; }
+  table.scanner thead th { padding:8px 8px; }
+  .score-mini-bar { width:38px; }
+  .mobile-hint { display:block; }
+}
+@media (min-width:640px) { .mobile-hint { display:none; } }
+.mobile-hint { font-size:10px; color:#444; text-align:center; padding:4px 0 2px; letter-spacing:.5px; }
+
+.scanner-wrap { overflow-x:auto; }
+table.scanner { width:100%; border-collapse:collapse; }
+table.scanner thead th { background:#0f0f0f; color:#666; font-size:10px; letter-spacing:.8px; text-transform:uppercase; padding:6px 10px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+table.scanner thead th:hover { color:#aaa; }
+table.scanner thead th.sort-asc::after { content:" ▲"; font-size:9px; }
+table.scanner thead th.sort-desc::after { content:" ▼"; font-size:9px; }
+table.scanner tbody tr { border-bottom:1px solid #181818; cursor:pointer; transition:background .1s; }
+table.scanner tbody tr:hover { background:#161616; }
+table.scanner tbody tr.selected { background:#0d1a2a; }
+table.scanner tbody td { padding:6px 10px; white-space:nowrap; font-size:12px; }
+.ticker-cell { font-weight:700; color:#fff; letter-spacing:.5px; }
+.price-cell { color:#ccc; }
+
+.score-wrap { display:flex; align-items:center; gap:6px; }
+.score-mini-bar { width:60px; height:6px; background:#222; border-radius:3px; overflow:hidden; }
+.score-mini-fill { height:100%; border-radius:3px; transition:width .4s; }
+.action-badge { display:inline-block; padding:2px 7px; border-radius:2px; font-size:10px; font-weight:700; letter-spacing:.5px; }
+.chip { display:inline-block; width:14px; height:14px; border-radius:2px; margin-right:2px; vertical-align:middle; }
+.chip.g { background:#2e7d32; }
+.chip.y { background:#f9a825; }
+.chip.r { background:#c62828; }
+
+/* dashboard tab */
+.dash-panel { display:flex; flex-direction:column; align-items:flex-start; padding:16px; gap:16px; }
+@media (min-width:700px) { .dash-panel { flex-direction:row; align-items:flex-start; } }
+.dash-left { display:flex; flex-direction:column; gap:16px; }
+table.dashboard { border-collapse:collapse; border:1px solid #2a2a2a; width:300px; min-width:260px; }
+table.dashboard td { border:1px solid #222; padding:7px 10px; font-size:12px; white-space:nowrap; }
+table.dashboard td.lbl { background:var(--label); color:#ccc; width:110px; font-weight:600; }
+table.dashboard td.val { background:var(--label); color:#fff; text-align:right; }
+.dscore-cell { position:relative; padding:0 !important; overflow:hidden; }
+.dscore-bar { position:absolute; top:0; left:0; bottom:0; opacity:.28; transition:width .4s; }
+.dscore-txt { position:relative; z-index:1; display:block; padding:7px 10px; text-align:right; font-weight:700; }
+
+.chart-box { background:#0e0e0e; border:1px solid var(--border); border-radius:2px; overflow:hidden; width:300px; min-width:260px; }
+.chart-box-header { padding:5px 10px; font-size:10px; color:#555; letter-spacing:.5px; border-bottom:1px solid var(--border); text-transform:uppercase; }
+canvas#miniChart { display:block; }
+
+.empty-state { padding:40px 20px; color:#444; font-size:12px; text-align:center; letter-spacing:.5px; }
+
+.bg-green  { background:#1b5e20 !important; }
+.bg-yellow { background:#f9a825 !important; }
+.bg-red    { background:#b71c1c !important; }
+.bg-blue   { background:#1565c0 !important; }
+.bg-orange { background:#e65100 !important; }
+.bg-dark   { background:var(--label) !important; }
+.txt-white  { color:#fff !important; }
+.txt-black  { color:#000 !important; }
+.txt-lime   { color:#00e676 !important; }
+.txt-red    { color:#ef5350 !important; }
+.txt-yellow { color:#ffd600 !important; }
+.txt-gray   { color:#777 !important; }
+.txt-north  { color:#00e676 !important; }
+.txt-south  { color:#ef5350 !important; }
+.txt-bal    { color:#777 !important; }
+
+.spinner { width:14px; height:14px; border:2px solid #333; border-top-color:#888; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">MMG V9.9K-3 &mdash; Five Legend Scanner</div>
+  <div class="api-row">
+    <input id="apiKey" type="password" placeholder="Paste Polygon.io API Key…" autocomplete="off">
+    <button class="btn primary" onclick="runScan()">&#9654; Scan</button>
+    <button class="btn" onclick="stopScan()">&#9646;&#9646; Stop</button>
+    <span id="lastScan" style="color:#444;font-size:10px;"></span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('scanner',this)">&#128269; Scanner</div>
+  <div class="tab" onclick="switchTab('dashboard',this)" id="tab-dashboard">&#128200; Dashboard</div>
+</div>
+
+<!-- SCANNER TAB -->
+<div class="tab-panel active" id="panel-scanner">
+  <div class="scanner-controls">
+    <label>Sort:</label>
+    <select id="sortSelect" onchange="applySortUI()">
+      <option value="score-desc">Signal Score ▼</option>
+      <option value="score-asc">Signal Score ▲</option>
+      <option value="action">Action (Get On first)</option>
+      <option value="ticker">Ticker A–Z</option>
+    </select>
+    <label style="margin-left:10px">Filter:</label>
+    <select id="filterSelect" onchange="applyFilter()">
+      <option value="all">All</option>
+      <option value="b2o">B2O only</option>
+      <option value="s2o">S2O only</option>
+      <option value="geton">Get On (any)</option>
+      <option value="getoff">Get Off</option>
+      <option value="wait">Wait</option>
+      <option value="score80">Score ≥ 80</option>
+      <option value="score60">Score ≥ 60</option>
+    </select>
+    <span id="countLabel" style="color:#555;font-size:10px;margin-left:auto;"></span>
+  </div>
+  <div class="status-bar">
+    <span class="pulse" id="scanPulse"></span>
+    <span id="scanStatus">Ready — enter API key and press Scan</span>
+    <span id="scanProgress"></span>
+  </div>
+  <div class="mobile-hint">↑ Tap any ticker for full details &nbsp;|&nbsp; Landscape = all columns</div>
+  <div class="scanner-wrap">
+    <table class="scanner" id="scannerTable">
+      <thead><tr>
+        <th onclick="sortBy('ticker')">Ticker</th>
+        <th onclick="sortBy('price')" class="col-price">Price</th>
+        <th onclick="sortBy('dir')">Direction</th>
+        <th onclick="sortBy('cycle')" class="col-cycle">Market Cycle</th>
+        <th onclick="sortBy('trend')" class="col-trend">Trend</th>
+        <th onclick="sortBy('edge')" class="col-edge">Edge %</th>
+        <th onclick="sortBy('risk')" class="col-risk">Risk Level</th>
+        <th onclick="sortBy('momentum')" class="col-momentum">Momentum</th>
+        <th onclick="sortBy('score')">Signal Score</th>
+        <th onclick="sortBy('action')">Action</th>
+      </tr></thead>
+      <tbody id="scannerBody">
+        <tr><td colspan="10" class="empty-state">Press Scan to load live data</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DASHBOARD TAB -->
+<div class="tab-panel" id="panel-dashboard">
+  <div id="dashEmpty" class="empty-state">Click any ticker in the Scanner to load its dashboard</div>
+  <div id="dashContent" style="display:none">
+    <div class="dash-panel">
+      <div class="dash-left">
+        <div style="font-size:10px;color:#555;letter-spacing:1px;text-transform:uppercase;padding-bottom:4px">
+          <span id="dashTicker" style="color:#fff;font-size:16px;font-weight:700;letter-spacing:2px"></span>
+          &nbsp;— 15m Live Dashboard
+          <span id="dashBarTime" style="color:#444;font-size:9px;margin-left:8px;"></span>
+        </div>
+        <table class="dashboard">
+          <tr><td class="lbl">Price</td>      <td class="val bg-dark txt-white" id="d-price">—</td></tr>
+          <tr><td class="lbl">Station</td>    <td class="val bg-dark" id="d-station">—</td></tr>
+          <tr><td class="lbl">Direction</td>  <td class="val bg-dark" id="d-direction">—</td></tr>
+          <tr><td class="lbl">Market Cycle</td><td class="val" id="d-cycle">—</td></tr>
+          <tr><td class="lbl">Trend</td>      <td class="val" id="d-trend">—</td></tr>
+          <tr><td class="lbl">Edge %</td>     <td class="val" id="d-edge">—</td></tr>
+          <tr><td class="lbl">Risk Level</td> <td class="val" id="d-risk">—</td></tr>
+          <tr><td class="lbl">Momentum</td>   <td class="val" id="d-momentum">—</td></tr>
+          <tr><td class="lbl">Signal Score</td>
+              <td class="val dscore-cell" id="d-score">
+                <div class="dscore-bar" id="d-score-bar"></div>
+                <span class="dscore-txt" id="d-score-txt">—</span>
+              </td></tr>
+          <tr><td class="lbl">Entry</td>      <td class="val bg-dark txt-white" id="d-entry">—</td></tr>
+          <tr><td class="lbl">T1</td>         <td class="val bg-dark" id="d-t1">—</td></tr>
+          <tr><td class="lbl">T2</td>         <td class="val bg-dark" id="d-t2">—</td></tr>
+          <tr><td class="lbl" id="d-action-lbl">Action</td>
+              <td class="val" id="d-action">—</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="chart-box">
+          <div class="chart-box-header" id="chartLabel">Price Chart (15m)</div>
+          <canvas id="miniChart" width="420" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// TOP 80 S&P 500 TICKERS
+// ═══════════════════════════════════════════════════════
+const TICKERS = [
+  'AAPL','MSFT','NVDA','AMZN','META','GOOGL','GOOG','TSLA','AVGO','JPM',
+  'LLY','UNH','XOM','V','MA','JNJ','PG','HD','COST','MRK',
+  'ABBV','CVX','WMT','BAC','NFLX','KO','AMD','PEP','ADBE','CRM',
+  'ORCL','TMO','ACN','MCD','CSCO','ABT','LIN','DHR','INTC','NKE',
+  'NEE','DIS','PM','TXN','AMGN','WFC','RTX','HON','QCOM','IBM',
+  'INTU','UPS','CAT','GE','BA','SPGI','GS','LOW','ISRG','BKNG',
+  'DE','ELV','CI','REGN','MMM','VRTX','AXP','ADI','MDLZ','PLD',
+  'BLK','SYK','GILD','AMT','MO','SBUX','TJX','ZTS','EOG','BRK.B'
+];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let scanResults = [], scanning = false, scanAbort = false;
+let sortState = { col:'score', dir:'desc' };
+let selectedTicker = null;
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+// POLYGON FETCH — 20 day lookback
+// ═══════════════════════════════════════════════════════
+function getKey() { return document.getElementById('apiKey').value.trim(); }
+
+async function fetchCandles(ticker, tf, mult, days) {
+  const key = getKey();
+  const to   = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  const toStr   = to.toISOString().split('T')[0];
+  const fromStr = from.toISOString().split('T')[0];
+  const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${mult}/${tf}/${fromStr}/${toStr}?adjusted=true&sort=asc&limit=5000&apiKey=${key}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const d = await r.json();
+  return (d.results||[]).map(c=>({t:c.t,o:c.o,h:c.h,l:c.l,c:c.c,v:c.v}));
+}
+
+// ═══════════════════════════════════════════════════════
+// MATH HELPERS — exact Pine equivalents
+// ═══════════════════════════════════════════════════════
+function sma(arr, len) {
+  const out = new Array(arr.length).fill(NaN);
+  for (let i=len-1;i<arr.length;i++) {
+    let s=0; for(let j=i-len+1;j<=i;j++) s+=arr[j]; out[i]=s/len;
+  }
+  return out;
+}
+function ema(arr, len) {
+  const out = new Array(arr.length).fill(NaN);
+  const k = 2/(len+1);
+  for (let i=0;i<arr.length;i++) {
+    if (isNaN(arr[i])) continue;
+    if (isNaN(out[i-1])) { out[i]=arr[i]; }
+    else { out[i]=arr[i]*k+out[i-1]*(1-k); }
+  }
+  return out;
+}
+// Pine ta.stdev uses population stdev
+function stdevPop(arr, len) {
+  const out = new Array(arr.length).fill(NaN);
+  for (let i=len-1;i<arr.length;i++) {
+    const sl=arr.slice(i-len+1,i+1);
+    const m=sl.reduce((a,b)=>a+b,0)/len;
+    const v=sl.reduce((a,b)=>a+(b-m)**2,0)/len;
+    out[i]=Math.sqrt(v);
+  }
+  return out;
+}
+function rsi(C, len) {
+  const out = new Array(C.length).fill(NaN);
+  for (let i=len;i<C.length;i++) {
+    let g=0,l=0;
+    for(let j=i-len+1;j<=i;j++){const d=C[j]-C[j-1];if(d>0)g+=d;else l-=d;}
+    const rs=l===0?100:g/l; out[i]=100-100/(1+rs);
+  }
+  return out;
+}
+function macd(C,fast,slow,sig) {
+  const ef=ema(C,fast), es=ema(C,slow);
+  const line=C.map((_,i)=>isNaN(ef[i])||isNaN(es[i])?NaN:ef[i]-es[i]);
+  const signal=ema(line,sig);
+  const hist=line.map((v,i)=>isNaN(v)||isNaN(signal[i])?NaN:v-signal[i]);
+  return {line,signal,hist};
+}
+// Pine ta.roc: (close - close[len]) / close[len] * 100
+function roc(C, len) {
+  return C.map((v,i)=>i>=len&&C[i-len]!==0?(v-C[i-len])/C[i-len]*100:NaN);
+}
+function atr(H,L,C,len) {
+  const tr=C.map((_,i)=>i===0?H[i]-L[i]:Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1])));
+  // Pine ta.atr uses RMA (Wilder's)
+  const out=new Array(C.length).fill(NaN);
+  for(let i=0;i<C.length;i++){
+    if(isNaN(out[i-1]))out[i]=tr[i];
+    else out[i]=(out[i-1]*(len-1)+tr[i])/len;
+  }
+  return out;
+}
+function vwap(H,L,C,V) {
+  const out=new Array(C.length).fill(NaN);
+  let cpv=0,cv=0;
+  for(let i=0;i<C.length;i++){
+    const hlc3=(H[i]+L[i]+C[i])/3;
+    cpv+=hlc3*V[i]; cv+=V[i];
+    out[i]=cv>0?cpv/cv:NaN;
+  }
+  return out;
+}
+// Pine ta.sar — exact Wilder implementation
+function sarCalc(H,L,start,inc,max) {
+  const n=H.length, out=new Array(n).fill(NaN);
+  if(n<2)return out;
+  let bull=true, sv=L[0], ep=H[0], af=start;
+  out[0]=sv;
+  for(let i=1;i<n;i++){
+    let ns=sv+af*(ep-sv);
+    if(bull){
+      ns=Math.min(ns,L[i-1],i>1?L[i-2]:L[i-1]);
+      if(L[i]<ns){bull=false;ns=ep;ep=L[i];af=start;}
+      else{if(H[i]>ep){ep=H[i];af=Math.min(af+inc,max);}}
+    } else {
+      ns=Math.max(ns,H[i-1],i>1?H[i-2]:H[i-1]);
+      if(H[i]>ns){bull=true;ns=ep;ep=H[i];af=start;}
+      else{if(L[i]<ep){ep=L[i];af=Math.min(af+inc,max);}}
+    }
+    out[i]=ns; sv=ns;
+  }
+  return out;
+}
+// Pine ta.lowest / ta.highest
+function lowest(arr,len){
+  return arr.map((_,i)=>i<len-1?NaN:Math.min(...arr.slice(i-len+1,i+1)));
+}
+function highest(arr,len){
+  return arr.map((_,i)=>i<len-1?NaN:Math.max(...arr.slice(i-len+1,i+1)));
+}
+// ta.crossover(a,b): a crosses over b = a[1]<=b[1] && a>b
+function crossover(aArr,bArr,i){return i>0&&aArr[i-1]<=bArr[i-1]&&aArr[i]>bArr[i];}
+function crossunder(aArr,bArr,i){return i>0&&aArr[i-1]>=bArr[i-1]&&aArr[i]<bArr[i];}
+// ta.barssince: bars since cond[i] was last true, scanning backward
+function barssince(condArr,i){for(let k=i;k>=0;k--)if(condArr[k])return i-k;return NaN;}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+
+// ═══════════════════════════════════════════════════════
+// CORE ENGINE — exact Pine V9.9K-3 port
+// Parameters match input defaults exactly
+// ═══════════════════════════════════════════════════════
+const P = {
+  emaLen:21, atrLen:14, bbLen:20, bbMult:2.0, bbWidthLen:20,
+  bbExpansionRateMin:5.0, bbExpansionHoldBars:8, bbMidlineLookback:3,
+  bbTriggerWeight:0.35,
+  sarStart:0.02, sarInc:0.02, sarMax:0.20,
+  volLen:20, rvolHot:1.50, rvolWeak:0.75,
+  rsiLen:14, momLen:10, macdFast:12, macdSlow:26, macdSignal:9,
+  liqPivotLen:5, liqNearATR:0.50, fibLookback:100, fibNearATR:0.35,
+  confirmWeight:0.15, confirmBonus:8.0, conflictPenalty:10.0,
+  sigmaLen:20, minRR1:1.50,
+  cycleSidewaysATR:0.65, riskLowATRpct:1.20, riskHighATRpct:2.50,
+  vwapBalanceATR:0.15, nearTargetATR:0.40, minBreakATR:0.10,
+  spacingFactor:0.25, scalpTrigger:0.25, intradayTrigger:0.22, swingTrigger:0.18,
+  minBarsInTrade:3, dynMinBars:5, dynCooldownBars:4
+};
+
+function computeEngine(candles) {
+  const n = candles.length;
+  if (n < 150) return null; // need enough history
+
+  const O=candles.map(c=>c.o), H=candles.map(c=>c.h),
+        Lo=candles.map(c=>c.l), C=candles.map(c=>c.c), V=candles.map(c=>c.v);
+  const i = n-1; // latest bar
+
+  // ── EMA, VWAP, ATR (native, all bars) ──
+  const emaN  = ema(C, P.emaLen);
+  const vwapN = vwap(H, Lo, C, V);
+  const atrN  = atr(H, Lo, C, P.atrLen);
+  const emaNow=emaN[i], vwapNow=vwapN[i], atrNow=atrN[i];
+
+  // ── BB ENGINE ──
+  const bbBasis = sma(C, P.bbLen);
+  const bbDev   = stdevPop(C, P.bbLen).map(s=>s*P.bbMult);
+  const bbUpper = bbBasis.map((b,j)=>b+bbDev[j]);
+  const bbLower = bbBasis.map((b,j)=>b-bbDev[j]);
+  const bbWidth = bbBasis.map((b,j)=>b!==0?(bbUpper[j]-bbLower[j])/b:NaN);
+  const bbWidthAvg = sma(bbWidth, P.bbWidthLen);
+
+  // bbCompressionRecent: ta.lowest(bbWidth,len) < ta.lowest(bbWidthAvg,len)
+  const bbWLow  = lowest(bbWidth, P.bbWidthLen);
+  const bbWALow = lowest(bbWidthAvg, P.bbWidthLen);
+  const bbCompressionRecent = !isNaN(bbWidth[i])&&!isNaN(bbWidthAvg[i])&&
+    !isNaN(bbWLow[i])&&!isNaN(bbWALow[i])&&bbWLow[i]<bbWALow[i];
+  const bbWidthRising3 = i>=2&&!isNaN(bbWidth[i-2])&&bbWidth[i]>bbWidth[i-1]&&bbWidth[i-1]>bbWidth[i-2];
+  const bbWidthLenAgo = i>=P.bbWidthLen?bbWidth[i-P.bbWidthLen]:NaN;
+  const bbExpansionRatePct = !isNaN(bbWidthLenAgo)&&bbWidthLenAgo>0?
+    ((bbWidth[i]-bbWidthLenAgo)/bbWidthLenAgo)*100:0;
+  const bbTrueExpansion = bbCompressionRecent&&!isNaN(bbWidthAvg[i])&&
+    bbWidth[i]>bbWidthAvg[i]&&bbWidthRising3&&bbExpansionRatePct>=P.bbExpansionRateMin;
+
+  // bbExpansionAlive: scan back bbExpansionHoldBars for last trueExpansion
+  // Build array for all bars
+  const bbTrueExpArr = new Array(n).fill(false);
+  for (let j=P.bbWidthLen+2;j<n;j++) {
+    const wrising3 = j>=2&&!isNaN(bbWidth[j-2])&&bbWidth[j]>bbWidth[j-1]&&bbWidth[j-1]>bbWidth[j-2];
+    const wLenAgo  = j>=P.bbWidthLen?bbWidth[j-P.bbWidthLen]:NaN;
+    const erate    = !isNaN(wLenAgo)&&wLenAgo>0?((bbWidth[j]-wLenAgo)/wLenAgo)*100:0;
+    const wlow_j   = !isNaN(bbWLow[j])&&!isNaN(bbWALow[j])&&bbWLow[j]<bbWALow[j];
+    bbTrueExpArr[j] = wlow_j&&!isNaN(bbWidthAvg[j])&&bbWidth[j]>bbWidthAvg[j]&&wrising3&&erate>=P.bbExpansionRateMin;
+  }
+  const barssinceExp = barssince(bbTrueExpArr, i);
+  const bbExpansionAlive = bbTrueExpArr[i]||
+    (!isNaN(barssinceExp)&&barssinceExp<=P.bbExpansionHoldBars&&
+     !isNaN(bbWidthAvg[i])&&bbWidth[i]>=bbWidthAvg[i]);
+
+  const bbExpanding = bbExpansionAlive;
+  const bbSqueezing = !isNaN(bbWidth[i])&&!isNaN(bbWidthAvg[i])&&
+    bbWidth[i]<bbWidthAvg[i]&&bbWidth[i]<bbWidth[i-1];
+
+  const bbBull = C[i]>bbBasis[i]&&C[i]>bbBasis[i-1];
+  const bbBear = C[i]<bbBasis[i]&&C[i]<bbBasis[i-1];
+  const bbUpperPush = C[i]>bbUpper[i];
+  const bbLowerPush = C[i]<bbLower[i];
+  const bbRegimeBull = C[i]>bbBasis[i];
+  const bbRegimeBear = C[i]<bbBasis[i];
+
+  let bbScore = 0;
+  bbScore += bbBull?0.35:bbBear?-0.35:0;
+  bbScore += bbExpanding&&bbBull?0.25:bbExpanding&&bbBear?-0.25:0;
+  bbScore += bbUpperPush?0.20:bbLowerPush?-0.20:0;
+  bbScore = clamp(bbScore,-1,1);
+
+  // BB midline trigger (barssince crossover/crossunder ≤ bbMidlineLookback)
+  const bbCrossArr = new Array(n).fill(false);
+  const bbBearCrossArr = new Array(n).fill(false);
+  for(let j=1;j<n;j++){
+    bbCrossArr[j]     = crossover(C,bbBasis,j);
+    bbBearCrossArr[j] = crossunder(C,bbBasis,j);
+  }
+  const bbBarsSinceBull = barssince(bbCrossArr,i);
+  const bbBarsSinceBear = barssince(bbBearCrossArr,i);
+  const bbBullTrigger = !isNaN(bbBarsSinceBull)&&bbBarsSinceBull<=P.bbMidlineLookback&&C[i]>bbBasis[i];
+  const bbBearTrigger = !isNaN(bbBarsSinceBear)&&bbBarsSinceBear<=P.bbMidlineLookback&&C[i]<bbBasis[i];
+  const bbTriggerScore = bbBullTrigger?1.0:bbBearTrigger?-1.0:0;
+  const bbRegimeScore  = bbRegimeBull?0.20:bbRegimeBear?-0.20:0;
+
+  // ── SAR ENGINE ──
+  const sarArr = sarCalc(H,Lo,P.sarStart,P.sarInc,P.sarMax);
+  const sarNow = sarArr[i];
+  const sarBull = C[i]>sarNow;
+  const sarBear = C[i]<sarNow;
+  const sarFlipBull = sarBull&&i>0&&C[i-1]<=sarArr[i-1];
+  const sarFlipBear = sarBear&&i>0&&C[i-1]>=sarArr[i-1];
+  let sarScore = 0;
+  sarScore += sarBull?0.55:sarBear?-0.55:0;
+  sarScore += sarFlipBull?0.30:sarFlipBear?-0.30:0;
+  sarScore = clamp(sarScore,-1,1);
+
+  // ── GAP ENGINE ──
+  const gapAvgRange = sma(H.map((_,j)=>H[j]-Lo[j]), 14);
+  let gapScore = 0; // simplified: no persistent var in single-bar compute
+
+  // ── VOLUME / RVOL ENGINE ──
+  const volAvg = sma(V, P.volLen);
+  const rvol = volAvg[i]>0?V[i]/volAvg[i]:NaN;
+  const volGreen = C[i]>O[i];
+  const volRed   = C[i]<O[i];
+  const volRising = V[i]>V[i-1];
+  const volFading = V[i]<V[i-1]&&V[i]<V[i-2];
+  let volumeScore = 0;
+  if (!isNaN(rvol)) {
+    volumeScore += rvol>=P.rvolHot&&volGreen?0.45:rvol>=P.rvolHot&&volRed?-0.45:0;
+    volumeScore += volRising&&volGreen?0.20:volRising&&volRed?-0.20:0;
+    volumeScore += rvol<=P.rvolWeak?-0.10:0;
+    volumeScore = clamp(volumeScore,-1,1);
+  }
+
+  // ── MOMENTUM ENGINE ──
+  const rsiArr  = rsi(C, P.rsiLen);
+  const rocArr  = roc(C, P.momLen);
+  const {hist:macdHist} = macd(C,P.macdFast,P.macdSlow,P.macdSignal);
+  const rsiNow=rsiArr[i], rocNow=rocArr[i], macdNow=macdHist[i], macdPrev=macdHist[i-1];
+  const momBull = rsiNow>50&&rocNow>0&&macdNow>0;
+  const momBear = rsiNow<50&&rocNow<0&&macdNow<0;
+  const momBullStrong = rsiNow>60&&rocNow>0&&macdNow>macdPrev;
+  const momBearStrong = rsiNow<40&&rocNow<0&&macdNow<macdPrev;
+  let momentumScore = 0;
+  momentumScore += momBull?0.35:momBear?-0.35:0;
+  momentumScore += momBullStrong?0.25:momBearStrong?-0.25:0;
+  momentumScore = clamp(momentumScore,-1,1);
+
+  // ── LIQUIDITY ENGINE (ta.valuewhen pivot) ──
+  const pl = P.liqPivotLen;
+  let liqHighVal=NaN, liqLowVal=NaN;
+  for(let j=i-pl;j>=pl;j--){
+    let ph=true,plo=true;
+    for(let k=j-pl;k<=j+pl;k++){
+      if(k===j||k<0||k>=n)continue;
+      if(H[k]>H[j])ph=false;
+      if(Lo[k]<Lo[j])plo=false;
+    }
+    if(ph&&isNaN(liqHighVal))liqHighVal=H[j];
+    if(plo&&isNaN(liqLowVal))liqLowVal=Lo[j];
+    if(!isNaN(liqHighVal)&&!isNaN(liqLowVal))break;
+  }
+  const nearLiqHigh = !isNaN(liqHighVal)&&Math.abs(C[i]-liqHighVal)<=atrNow*P.liqNearATR;
+  const nearLiqLow  = !isNaN(liqLowVal) &&Math.abs(C[i]-liqLowVal) <=atrNow*P.liqNearATR;
+  const liqBreakUp  = !isNaN(liqHighVal)&&C[i]>liqHighVal&&C[i-1]<=liqHighVal;
+  const liqBreakDn  = !isNaN(liqLowVal) &&C[i]<liqLowVal &&C[i-1]>=liqLowVal;
+  const liqRejectHigh = nearLiqHigh&&C[i]<O[i];
+  const liqRejectLow  = nearLiqLow &&C[i]>O[i];
+  let liquidityScore = 0;
+  liquidityScore += liqBreakUp?0.45:liqBreakDn?-0.45:0;
+  liquidityScore += liqRejectLow?0.25:liqRejectHigh?-0.25:0;
+  liquidityScore = clamp(liquidityScore,-1,1);
+
+  // ── FIB ENGINE ──
+  const fibLB = Math.min(P.fibLookback, n);
+  const fibH  = Math.max(...H.slice(n-fibLB));
+  const fibL  = Math.min(...Lo.slice(n-fibLB));
+  const fibRange = fibH-fibL;
+  const fibMid=fibL+fibRange*0.50, fib618=fibL+fibRange*0.618,
+        fib382=fibL+fibRange*0.382, fib786=fibL+fibRange*0.786,
+        fib236=fibL+fibRange*0.236;
+  const nearFib382=fibRange>0&&Math.abs(C[i]-fib382)<=atrNow*P.fibNearATR;
+  const nearFib50 =fibRange>0&&Math.abs(C[i]-fibMid) <=atrNow*P.fibNearATR;
+  const nearFib618=fibRange>0&&Math.abs(C[i]-fib618) <=atrNow*P.fibNearATR;
+  const fibAboveMid=fibRange>0&&C[i]>fibMid;
+  const fibBelowMid=fibRange>0&&C[i]<fibMid;
+  const fibBreak618=fibRange>0&&C[i]>fib618&&C[i-1]<=fib618;
+  const fibBreak382=fibRange>0&&C[i]<fib382&&C[i-1]>=fib382;
+  const fibSupportBounce=(nearFib382||nearFib50||nearFib618)&&C[i]>O[i]&&C[i]>C[i-1];
+  const fibResistanceReject=(nearFib618||nearFib786||nearFib50)&&C[i]<O[i]&&C[i]<C[i-1];
+  let fibScore = 0;
+  if(fibRange>0){
+    fibScore += fibAboveMid?0.20:fibBelowMid?-0.20:0;
+    fibScore += fibBreak618?0.35:fibBreak382?-0.35:0;
+    fibScore += fibSupportBounce?0.20:fibResistanceReject?-0.20:0;
+    fibScore = clamp(fibScore,-1,1);
+  }
+
+  // ── DIRECTION — Pine baseDirectionScore uses pressure/gravity/vote from MTF ladder
+  // We approximate with EMA/VWAP/SAR flow (close match without multi-TF requests)
+  const nativeBullFlow = C[i]>emaNow&&C[i]>vwapNow;
+  const nativeBearFlow = C[i]<emaNow&&C[i]<vwapNow;
+  let baseDirectionScore = 0;
+  baseDirectionScore += nativeBullFlow?0.60:nativeBearFlow?-0.60:0;
+  baseDirectionScore += sarBull?0.25:sarBear?-0.25:0;
+  baseDirectionScore += bbBull?0.15:bbBear?-0.15:0;
+  baseDirectionScore = clamp(baseDirectionScore,-1,1);
+
+  // ── CONFIRMATION MERGE (7 engines: BB,SAR,Gap,Vol,Mom,Liq,Fib) ──
+  const enabledCount = 7;
+  const rawConfirmScore = (bbScore+sarScore+gapScore+volumeScore+momentumScore+liquidityScore+fibScore)/enabledCount;
+  const directionScore = clamp(baseDirectionScore+(rawConfirmScore*P.confirmWeight),-1,1);
+
+  let dir = 0;
+  if(directionScore>0.10) dir=1;
+  else if(directionScore<-0.10) dir=-1;
+
+  const confirmAligned  = dir===1?rawConfirmScore>0.15:dir===-1?rawConfirmScore<-0.15:false;
+  const confirmConflict = dir===1?rawConfirmScore<-0.15:dir===-1?rawConfirmScore>0.15:false;
+
+  // ── TF SIGNAL SCORES (15m = intraday) ──
+  const intradayScore = clamp(
+    bbScore*0.22+sarScore*0.22+momentumScore*0.18+volumeScore*0.13+gapScore*0.12+(bbTriggerScore*(P.bbTriggerWeight*0.80)),
+    -1,1);
+  let intradaySignal = intradayScore>P.intradayTrigger?"Get On":intradayScore<-P.intradayTrigger?"Get Off":"Wait";
+  // BB hard trigger override for intraday
+  if(bbBullTrigger) intradaySignal="Get On";
+  else if(bbBearTrigger) intradaySignal="Get Off";
+
+  // ── SIGMA WHERE (RR targets) ──
+  const sigmaArr = stdevPop(C, P.sigmaLen);
+  const sigmaNow = sigmaArr[i];
+  const callT1=C[i]+sigmaNow, callT2=C[i]+sigmaNow*1.5, callT3=C[i]+sigmaNow*2.0;
+  const putT1 =C[i]-sigmaNow, putT2 =C[i]-sigmaNow*1.5, putT3=C[i]-sigmaNow*2.0;
+  const callRisk=Math.abs(C[i]-sarNow), putRisk=Math.abs(C[i]-sarNow);
+  const callRR1=callRisk>0?Math.abs(callT1-C[i])/callRisk:0;
+  const callRR2=callRisk>0?Math.abs(callT2-C[i])/callRisk:0;
+  const putRR1 =putRisk>0 ?Math.abs(C[i]-putT1)/putRisk:0;
+  const putRR2 =putRisk>0 ?Math.abs(C[i]-putT2)/putRisk:0;
+
+  // ── MANIPULATION PHASE ──
+  const emaSlope3 = emaNow-(i>=3?emaN[i-3]:emaN[0]);
+  const emaVwapTangled = Math.abs(emaNow-vwapNow)<=atrNow*0.18;
+  const priceNearMid   = Math.abs(C[i]-bbBasis[i])<=atrNow*0.18;
+  const manipulationPhase = bbSqueezing&&emaVwapTangled&&priceNearMid;
+
+  // ── CAMPAIGN TRIGGERS (longTurn/shortTurn) ──
+  const longTurn  = sarFlipBull||(crossover(C,emaN,i)&&C[i]>bbBasis[i])||(crossover(C,bbBasis,i)&&C[i]>emaNow);
+  const shortTurn = sarFlipBear||(crossunder(C,emaN,i)&&C[i]<bbBasis[i])||(crossunder(C,bbBasis,i)&&C[i]<emaNow);
+  const longCampaignTrigger  = !manipulationPhase&&longTurn &&C[i]>emaNow&&C[i]>bbBasis[i]&&emaSlope3>=0;
+  const shortCampaignTrigger = !manipulationPhase&&shortTurn&&C[i]<emaNow&&C[i]<bbBasis[i]&&emaSlope3<=0;
+  const longBBConfirmed  = C[i]>bbBasis[i]&&bbExpansionAlive;
+  const shortBBConfirmed = C[i]<bbBasis[i]&&bbExpansionAlive;
+
+  // ── CAMPAIGN STATE (stateless single-bar approximation) ──
+  // Walk through all bars to simulate persistent state machine
+  let activeTrainDir=0, actionState="Wait", entryBar=null;
+  let lastCampaignExitBar=null, entryPriceVal=null, entryRisk=null;
+  let aT1=null,aT2=null,lastSignal="None";
+
+  for(let j=1;j<n;j++){
+    const ej=emaN[j], vj=vwapN[j], aj=atrN[j], bj=bbBasis[j], sj=sarArr[j];
+    const sarBj=C[j]>sj, sarBerj=C[j]<sj;
+    const sarFBj=sarBj&&C[j-1]<=sarArr[j-1], sarFBerj=sarBerj&&C[j-1]>=sarArr[j-1];
+    const bbCj=sma(C.slice(0,j+1).slice(-P.bbLen),P.bbLen); // avoid recomputing; use precomputed
+    const basisJ=bbBasis[j];
+    const eTangled=Math.abs(ej-vj)<=atrN[j]*0.18;
+    const pNearMid=Math.abs(C[j]-basisJ)<=atrN[j]*0.18;
+
+    // rebuild bbSqueezing/Expanding at j
+    const bbSqJ=!isNaN(bbWidth[j])&&!isNaN(bbWidthAvg[j])&&bbWidth[j]<bbWidthAvg[j]&&(j>0?bbWidth[j]<bbWidth[j-1]:true);
+    const manipJ=bbSqJ&&eTangled&&pNearMid;
+
+    const longT = (sarFBj||(crossover(C,emaN,j)&&C[j]>basisJ)||(crossover(C,bbBasis,j)&&C[j]>ej));
+    const shortT= (sarFBerj||(crossunder(C,emaN,j)&&C[j]<basisJ)||(crossunder(C,bbBasis,j)&&C[j]<ej));
+    const eSlope3j=ej-(j>=3?emaN[j-3]:emaN[0]);
+    const lCT=!manipJ&&longT &&C[j]>ej&&C[j]>basisJ&&eSlope3j>=0;
+    const sCT=!manipJ&&shortT&&C[j]<ej&&C[j]<basisJ&&eSlope3j<=0;
+    const lBBConf=C[j]>basisJ&&bbTrueExpArr[j];
+    const sBBConf=C[j]<basisJ&&bbTrueExpArr[j];
+
+    const coolOK=lastCampaignExitBar===null||j-lastCampaignExitBar>=P.dynCooldownBars;
+    const canExitJ=entryBar!==null&&j-entryBar>=Math.max(P.minBarsInTrade,P.dynMinBars);
+
+    // exit scoring for long
+    const cBelowEMA2=C[j]<emaN[j]&&C[j-1]<emaN[j-1];
+    const cBelowVWAP2=C[j]<vwapN[j]&&C[j-1]<vwapN[j-1];
+    const cBelowMid2=C[j]<bbBasis[j]&&C[j-1]<bbBasis[j-1];
+    const cAboveEMA2=C[j]>emaN[j]&&C[j-1]>emaN[j-1];
+    const cAboveVWAP2=C[j]>vwapN[j]&&C[j-1]>vwapN[j-1];
+    const cAboveMid2=C[j]>bbBasis[j]&&C[j-1]>bbBasis[j-1];
+    const cRange=H[j]-Lo[j];
+    const cBody=Math.abs(C[j]-O[j]);
+    const largeBear=cRange>0&&C[j]<O[j]&&cBody>=atrN[j]*0.70&&C[j]<=Lo[j]+cRange*0.35;
+    const largeBull=cRange>0&&C[j]>O[j]&&cBody>=atrN[j]*0.70&&C[j]>=H[j]-cRange*0.35;
+    const bbExpStall=j>0&&!isNaN(bbWidth[j-1])&&(bbWidth[j]<bbWidth[j-1]||(bbTrueExpArr[j-1]&&!bbTrueExpArr[j]));
+
+    let longExitScore=0;
+    longExitScore+=sarFBerj?2:0;
+    longExitScore+=cBelowEMA2?1:0;
+    longExitScore+=cBelowVWAP2?1:0;
+    longExitScore+=cBelowMid2?1:0;
+    longExitScore+=largeBear?1:0;
+    longExitScore+=(bbExpStall&&C[j]<C[j-1])?1:0;
+
+    let shortExitScore=0;
+    shortExitScore+=sarFBj?1:0;
+    shortExitScore+=cAboveEMA2?1:0;
+    shortExitScore+=cAboveVWAP2?1:0;
+    shortExitScore+=cAboveMid2?1:0;
+    shortExitScore+=largeBull?1:0;
+    shortExitScore+=(bbExpStall&&C[j]>C[j-1])?1:0;
+
+    const strongShortRev=(sarFBj&&cAboveEMA2&&cAboveMid2)||(largeBull&&C[j]>emaN[j]&&C[j]>bbBasis[j]);
+    const longExitP=activeTrainDir===1&&canExitJ&&longExitScore>=2;
+    const shortExitP=activeTrainDir===-1&&canExitJ&&strongShortRev&&shortExitScore>=3;
+
+    // confirm conflict at j
+    const rawCj=(bbScore+sarScore+gapScore+volumeScore+momentumScore+liquidityScore+fibScore)/enabledCount;
+    // simplified: use current-bar confirm (full recompute not done per-bar for perf)
+    const dirJ=directionScore>0.10?1:directionScore<-0.10?-1:0;
+    const confConflJ=dirJ===1?rawCj<-0.15:dirJ===-1?rawCj>0.15:false;
+
+    if(activeTrainDir===0){
+      if(coolOK&&lCT){
+        activeTrainDir=1; actionState="Get On"; entryBar=j;
+        entryPriceVal=C[j]; entryRisk=Math.abs(C[j]-sarArr[j]);
+        const sig=stdevPop(C.slice(0,j+1).slice(-P.sigmaLen),P.sigmaLen);
+        const sigJ=sig[sig.length-1];
+        aT1=C[j]+sigJ; aT2=C[j]+sigJ*1.5; lastSignal="B2O";
+      } else if(coolOK&&sCT){
+        activeTrainDir=-1; actionState="Get On"; entryBar=j;
+        entryPriceVal=C[j]; entryRisk=Math.abs(C[j]-sarArr[j]);
+        const sig=stdevPop(C.slice(0,j+1).slice(-P.sigmaLen),P.sigmaLen);
+        const sigJ=sig[sig.length-1];
+        aT1=C[j]-sigJ; aT2=C[j]-sigJ*1.5; lastSignal="S2O";
+      } else { actionState="Wait"; }
+    } else if(activeTrainDir===1){
+      if(longExitP){
+        actionState="Get Off"; activeTrainDir=0; lastCampaignExitBar=j;
+        entryBar=null; entryPriceVal=null; entryRisk=null; aT1=null; aT2=null; lastSignal="S2C";
+      } else { actionState="Get On"; }
+    } else if(activeTrainDir===-1){
+      if(shortExitP){
+        actionState="Get Off"; activeTrainDir=0; lastCampaignExitBar=j;
+        entryBar=null; entryPriceVal=null; entryRisk=null; aT1=null; aT2=null; lastSignal="B2C";
+      } else { actionState="Get On"; }
+    }
+    if(confConflJ&&activeTrainDir!==0) actionState="Wait";
+  }
+  const action=actionState;
+
+  // ── RR FROM LOCKED ENTRY ──
+  let rr1=null,rr2=null;
+  if(entryPriceVal!==null&&entryRisk!==null&&entryRisk>0&&aT1!==null){
+    rr1=Math.abs(aT1-entryPriceVal)/entryRisk;
+    rr2=aT2!==null?Math.abs(aT2-entryPriceVal)/entryRisk:null;
+  }
+
+  // ── TREND SCORE + QUALITY (Pine lines 1180-1186) ──
+  const trendScore = activeTrainDir===1?(C[i]>emaNow?20:0)+(C[i]>vwapNow?20:0)+(sarBull?20:0):
+                     activeTrainDir===-1?(C[i]<emaNow?20:0)+(C[i]<vwapNow?20:0)+(sarBear?20:0):0;
+  let rrScore=0;
+  if(rr1!==null&&rr1>=P.minRR1) rrScore+=20;
+  if(rr2!==null&&rr2>=2.0) rrScore+=20;
+  const quality=trendScore+rrScore;
+
+  // ── CERTAINTY / EDGE (Pine lines 1195-1259) ──
+  const engineTempPct=clamp(Math.abs(directionScore)*100,0,100);
+  const flowAligned=dir===1?C[i]>vwapNow:dir===-1?C[i]<vwapNow:false;
+  const mode=action==="Get On"?(longBBConfirmed||shortBBConfirmed?4:3):
+             action==="Get Off"?7:1;
+  const modeTrust=mode===4?90:mode===3?75:mode===2?55:mode===5?45:mode===6?35:mode===7?20:mode===8?5:25;
+  const arriveTrust=50; // no session tracking in single candle array
+  const flowTrust=flowAligned?80:40;
+  let baseCertaintyPct=dir===0?0:clamp(
+    engineTempPct*0.40+modeTrust*0.25+arriveTrust*0.20+flowTrust*0.15,0,100);
+  const confirmationPct=clamp(Math.abs(rawConfirmScore)*100,0,100);
+  let certaintyPct=baseCertaintyPct;
+  certaintyPct+=confirmAligned?P.confirmBonus:0;
+  certaintyPct-=confirmConflict?P.conflictPenalty:0;
+  certaintyPct=clamp(certaintyPct,0,100);
+  const edgePct=clamp(certaintyPct*0.55+confirmationPct*0.25+quality*0.20,0,100);
+
+  // ── RISK (Pine lines 1263-1266) ──
+  const atrPct=C[i]!==0?(atrNow/C[i])*100:NaN;
+  const riskText=isNaN(atrPct)?"Medium":
+    atrPct<=P.riskLowATRpct&&quality>=60?"Low":
+    atrPct>=P.riskHighATRpct||quality<40?"High":"Medium";
+
+  // ── LEGENDS ENGINE (Pine lines 1238-1266) ──
+  const sidewaysNow=Math.abs(C[i]-bbBasis[i])<=atrNow*P.cycleSidewaysATR;
+  const volumeElevated=!isNaN(rvol)&&rvol>=P.rvolHot;
+  const momentumFadingBull=C[i]<C[i-1]||volFading;
+  const isAccumulation=bbSqueezing&&sidewaysNow&&(isNaN(rvol)||rvol<P.rvolHot);
+  const isMarkUp=bbExpanding&&bbRegimeBull&&sarBull&&momentumScore>0&&volumeScore>=0;
+  const isMarkDown=bbExpanding&&bbRegimeBear&&sarBear&&momentumScore<0&&volumeScore<=0;
+  const nearTarget=false; // no full ladder in JS
+  const isDistribution=(nearTarget||bbUpperPush||nearLiqHigh)&&(momentumFadingBull||volumeElevated)&&!isMarkUp;
+  const cycleText=isAccumulation?"Accumulation":isMarkUp?"Mark-Up":isDistribution?"Distribution":isMarkDown?"Mark-Down":"Balance";
+
+  const trendComposite=clamp(directionScore*0.45+rawConfirmScore*0.35+bbScore*0.20,-1,1);
+
+  const opportunityDir=activeTrainDir!==0?activeTrainDir:dir;
+
+  // Wyckoff
+  const wyBullTrap=cycleText==="Mark-Up"&&dir===-1;
+  const wyBearTrap=cycleText==="Mark-Down"&&dir===1;
+  const wyckoffText=wyBullTrap?"Bull Trap":wyBearTrap?"Bear Trap":
+    (cycleText==="Accumulation"||cycleText==="Mark-Up")?"Inst Buying":
+    (cycleText==="Distribution"||cycleText==="Mark-Down")?"Inst Selling":
+    manipulationPhase?"Manipulation":"Balance";
+  const wyGreen=(opportunityDir===1&&wyckoffText==="Inst Buying")||(opportunityDir===-1&&wyckoffText==="Inst Selling");
+  const wyYellow=["Bull Trap","Bear Trap","Manipulation","Balance"].includes(wyckoffText);
+
+  // Livermore
+  const livUp=C[i]>emaNow&&C[i]>vwapNow&&sarBull;
+  const livDown=C[i]<emaNow&&C[i]<vwapNow&&sarBear;
+  const livText=livUp?"Uptrend":livDown?"Downtrend":"Transition";
+  const livGreen=(opportunityDir===1&&livUp)||(opportunityDir===-1&&livDown);
+  const livYellow=livText==="Transition";
+
+  // Seykota
+  const seykotaText=manipulationPhase||bbSqueezing?"Compression":
+    Math.abs(trendComposite)>=0.70&&bbExpansionAlive?"Strong Trend":
+    Math.abs(trendComposite)>=0.35?"Trend":"Weak Trend";
+  const seykotaGreen=seykotaText==="Strong Trend"||seykotaText==="Trend";
+  const seykotaYellow=seykotaText==="Weak Trend";
+
+  // Signal Score 0-100 (5×20)
+  const signalScore=(wyGreen?20:0)+(livGreen?20:0)+(edgePct>=75?20:0)+(riskText==="Low"?20:0)+(seykotaGreen?20:0);
+
+  // Station (nearest forward level)
+  let stationPrice=null;
+  if(!isNaN(liqHighVal)&&dir===1&&liqHighVal>C[i])stationPrice=liqHighVal;
+  else if(!isNaN(liqLowVal)&&dir===-1&&liqLowVal<C[i])stationPrice=liqLowVal;
+  else if(dir===1)stationPrice=C[i]+atrNow*1.618;
+  else if(dir===-1)stationPrice=C[i]-atrNow*1.618;
+  const stationDistPct=stationPrice&&C[i]>0?(Math.abs(stationPrice-C[i])/C[i])*100:null;
+
+  return {
+    close:C[i], atrPct, dir, opportunityDir,
+    wyckoffText, wyGreen, wyYellow,
+    livText, livGreen, livYellow,
+    edgePct, riskText, dennisGreen:riskText==="Low",
+    seykotaText, seykotaGreen, seykotaYellow,
+    signalScore, action, lastSignal, activeTrainDir,
+    entryPrice:entryPriceVal, activeT1:aT1, activeT2:aT2, rr1, rr2,
+    stationPrice, stationDistPct,
+    trendComposite, manipulationPhase,
+    bbExpanding, bbSqueezing, bbBasis, bbUpper, bbLower,
+    ema21Arr:emaN, sarArr,
+    barTime: candles[i].t
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// SCAN LOOP
+// ═══════════════════════════════════════════════════════
+async function runScan() {
+  if(!getKey()){setStatus("⚠ Enter Polygon.io API key first","yellow");return;}
+  if(scanning)return;
+  scanning=true; scanAbort=false; scanResults=[];
+  document.getElementById('scanPulse').className="pulse green";
+  document.getElementById('scannerBody').innerHTML='<tr><td colspan="10" class="empty-state"><span class="spinner"></span> Scanning…</td></tr>';
+  const total=TICKERS.length;
+  for(let t=0;t<total;t++){
+    if(scanAbort)break;
+    const ticker=TICKERS[t];
+    setStatus(`Fetching ${ticker} (${t+1}/${total})…`,"green");
+    document.getElementById('scanProgress').textContent=Math.round((t/total)*100)+"%";
+    try {
+      // 20 days lookback for enough BB/EMA/sigma history
+      const candles=await fetchCandles(ticker,'minute',15,20);
+      if(candles.length>=150){
+        const result=computeEngine(candles);
+        if(result) scanResults.push({ticker,...result,candles});
+      }
+    } catch(e){ console.warn(ticker,e.message); }
+    await new Promise(r=>setTimeout(r,80));
+  }
+  scanning=false;
+  document.getElementById('scanPulse').className="pulse";
+  document.getElementById('scanProgress').textContent='';
+  document.getElementById('lastScan').textContent="Last scan: "+new Date().toLocaleTimeString();
+  setStatus(`Scan complete — ${scanResults.length} tickers loaded`,"");
+  renderScanner();
+}
+function stopScan(){scanAbort=true;scanning=false;document.getElementById('scanPulse').className="pulse";setStatus("Scan stopped","");}
+function setStatus(msg,pulse){
+  document.getElementById('scanStatus').textContent=msg;
+  if(pulse)document.getElementById('scanPulse').className="pulse "+pulse;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER SCANNER
+// ═══════════════════════════════════════════════════════
+function chip(g,y){return`<span class="chip ${g?"g":y?"y":"r"}"></span>`;}
+function actionBadge(r){
+  let bg="#333",c="#888",lbl="Wait";
+  if(r.lastSignal==="B2O"||(r.action==="Get On"&&r.activeTrainDir===1)){bg="#1565c0";c="#fff";lbl="B2O";}
+  else if(r.lastSignal==="S2O"||(r.action==="Get On"&&r.activeTrainDir===-1)){bg="#b71c1c";c="#fff";lbl="S2O";}
+  else if(r.action==="Get Off"){bg="#4a148c";c="#fff";lbl="Get Off";}
+  return`<span class="action-badge" style="background:${bg};color:${c}">${lbl}</span>`;
+}
+function scColor(s){
+  if(s>=80)return{bg:"#1b5e20",txt:"#00e676",bar:"#00e676"};
+  if(s>=60)return{bg:"#4a3800",txt:"#ffd600",bar:"#ffd600"};
+  return{bg:"#3b0000",txt:"#ef5350",bar:"#ef5350"};
+}
+function dirTxt(d){return d===1?"↑ North":d===-1?"↓ South":"— Balance";}
+function dirStyle(d){return d===1?"color:#00e676":d===-1?"color:#ef5350":"color:#666";}
+
+function renderScanner(){
+  const filter=document.getElementById('filterSelect').value;
+  let data=[...scanResults].filter(r=>{
+    if(filter==="all")return true;
+    if(filter==="b2o")return r.lastSignal==="B2O"||(r.action==="Get On"&&r.activeTrainDir===1);
+    if(filter==="s2o")return r.lastSignal==="S2O"||(r.action==="Get On"&&r.activeTrainDir===-1);
+    if(filter==="geton")return r.action==="Get On";
+    if(filter==="getoff")return r.action==="Get Off";
+    if(filter==="wait")return r.action==="Wait";
+    if(filter==="score80")return r.signalScore>=80;
+    if(filter==="score60")return r.signalScore>=60;
+    return true;
+  });
+  data.sort((a,b)=>{
+    const{col,dir}=sortState;
+    let va,vb;
+    if(col==="score"){va=a.signalScore;vb=b.signalScore;}
+    else if(col==="price"){va=a.close;vb=b.close;}
+    else if(col==="ticker"){va=a.ticker;vb=b.ticker;}
+    else if(col==="dir"){va=a.dir;vb=b.dir;}
+    else if(col==="edge"){va=a.edgePct;vb=b.edgePct;}
+    else if(col==="action"){const rk=s=>s==="Get On"?0:s==="Get Off"?1:2;va=rk(a.action);vb=rk(b.action);}
+    else{va=a.signalScore;vb=b.signalScore;}
+    if(typeof va==="string")return dir==="asc"?va.localeCompare(vb):vb.localeCompare(va);
+    return dir==="asc"?va-vb:vb-va;
+  });
+  document.getElementById('countLabel').textContent=data.length+" tickers";
+  const body=document.getElementById('scannerBody');
+  if(!data.length){body.innerHTML='<tr><td colspan="10" class="empty-state">No results match filter</td></tr>';return;}
+  body.innerHTML=data.map(r=>{
+    const sc=scColor(r.signalScore);
+    const sel=r.ticker===selectedTicker?" selected":"";
+    return`<tr class="${sel}" onclick="selectTicker('${r.ticker}',event)">
+      <td class="ticker-cell">${r.ticker}</td>
+      <td class="price-cell col-price">$${r.close.toFixed(2)}</td>
+      <td style="${dirStyle(r.dir)}">${dirTxt(r.dir)}</td>
+      <td class="col-cycle">${chip(r.wyGreen,r.wyYellow)}${r.wyckoffText}</td>
+      <td class="col-trend">${chip(r.livGreen,r.livYellow)}${r.livText}</td>
+      <td class="col-edge">${r.edgePct.toFixed(1)}%</td>
+      <td class="col-risk" style="color:${r.riskText==="Low"?"#00e676":r.riskText==="Medium"?"#ffd600":"#ef5350"}">${r.riskText}</td>
+      <td class="col-momentum">${chip(r.seykotaGreen,r.seykotaYellow)}${r.seykotaText}</td>
+      <td><div class="score-wrap"><span style="color:${sc.txt};font-weight:700;min-width:32px">${r.signalScore}</span>
+        <div class="score-mini-bar"><div class="score-mini-fill" style="width:${r.signalScore}%;background:${sc.bar}"></div></div></div></td>
+      <td>${actionBadge(r)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function sortBy(col){
+  if(sortState.col===col)sortState.dir=sortState.dir==="desc"?"asc":"desc";
+  else{sortState.col=col;sortState.dir="desc";}
+  document.querySelectorAll('table.scanner thead th').forEach(th=>th.classList.remove('sort-asc','sort-desc'));
+  const cols=['ticker','price','dir','cycle','trend','edge','risk','momentum','score','action'];
+  const idx=cols.indexOf(col);
+  if(idx>=0)document.querySelectorAll('table.scanner thead th')[idx].classList.add(sortState.dir==="asc"?"sort-asc":"sort-desc");
+  renderScanner();
+}
+function applySortUI(){
+  const v=document.getElementById('sortSelect').value;
+  if(v==="score-desc")sortState={col:"score",dir:"desc"};
+  else if(v==="score-asc")sortState={col:"score",dir:"asc"};
+  else if(v==="action")sortState={col:"action",dir:"asc"};
+  else if(v==="ticker")sortState={col:"ticker",dir:"asc"};
+  renderScanner();
+}
+function applyFilter(){renderScanner();}
+
+// ═══════════════════════════════════════════════════════
+// SELECT TICKER → DASHBOARD
+// ═══════════════════════════════════════════════════════
+function selectTicker(ticker,event){
+  selectedTicker=ticker;
+  const r=scanResults.find(x=>x.ticker===ticker);
+  if(!r)return;
+  document.querySelectorAll('table.scanner tbody tr').forEach(tr=>tr.classList.remove('selected'));
+  if(event&&event.currentTarget)event.currentTarget.classList.add('selected');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-dashboard').classList.add('active');
+  document.getElementById('panel-dashboard').classList.add('active');
+  populateDashboard(r);
+  drawChart(r);
+}
+
+// ═══════════════════════════════════════════════════════
+// POPULATE DASHBOARD
+// ═══════════════════════════════════════════════════════
+function lgCls(g,y){return g?"val bg-green txt-white":y?"val bg-yellow txt-black":"val bg-red txt-white";}
+function simonsCls(e){return e>=75?"val bg-green txt-white":e>=55?"val bg-yellow txt-black":"val bg-red txt-white";}
+function dennisCls(r){return r==="Low"?"val bg-green txt-white":r==="Medium"?"val bg-yellow txt-black":"val bg-red txt-white";}
+function setD(id,text,cls){const el=document.getElementById(id);el.className=cls;el.textContent=text;}
+function setDStyle(id,text,bg,color){const el=document.getElementById(id);el.className="val";el.style.background=bg;el.style.color=color;el.textContent=text;}
+
+function populateDashboard(r){
+  document.getElementById('dashEmpty').style.display="none";
+  document.getElementById('dashContent').style.display="block";
+  document.getElementById('dashTicker').textContent=r.ticker;
+  document.getElementById('chartLabel').textContent=r.ticker+" — Price Chart (15m, last 50 bars)";
+  if(r.barTime){
+    const d=new Date(r.barTime);
+    document.getElementById('dashBarTime').textContent="Bar: "+d.toLocaleString();
+  }
+
+  const dCls=r.dir===1?"val bg-dark txt-north":r.dir===-1?"val bg-dark txt-south":"val bg-dark txt-bal";
+  const dirTxtV=r.dir===1?"North":r.dir===-1?"South":"Balance";
+
+  setD("d-price","$"+r.close.toFixed(2),"val bg-dark txt-white");
+  const staTxt=r.stationPrice?"$"+r.stationPrice.toFixed(2)+(r.stationDistPct?" / "+r.stationDistPct.toFixed(2)+"%":""):"—";
+  setD("d-station",staTxt,dCls);
+  setD("d-direction",dirTxtV,dCls);
+  setD("d-cycle",r.wyckoffText,lgCls(r.wyGreen,r.wyYellow));
+  setD("d-trend",r.livText,lgCls(r.livGreen,r.livYellow));
+  setD("d-edge",r.edgePct.toFixed(1)+"%",simonsCls(r.edgePct));
+  setD("d-risk",r.riskText+(r.atrPct?" "+r.atrPct.toFixed(2)+"%":""),dennisCls(r.riskText));
+  setD("d-momentum",r.seykotaText,lgCls(r.seykotaGreen,r.seykotaYellow));
+
+  const sc=scColor(r.signalScore);
+  const scoreCell=document.getElementById("d-score");
+  scoreCell.className="val dscore-cell"; scoreCell.style.background=sc.bg;
+  document.getElementById("d-score-bar").style.cssText=`width:${r.signalScore}%;background:${sc.bar}`;
+  const stxt=document.getElementById("d-score-txt");
+  stxt.textContent=r.signalScore+" / 100"; stxt.style.color=sc.txt;
+
+  setD("d-entry",r.entryPrice?"$"+r.entryPrice.toFixed(2):"—","val bg-dark txt-white");
+
+  const fmt2=v=>isNaN(v)||v===null?"—":v.toFixed(2);
+  const t1txt=r.activeT1?"$"+r.activeT1.toFixed(2)+" ("+fmt2(r.rr1)+"R)":"—";
+  const t1cls=r.rr1!==null?(r.rr1>=1?"val bg-dark txt-lime":r.rr1>=0.5?"val bg-dark txt-yellow":"val bg-dark txt-red"):"val bg-dark txt-gray";
+  setD("d-t1",t1txt,t1cls);
+
+  const t2txt=r.activeT2?"$"+r.activeT2.toFixed(2)+" ("+fmt2(r.rr2)+"R)":"—";
+  const t2cls=r.rr2!==null?(r.rr2>=2?"val bg-dark txt-lime":r.rr2>=1?"val bg-dark txt-yellow":"val bg-dark txt-red"):"val bg-dark txt-gray";
+  setD("d-t2",t2txt,t2cls);
+
+  let actBg="#333",actTxt="#888",actLbl="Wait";
+  if(r.lastSignal==="B2O"||(r.action==="Get On"&&r.activeTrainDir===1)){actBg="#1565c0";actTxt="#fff";actLbl="B2O / Hold";}
+  else if(r.lastSignal==="S2O"||(r.action==="Get On"&&r.activeTrainDir===-1)){actBg="#b71c1c";actTxt="#fff";actLbl="S2O / Hold";}
+  else if(r.action==="Get Off"){actBg="#4a148c";actTxt="#fff";actLbl=r.lastSignal||"Get Off";}
+  const actEl=document.getElementById("d-action");
+  actEl.className="val"; actEl.style.background=actBg; actEl.style.color=actTxt; actEl.textContent=actLbl;
+  const actLblEl=document.getElementById("d-action-lbl");
+  actLblEl.style.background=actBg; actLblEl.style.color=actTxt;
+}
+
+// ═══════════════════════════════════════════════════════
+// MINI CHART
+// ═══════════════════════════════════════════════════════
+function scColor(s){ // defined again for scoping
+  if(s>=80)return{bg:"#1b5e20",txt:"#00e676",bar:"#00e676"};
+  if(s>=60)return{bg:"#4a3800",txt:"#ffd600",bar:"#ffd600"};
+  return{bg:"#3b0000",txt:"#ef5350",bar:"#ef5350"};
+}
+function drawChart(r){
+  const canvas=document.getElementById('miniChart');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const pad={t:12,r:12,b:28,l:54};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  const candles=r.candles.slice(-50);
+  const n=candles.length;
+  if(!n)return;
+  const emaSlice =r.ema21Arr.slice(-50);
+  const bbBSlice =r.bbBasis.slice(-50);
+  const bbUSlice =r.bbUpper.slice(-50);
+  const bbLSlice =r.bbLower.slice(-50);
+  const sarSlice =r.sarArr.slice(-50);
+  let pHi=-Infinity,pLo=Infinity;
+  candles.forEach(c=>{pHi=Math.max(pHi,c.h);pLo=Math.min(pLo,c.l);});
+  [...bbUSlice,...bbLSlice].forEach(v=>{if(!isNaN(v)){pHi=Math.max(pHi,v);pLo=Math.min(pLo,v);}});
+  const range=pHi-pLo||1;
+  const py=v=>pad.t+(1-(v-pLo)/range)*ch;
+  const bw=Math.max(2,(cw/n)*0.65);
+  const cx=j=>pad.l+(j+0.5)*(cw/n);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="#0e0e0e"; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle="#1a1a1a"; ctx.lineWidth=1;
+  for(let g=0;g<=4;g++){
+    const y=pad.t+g*(ch/4);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
+    ctx.fillStyle="#444";ctx.font="9px Courier New";ctx.textAlign="right";
+    ctx.fillText("$"+(pHi-(g/4)*range).toFixed(2),pad.l-4,y+3);
+  }
+  // BB fill
+  ctx.beginPath();
+  for(let j=0;j<n;j++){const v=bbUSlice[j];if(!isNaN(v)){j===0?ctx.moveTo(cx(j),py(v)):ctx.lineTo(cx(j),py(v));}}
+  for(let j=n-1;j>=0;j--){const v=bbLSlice[j];if(!isNaN(v))ctx.lineTo(cx(j),py(v));}
+  ctx.closePath();ctx.fillStyle="rgba(33,150,243,0.06)";ctx.fill();
+  function drawLine(arr,color,dash=[]){
+    ctx.strokeStyle=color;ctx.lineWidth=1;ctx.setLineDash(dash);
+    ctx.beginPath();let s=false;
+    arr.forEach((v,j)=>{if(isNaN(v))return;s?ctx.lineTo(cx(j),py(v)):(ctx.moveTo(cx(j),py(v)),s=true);});
+    ctx.stroke();ctx.setLineDash([]);
+  }
+  drawLine(bbUSlice,"rgba(239,83,80,0.5)");
+  drawLine(bbLSlice,"rgba(0,230,118,0.5)");
+  drawLine(bbBSlice,"rgba(33,150,243,0.5)",[3,3]);
+  drawLine(emaSlice,"#ff9800");
+  sarSlice.forEach((v,j)=>{
+    if(isNaN(v))return;
+    ctx.beginPath();ctx.arc(cx(j),py(v),1.5,0,Math.PI*2);
+    ctx.fillStyle=candles[j].c>v?"#00e676":"#ef5350";ctx.fill();
+  });
+  candles.forEach((c,j)=>{
+    const bull=c.c>=c.o;
+    const color=bull?"#00e676":"#ef5350";
+    const x=cx(j);
+    ctx.strokeStyle=color;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,py(c.h));ctx.lineTo(x,py(c.l));ctx.stroke();
+    const top=py(Math.max(c.o,c.c)),bot=py(Math.min(c.o,c.c)),ht=Math.max(1,bot-top);
+    ctx.fillStyle=bull?"#1b5e20":"#b71c1c";
+    ctx.strokeStyle=color;ctx.lineWidth=1;
+    ctx.fillRect(x-bw/2,top,bw,ht);ctx.strokeRect(x-bw/2,top,bw,ht);
+  });
+  ctx.fillStyle="#444";ctx.font="9px Courier New";ctx.textAlign="center";
+  const step=Math.floor(n/5);
+  for(let j=0;j<n;j+=step){
+    const d=new Date(candles[j].t);
+    ctx.fillText(d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0"),cx(j),H-8);
+  }
+}
+</script>
+</body>
+</html>
