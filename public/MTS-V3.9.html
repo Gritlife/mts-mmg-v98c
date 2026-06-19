@@ -356,6 +356,10 @@ document.getElementById('enterBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  if(typeof window.PAGE_CLEANUP === 'function'){
+    try{ window.PAGE_CLEANUP(); }catch(e){ console.warn('Page cleanup error', e); }
+    window.PAGE_CLEANUP = null;
+  }
   MTS.role = null;
   pendingRole = null;
   document.getElementById('appShell').style.display='none';
@@ -378,6 +382,10 @@ function buildTabs(){
 }
 
 function navigate(key){
+  if(typeof window.PAGE_CLEANUP === 'function'){
+    try{ window.PAGE_CLEANUP(); }catch(e){ console.warn('Page cleanup error', e); }
+    window.PAGE_CLEANUP = null;
+  }
   MTS.page = key;
   document.querySelectorAll('.tab-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.key===key);
@@ -395,6 +403,7 @@ function renderPage(key){
 window.MTS = MTS;
 window.navigate = navigate;
 window.PAGES = window.PAGES || {};
+window.PAGE_CLEANUP = null; // any page can set this to a function; navigate() calls it before switching away
 </script>
 
 
@@ -1472,6 +1481,15 @@ styleTag.textContent = `
 .dash-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
 .dash-ticker{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:26px;}
 .dash-price{font-family:'IBM Plex Mono',monospace;font-size:18px;color:var(--mute);}
+.live-indicator{
+  display:flex;align-items:center;gap:6px;margin-left:auto;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--faint);
+  text-transform:uppercase;letter-spacing:0.06em;
+}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--long);}
+.live-dot.paused{background:var(--faint);}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,0.55);}70%{box-shadow:0 0 0 5px rgba(74,222,128,0);}100%{box-shadow:0 0 0 0 rgba(74,222,128,0);}}
+.live-dot.pulse{animation:livePulse 0.6s ease-out;}
 
 .mts-table{
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
@@ -1755,6 +1773,7 @@ function renderDashboard(root, item){
   }
 
   const certColor = snap.certaintyPct>=70 ? 'var(--long)' : snap.certaintyPct>=45 ? 'var(--amber)' : 'var(--short)';
+  const nowStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 
   root.innerHTML = `
     <div class="page-header">
@@ -1765,6 +1784,10 @@ function renderDashboard(root, item){
       <div class="dash-ticker">${ticker}</div>
       <div class="dash-price mono">$${snap.price.toFixed(2)}</div>
       <div class="mts-pill" style="background:${pill.bg};color:${pill.fg};">${snap.actionState}</div>
+      <div class="live-indicator" id="liveIndicator">
+        <span class="live-dot pulse" id="liveDot"></span>
+        <span id="liveText">Live · updated ${nowStr}</span>
+      </div>
     </div>
 
     <div class="dash-grid">
@@ -1879,8 +1902,6 @@ function renderDashboard(root, item){
 
   const canvas = document.getElementById('dashChartCanvas');
   drawChart(canvas, result);
-  const resizeHandler = ()=>drawChart(canvas, result);
-  window.addEventListener('resize', resizeHandler, {once:false});
 
   document.getElementById('acceptBtn').addEventListener('click', ()=>{
     TradeLog.add({
@@ -1900,12 +1921,105 @@ function renderDashboard(root, item){
     });
     showToast(`${ticker} passed`);
     MTS.selectedTrade = null;
+    stopLiveRefresh();
     navigate('scanner');
   });
+
+  return { canvas, result };
+}
+
+/* =====================================================
+   LIVE AUTO-REFRESH
+   Polls Polygon for fresh 15m candles (the forming candle
+   updates intra-bar) every REFRESH_MS, recomputes the engine,
+   and re-renders the dashboard in place. Pauses when the tab
+   is backgrounded and stops cleanly when navigating away.
+   ===================================================== */
+const REFRESH_MS = 10000; // 10s — fastest practical poll without hammering the API
+let liveTimer = null;
+let liveInFlight = false;
+let liveVisHandler = null;
+let liveResizeHandler = null;
+let lastChartResult = null;
+
+function stopLiveRefresh(){
+  if(liveTimer){ clearInterval(liveTimer); liveTimer = null; }
+  if(liveVisHandler){ document.removeEventListener('visibilitychange', liveVisHandler); liveVisHandler = null; }
+  if(liveResizeHandler){ window.removeEventListener('resize', liveResizeHandler); liveResizeHandler = null; }
+  lastChartResult = null;
+  window.PAGE_CLEANUP = null;
+}
+
+function setLiveStatus(root, state){
+  const dot = root.querySelector('#liveDot');
+  const text = root.querySelector('#liveText');
+  if(!dot || !text) return;
+  if(state==='paused'){
+    dot.classList.add('paused');
+    text.textContent = 'Paused (tab inactive)';
+  } else if(state==='error'){
+    dot.classList.remove('paused');
+    text.textContent = 'Refresh failed — retrying…';
+  } else {
+    dot.classList.remove('paused');
+    const nowStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    text.textContent = `Live · updated ${nowStr}`;
+    dot.classList.remove('pulse');
+    requestAnimationFrame(()=>dot.classList.add('pulse'));
+  }
+}
+
+async function refreshTick(root, ticker){
+  if(liveInFlight) return; // skip overlapping ticks if a fetch is still in flight
+  if(document.hidden) return; // paused while tab backgrounded
+  liveInFlight = true;
+  try{
+    const candles = await Polygon.fetch15mCandles(ticker, 5);
+    if(candles.length >= 30){
+      const fresh = Engine.compute(candles);
+      const updatedItem = { ticker, snap: fresh.snapshot, candles };
+      MTS.selectedTrade = updatedItem; // keep accept/pass logging fresh
+      const rendered = renderDashboard(root, updatedItem);
+      if(rendered) lastChartResult = rendered.result;
+      setLiveStatus(root, 'ok');
+    }
+  }catch(e){
+    console.warn('Live refresh error', ticker, e.message);
+    setLiveStatus(root, 'error');
+  }finally{
+    liveInFlight = false;
+  }
 }
 
 window.PAGES.dashboard = function(root){
-  renderDashboard(root, MTS.selectedTrade);
+  stopLiveRefresh(); // safety: clear any previous interval before starting a new one
+  const item = MTS.selectedTrade;
+  const rendered = renderDashboard(root, item);
+  if(!item) return;
+  if(rendered) lastChartResult = rendered.result;
+
+  const ticker = item.ticker;
+
+  liveTimer = setInterval(()=>refreshTick(root, ticker), REFRESH_MS);
+
+  liveVisHandler = ()=>{
+    if(document.hidden){
+      setLiveStatus(root, 'paused');
+    } else {
+      // tab came back into focus — refresh immediately rather than waiting for the next tick
+      refreshTick(root, ticker);
+    }
+  };
+  document.addEventListener('visibilitychange', liveVisHandler);
+
+  liveResizeHandler = ()=>{
+    const canvas = root.querySelector('#dashChartCanvas');
+    if(canvas && lastChartResult) drawChart(canvas, lastChartResult);
+  };
+  window.addEventListener('resize', liveResizeHandler);
+
+  // Registered so navigate()/logout stop the poll the instant you leave this page.
+  window.PAGE_CLEANUP = stopLiveRefresh;
 };
 
 })();
@@ -2232,4 +2346,3 @@ window.PAGES.settings = function(root){
 
 </body>
 </html>
-
