@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>MTS v.17</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: #F7F7F4; --surface: #FFFFFF; --border: #E8E6E0; --border-strong: #D4D2CC;
+      --text: #1A1A1A; --muted: #6B6B6B; --dim: #A8A8A8; --locked: #C8C6C0;
+      --long: #16A34A; --short: #DC2626; --close: #D97706;
+      --add: #0891B2; --tp: #7C3AED; --neutral: #A8A8A8; --track: #EFEDE7;
+      --long-soft: rgba(22,163,74,0.12); --short-soft: rgba(220,38,38,0.12);
+      --close-soft: rgba(217,119,6,0.12); --add-soft: rgba(8,145,178,0.12); --tp-soft: rgba(124,58,237,0.12);
+      --surface-disabled: #FAFAF7;
+    }
+    body.dark {
+      --bg: #0E1014; --surface: #181B22; --border: #262A33; --border-strong: #3A3F4B;
+      --text: #E8E6E0; --muted: #9CA0AB; --dim: #5C6171; --locked: #3A3F4B;
+      --long: #4ADE80; --short: #F87171; --close: #FBBF24;
+      --add: #38BDF8; --tp: #C084FC; --neutral: #9CA0AB; --track: #262A33;
+      --long-soft: rgba(74,222,128,0.16); --short-soft: rgba(248,113,113,0.16);
+      --close-soft: rgba(251,191,36,0.16); --add-soft: rgba(56,189,248,0.16); --tp-soft: rgba(192,132,252,0.16);
+      --surface-disabled: #14171D;
+    }
+    html, body { margin: 0; padding: 0; background: var(--bg); -webkit-tap-highlight-color: transparent; }
+    * { -webkit-user-select: none; user-select: none; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="padding: 40px 20px; font-family: monospace; color: #6B6B6B; text-align: center;">
+      <div style="font-size: 28px; font-weight: bold; color: #1A1A1A;">MTS</div>
+      <div style="font-size: 10px; letter-spacing: 0.25em; margin-top: 4px;">MONGOL TRADING SYSTEM</div>
+      <div style="margin-top: 24px; font-size: 12px;">compiling React + JSX...</div>
+    </div>
+  </div>
+  <script>
+    window.addEventListener('error', function(e) {
+      var r = document.getElementById('root');
+      if (r) r.innerHTML = '<div style="padding:20px;font-family:monospace;color:#DC2626;font-size:12px;"><b>Error:</b><br><br>' + (e.message||'unknown') + '<br><br><small style="color:#6B6B6B;">' + (e.filename||'') + (e.lineno?':'+e.lineno:'') + '</small></div>';
+    });
+  </script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect } = React;
+
+// ---- Icons ----
+function Icon({ size = 16, color = "currentColor", strokeWidth = 2, children }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
+}
+const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Icon>;
+const Zap = (p) => <Icon {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
+const Eye = (p) => <Icon {...p}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></Icon>;
+const BookOpen = (p) => <Icon {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>;
+const User = (p) => <Icon {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Icon>;
+const ChevronLeft = (p) => <Icon {...p}><polyline points="15 18 9 12 15 6"/></Icon>;
+const ChevronUp = (p) => <Icon {...p}><polyline points="18 15 12 9 6 15"/></Icon>;
+const ChevronDown = (p) => <Icon {...p}><polyline points="6 9 12 15 18 9"/></Icon>;
+const Settings = (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
+const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
+const Plus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
+const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
+const Edit2 = (p) => <Icon {...p}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></Icon>;
+const Trash2 = (p) => <Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Icon>;
+const Sun = (p) => <Icon {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></Icon>;
+const Moon = (p) => <Icon {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></Icon>;
+
+// ---- Theme tokens (use CSS variables) ----
+const C = {
+  bg: "var(--bg)", surface: "var(--surface)", border: "var(--border)", borderStrong: "var(--border-strong)",
+  text: "var(--text)", muted: "var(--muted)", dim: "var(--dim)", locked: "var(--locked)",
+  long: "var(--long)", short: "var(--short)", close: "var(--close)",
+  add: "var(--add)", tp: "var(--tp)", neutral: "var(--neutral)", track: "var(--track)",
+  surfaceDisabled: "var(--surface-disabled)",
+};
+
+const MMG_STATES = ["Compression", "Expansion", "Midline", "SAR", "Volume", "B2O-signal", "S2O-signal", "Caution", "GetOff"];
+const CAMPAIGN_STATES = ["Boarding", "Rolling", "Departed", "Station"];
+
+// ---- Data ----
+const UNIVERSE_SEED = [
+  { sym: "NVDA", price: 132.07, change: -1.21, atr: 4.62, mmgState: "B2O-signal", campaign: "Boarding", direction: "long",  rvol: 1.92 },
+  { sym: "AVGO", price: 1620.4, change:  2.14, atr: 38.2, mmgState: "B2O-signal", campaign: "Boarding", direction: "long",  rvol: 1.74 },
+  { sym: "TSLA", price: 248.91, change:  2.07, atr: 7.83, mmgState: "Expansion",  campaign: "Boarding", direction: "long",  rvol: 1.68 },
+  { sym: "AAPL", price: 184.52, change:  0.84, atr: 2.38, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.40 },
+  { sym: "META", price: 580.12, change:  1.32, atr: 11.4, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.55 },
+  { sym: "AMZN", price: 195.34, change:  0.62, atr: 3.21, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.28 },
+  { sym: "MSFT", price: 420.18, change:  0.41, atr: 5.84, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.12 },
+  { sym: "GOOGL",price: 175.62, change:  0.28, atr: 3.04, mmgState: "Compression", campaign: "Boarding", direction: "long",  rvol: 0.92 },
+  { sym: "AMD",  price: 165.83, change: -2.41, atr: 5.97, mmgState: "S2O-signal", campaign: "Rolling",  direction: "short", rvol: 1.81 },
+  { sym: "NFLX", price: 705.21, change: -1.84, atr: 13.8, mmgState: "S2O-signal", campaign: "Boarding", direction: "short", rvol: 1.62 },
+  { sym: "CRM",  price: 285.44, change: -1.12, atr: 6.21, mmgState: "Expansion",  campaign: "Boarding", direction: "short", rvol: 1.48 },
+  { sym: "ORCL", price: 152.18, change:  0.52, atr: 2.84, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.08 },
+  { sym: "JPM",  price: 220.45, change:  0.31, atr: 3.12, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 0.94 },
+  { sym: "V",    price: 285.62, change:  0.18, atr: 3.41, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.81 },
+  { sym: "MA",   price: 470.34, change:  0.22, atr: 5.62, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.78 },
+  { sym: "WMT",  price:  88.12, change: -0.42, atr: 1.34, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 0.88 },
+  { sym: "COST", price: 880.45, change: -0.81, atr: 12.4, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 1.02 },
+  { sym: "UNH",  price: 510.18, change: -1.32, atr: 8.92, mmgState: "GetOff",     campaign: "Station",  direction: "long",  rvol: 1.45 },
+  { sym: "JNJ",  price: 152.34, change:  0.12, atr: 1.82, mmgState: "SAR",        campaign: "Rolling",  direction: "long",  rvol: 0.92 },
+  { sym: "PG",   price: 168.52, change:  0.08, atr: 1.94, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.72 },
+  { sym: "XOM",  price: 115.24, change:  1.42, atr: 2.18, mmgState: "Volume",     campaign: "Rolling",  direction: "long",  rvol: 1.62 },
+  { sym: "ABBV", price: 198.42, change: -0.32, atr: 3.04, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 0.98 },
+  { sym: "HD",   price: 388.62, change: -0.62, atr: 5.41, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 0.85 },
+  { sym: "KO",   price:  67.42, change:  0.18, atr: 0.84, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.68 },
+  { sym: "SPY",  price: 612.45, change:  0.31, atr: 3.94, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.22 },
+];
+
+const initialPositions = {
+  NVDA: { side: "long",  entryPrice: 128.50, size: 100, adds: 0, tpsTaken: 0, entryTime: Date.now() - 23 * 60 * 1000 },
+  AMD:  { side: "short", entryPrice: 168.00, size: 100, adds: 1, tpsTaken: 0, entryTime: Date.now() - 47 * 60 * 1000 },
+  AAPL: { side: "long",  entryPrice: 182.00, size: 150, adds: 1, tpsTaken: 1, entryTime: Date.now() - 132 * 60 * 1000 },
+};
+
+const MACRO_DATA = {
+  SPY:  { label: "SPY",  value: "612.45", change: 0.31,  type: "price" },
+  VIX:  { label: "VIX",  value: "14.20",  change: -2.14, type: "price" },
+  GC:   { label: "GOLD", value: "2,410",  change: 0.42,  type: "price" },
+  SI:   { label: "SILV", value: "32.50",  change: 0.68,  type: "price" },
+  CL:   { label: "OIL",  value: "78.40",  change: 1.21,  type: "price" },
+  DXY:  { label: "DXY",  value: "105.8",  change: -0.18, type: "price" },
+  T2:   { label: "2Y",   value: "4.18%",  change: -0.02, type: "yield" },
+  T5:   { label: "5Y",   value: "4.05%",  change: -0.03, type: "yield" },
+  T15:  { label: "15Y*", value: "4.38%",  change: -0.01, type: "yield" },
+  T20:  { label: "20Y",  value: "4.45%",  change:  0.00, type: "yield" },
+  MORT: { label: "MORT", value: "6.85%",  change: -0.04, type: "yield" },
+  FED:  { label: "FED",  value: "HAWK",   tone: "short", type: "fed" },
+  CONS: { label: "CONS", value: "71.4",   change: 1.20,  type: "macro" },
+  CPI:  { label: "CPI",  value: "2.4%",   change: -0.1,  type: "macro" },
+  PPI:  { label: "PPI",  value: "2.1%",   change:  0.1,  type: "macro" },
+  NFP:  { label: "NFP",  value: "+185K",  change: null,  type: "macro" },
+};
+const MACRO_ORDER = ["SPY", "VIX", "GC", "SI", "CL", "DXY", "T2", "T5", "T15", "T20", "MORT", "FED", "CONS", "CPI", "PPI", "NFP"];
+
+const ACCOUNT_DATA = {
+  name: "Khanh", email: "khanh@mts.app", role: "Trader", accountId: "****1234",
+  equity: 124580, buyingPower: 48320, dayPnL: 324, dayPnLPct: 0.26,
+  weekPnL: 1840, weekPnLPct: 1.50, monthPnL: 4250, monthPnLPct: 3.54,
+  winRate: 0.68, avgR: 1.42, maxDD: -3.2, tradesToday: 4, tradesActive: 3, tradesMonth: 47,
+};
+
+const LIBRARY_ARTICLES = [
+  { id: "mmg-state-machine", title: "MMG State Machine", category: "Indicator",
+    summary: "The sequence: Compression → Expansion → Midline → SAR → Volume → B2O/S2O",
+    body: [
+      { type: "h2", text: "Overview" },
+      { type: "p", text: "MMG (Market Momentum Guide) is a strict sequential state machine. Each state must trigger before the next becomes valid. This forces patience and prevents premature entries." },
+      { type: "h2", text: "The six base states" },
+      { type: "list", items: ["Compression — price coils, volatility contracts. Setup phase.", "Expansion — range breaks, directional move begins.", "Midline — price reaches the regression midline; trend confirmation.", "SAR — stop-and-reverse level engages; momentum reversal signal.", "Volume — volume confirms or rejects the move (RVOL > 1.5x is strong).", "B2O / S2O signal — entry trigger fires only after the full sequence."]},
+      { type: "h2", text: "Degradation states" },
+      { type: "list", items: ["Caution — trend integrity weakening; tighten stops, no new adds.", "GetOff — momentum broken; exit signal is high-conviction."]},
+    ]},
+  { id: "eight-actions", title: "The 8 Actions", category: "Execution",
+    summary: "B2O · S2O · ADD1 · ADD2 · TP1 · TP2 · S2C · B2C",
+    body: [
+      { type: "h2", text: "Entries (when flat)" },
+      { type: "list", items: ["B2O — Buy to Open. Initiate a long position. Size: 100 sh.", "S2O — Sell to Open. Initiate a short position. Size: 100 sh."]},
+      { type: "h2", text: "Management (when in position)" },
+      { type: "list", items: ["ADD1 — first scale-in. +50 sh.", "ADD2 — second scale-in. After ADD1.", "TP1 — first partial profit. Sells 50%.", "TP2 — second partial. After TP1."]},
+      { type: "h2", text: "Full exits" },
+      { type: "list", items: ["S2C — Sell to Close. Exit entire long.", "B2C — Buy to Close. Cover entire short."]},
+    ]},
+  { id: "campaign-states", title: "Campaign States", category: "Framework",
+    summary: "Boarding → Rolling → Departed → Station",
+    body: [
+      { type: "h2", text: "The train metaphor" },
+      { type: "p", text: "Every trade is a train ride. The campaign state tells you where you are in the journey." },
+      { type: "list", items: ["Boarding — signal fresh, RVOL building. Best for entries.", "Rolling — trend established. Good for re-confirms (ADD2). TP1 attractive.", "Departed — past peak velocity. ADDs risky. TP2 is right.", "Station — reached next station. Full exit or TP2 high conviction."]},
+    ]},
+  { id: "position-sizing", title: "Position Sizing & ATR", category: "Risk",
+    summary: "Why MTS sizes positions off Average True Range",
+    body: [
+      { type: "p", text: "ATR is your volatility unit. Sizing trades based on ATR (not a fixed share count) keeps risk per trade constant regardless of price." },
+      { type: "h2", text: "MTS conventions" },
+      { type: "list", items: ["Stop distance = 1 × ATR from entry", "First target = 1.7 × ATR (≈ 1:1.7 R:R)", "TP1 typically at 1R", "TP2 typically at 1.7R"]},
+    ]},
+  { id: "reading-the-deck", title: "Reading the Decision Deck", category: "Execution",
+    summary: "How to interpret WHERE, WHEN, scores, and rings",
+    body: [
+      { type: "h2", text: "Context strip" },
+      { type: "list", items: ["WHERE — MMG state and direction bias.", "WHEN — campaign state and RVOL.", "POSITION — side, P&L, scaling state (nA · nT)."]},
+      { type: "h2", text: "Rings" },
+      { type: "p", text: "Each ring fills proportionally to the action score. Below 30 means weak setup." },
+    ]},
+  { id: "glossary", title: "Glossary", category: "Reference",
+    summary: "Key terms",
+    body: [
+      { type: "h2", text: "Order codes" },
+      { type: "list", items: ["B2O — Buy to Open", "S2O — Sell to Open", "S2C — Sell to Close", "B2C — Buy to Close", "ADD — scale-in", "TP — take profit"]},
+      { type: "h2", text: "Metrics" },
+      { type: "list", items: ["ATR — Average True Range", "RVOL — Relative Volume (>1.5x strong)", "R — risk-multiple (1R = 1 ATR move)", "R:R — risk-to-reward ratio"]},
+    ]},
+];
+
+const initialWatchlists = [
+  { id: "tech",      name: "Mega Cap Tech",   symbols: ["NVDA", "AAPL", "MSFT", "GOOGL", "META", "AMZN"] },
+  { id: "defensive", name: "Defensive Plays", symbols: ["JNJ", "PG", "KO", "WMT"] },
+  { id: "bearish",   name: "Bearish Watch",   symbols: ["AMD", "NFLX", "CRM"] },
+];
+
+// ---- Helpers ----
+function calcPnL(position, currentPrice) {
+  if (!position || position.side === "flat") return { pct: 0, dollars: 0 };
+  const sign = position.side === "long" ? 1 : -1;
+  const diff = (currentPrice - position.entryPrice) * sign;
+  return { pct: (diff / position.entryPrice) * 100, dollars: diff * position.size };
+}
+function pnlR(position, currentPrice, atr) {
+  if (!position || position.side === "flat") return 0;
+  const sign = position.side === "long" ? 1 : -1;
+  return ((currentPrice - position.entryPrice) * sign) / atr;
+}
+function generateMockTicker(sym) {
+  const price = Math.round((20 + Math.random() * 480) * 100) / 100;
+  return {
+    sym,
+    price,
+    change: Math.round((Math.random() - 0.5) * 6 * 100) / 100,
+    atr: Math.round(price * 0.02 * 100) / 100,
+    mmgState: MMG_STATES[Math.floor(Math.random() * MMG_STATES.length)],
+    campaign: CAMPAIGN_STATES[Math.floor(Math.random() * CAMPAIGN_STATES.length)],
+    direction: ["long", "short", "neutral"][Math.floor(Math.random() * 3)],
+    rvol: Math.round((0.7 + Math.random() * 1.5) * 100) / 100,
+    custom: true,
+  };
+}
+function computeScores({ mmgState, campaign, direction, rvol, position, atrDistance, pnlInR }) {
+  const rvolMult = Math.min(rvol / 1.5, 1.0);
+  const stopMult = Math.max(0, 1 - atrDistance);
+  const side = (position && position.side) || "flat";
+  const b2o = side !== "flat" ? null : Math.min(95, Math.round(
+    (mmgState === "B2O-signal" ? 82 : mmgState === "Expansion" && direction === "long" ? 64 : mmgState === "Midline" && direction === "long" ? 48 : mmgState === "Compression" ? 28 : 14)
+    * rvolMult * (campaign === "Boarding" ? 1.18 : campaign === "Rolling" ? 1.05 : 0.85) * stopMult));
+  const s2o = side !== "flat" ? null : Math.min(95, Math.round(
+    (mmgState === "S2O-signal" ? 82 : mmgState === "Expansion" && direction === "short" ? 64 : mmgState === "Midline" && direction === "short" ? 48 : mmgState === "Compression" ? 28 : 14)
+    * rvolMult * (campaign === "Boarding" ? 1.18 : campaign === "Rolling" ? 1.05 : 0.85) * stopMult));
+  const inLong = side === "long", inShort = side === "short";
+  const directionMatch = (inLong && direction === "long") || (inShort && direction === "short");
+  const reconfirm = (inLong && mmgState === "B2O-signal") || (inShort && mmgState === "S2O-signal");
+  const baseAdd = directionMatch ? (reconfirm ? 78 : mmgState === "Expansion" ? 62 : mmgState === "Midline" ? 38 : 15) : 8;
+  const pnlAddMult = pnlInR > 0.5 ? 1.15 : pnlInR > 0 ? 1.0 : pnlInR > -0.3 ? 0.55 : 0.25;
+  const campaignAddMult = campaign === "Rolling" ? 1.15 : campaign === "Boarding" ? 0.95 : 0.6;
+  const addRaw = Math.round(baseAdd * rvolMult * pnlAddMult * campaignAddMult);
+  const add1 = (side !== "flat" && position.adds === 0) ? Math.min(95, addRaw) : null;
+  const add2 = (side !== "flat" && position.adds === 1) ? Math.min(95, Math.round(addRaw * 0.82)) : null;
+  const baseTP = mmgState === "GetOff" ? 88 : mmgState === "Caution" ? 70 : campaign === "Station" ? 75 : campaign === "Departed" ? 42 : 18;
+  const tp1RR = pnlInR >= 1.0 ? 1.25 : pnlInR >= 0.5 ? 1.1 : pnlInR >= 0 ? 0.75 : 0.35;
+  const tp2RR = pnlInR >= 1.7 ? 1.3 : pnlInR >= 1.0 ? 1.05 : pnlInR >= 0.5 ? 0.7 : 0.3;
+  const tp1 = (side !== "flat" && position.tpsTaken === 0) ? Math.min(95, Math.round(baseTP * tp1RR)) : null;
+  const tp2 = (side !== "flat" && position.tpsTaken === 1) ? Math.min(95, Math.round(baseTP * tp2RR)) : null;
+  const baseExit = mmgState === "GetOff" ? 90 : mmgState === "Caution" ? 68 : campaign === "Station" ? 58 : campaign === "Departed" ? 26 : 16;
+  const s2c = inLong ? Math.min(95, baseExit) : null;
+  const b2c = inShort ? Math.min(95, baseExit) : null;
+  return { b2o, s2o, add1, add2, tp1, tp2, s2c, b2c };
+}
+function topAction(scores) {
+  const entries = Object.entries(scores).filter(([_, v]) => v != null);
+  if (entries.length === 0) return { code: "—", score: 0, tone: "neutral" };
+  entries.sort((a, b) => b[1] - a[1]);
+  const [code, score] = entries[0];
+  const map = { b2o: "long", s2o: "short", add1: "add", add2: "add", tp1: "tp", tp2: "tp", s2c: "close", b2c: "close" };
+  return { code: code.toUpperCase(), score, tone: map[code] };
+}
+function toneColor(tone) {
+  return tone === "long" ? C.long : tone === "short" ? C.short : tone === "close" ? C.close : tone === "add" ? C.add : tone === "tp" ? C.tp : C.neutral;
+}
+function toneSoft(tone) {
+  return tone === "long" ? "var(--long-soft)" : tone === "short" ? "var(--short-soft)" : tone === "close" ? "var(--close-soft)" : tone === "add" ? "var(--add-soft)" : tone === "tp" ? "var(--tp-soft)" : C.track;
+}
+function formatTime(ms) {
+  const mins = Math.floor((Date.now() - ms) / 60000);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  return `${hrs}h${mins % 60}m`;
+}
+
+// ============================================================================
+// MacroBar — 4×4 grid, no horizontal scroll
+// ============================================================================
+function MacroBar({ account }) {
+  const tiles = MACRO_ORDER.map(k => MACRO_DATA[k]);
+  return (
+    <div style={{ backgroundColor: C.surface, borderBottomColor: C.border }} className="border-b">
+      <div className="max-w-md mx-auto px-2 py-2">
+        {/* Account row */}
+        <div style={{ borderColor: C.border }} className="flex items-center gap-3 pb-2 mb-2 border-b">
+          <div className="flex-1">
+            <div style={{ color: C.muted }} className="text-[8px] tracking-[0.15em]">BUYING POWER</div>
+            <div style={{ color: C.text }} className="text-sm font-mono font-bold leading-none mt-0.5">${(account.buyingPower / 1000).toFixed(1)}K</div>
+          </div>
+          <div style={{ borderColor: C.border }} className="h-7 border-l" />
+          <div className="flex-1">
+            <div style={{ color: C.muted }} className="text-[8px] tracking-[0.15em]">DAY P/L</div>
+            <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-sm font-mono font-bold leading-none mt-0.5">
+              {account.dayPnL >= 0 ? "+" : ""}${account.dayPnL} <span className="text-[10px]">({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)</span>
+            </div>
+          </div>
+        </div>
+        {/* 4×4 macro grid */}
+        <div className="grid grid-cols-4 gap-1">
+          {tiles.map((t, i) => {
+            const isFed = t.type === "fed", noChange = t.change == null;
+            const chgColor = isFed ? toneColor(t.tone) : t.change > 0 ? C.long : t.change < 0 ? C.short : C.dim;
+            const valColor = isFed ? toneColor(t.tone) : C.text;
+            return (
+              <div key={i} style={{ backgroundColor: C.bg }} className="rounded px-1.5 py-1">
+                <div style={{ color: C.muted }} className="text-[8px] tracking-wider leading-none">{t.label}</div>
+                <div style={{ color: valColor }} className="text-[11px] font-mono font-bold leading-tight mt-0.5">{t.value}</div>
+                {!noChange && !isFed && (
+                  <div style={{ color: chgColor }} className="text-[8px] font-mono leading-none">
+                    {t.change > 0 ? "+" : ""}{t.change.toFixed(t.type === "macro" ? 1 : 2)}{t.type === "yield" || t.type === "macro" ? "" : "%"}
+                  </div>
+                )}
+                {noChange && <div style={{ color: C.dim }} className="text-[8px] leading-none">—</div>}
+                {isFed && <div style={{ color: C.dim }} className="text-[8px] leading-none">posture</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// LoginPage
+// ============================================================================
+function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  return (
+    <div style={{ backgroundColor: C.bg, color: C.text }} className="min-h-screen flex flex-col font-sans">
+      <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
+        <div className="mb-10">
+          <div style={{ color: C.text }} className="text-4xl font-mono font-bold tracking-tight">MTS</div>
+          <div style={{ color: C.muted }} className="text-xs tracking-[0.25em] mt-1">MONGOL TRADING SYSTEM</div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mb-1">EMAIL</div>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="trader@example.com"
+              style={{ backgroundColor: C.surface, borderColor: C.borderStrong, color: C.text }}
+              className="w-full border-2 rounded-xl px-3 py-3 text-sm font-mono focus:outline-none" />
+          </div>
+          <div>
+            <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mb-1">PASSWORD</div>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
+              style={{ backgroundColor: C.surface, borderColor: C.borderStrong, color: C.text }}
+              className="w-full border-2 rounded-xl px-3 py-3 text-sm font-mono focus:outline-none" />
+          </div>
+          <button onClick={onLogin} style={{ backgroundColor: C.text, color: C.bg }}
+            className="w-full py-3 rounded-xl text-sm font-mono font-bold tracking-wider active:scale-[0.98] transition-transform mt-4">LOG IN</button>
+        </div>
+        <div className="flex flex-col items-center gap-3 mt-8 text-xs">
+          <button style={{ color: C.muted }} className="font-mono">Forgot password?</button>
+          <div style={{ color: C.dim }} className="flex items-center gap-1.5 font-mono">
+            <span>First time?</span>
+            <button style={{ color: C.text }} className="font-bold underline underline-offset-2">Register here</button>
+          </div>
+        </div>
+      </div>
+      <div style={{ color: C.dim }} className="text-[9px] text-center leading-relaxed px-6 pb-6 max-w-md mx-auto">
+        MTS is a decision-support tool. All orders require manual confirmation. You bear all P&L. By logging in you accept these terms.
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// AccountSummary — with dark mode toggle
+// ============================================================================
+function AccountSummary({ account, positions, universe, darkMode, setDarkMode, onLogout, onSelect }) {
+  const openTickers = Object.keys(positions).filter(sym => positions[sym].side !== "flat");
+  const openPositions = openTickers.map(sym => {
+    const t = universe.find(u => u.sym === sym);
+    if (!t) return null;
+    const pnl = calcPnL(positions[sym], t.price);
+    return { sym, side: positions[sym].side, pnl };
+  }).filter(Boolean);
+  return (
+    <div className="flex flex-col gap-2">
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3 flex items-center gap-3">
+        <div style={{ backgroundColor: C.text, color: C.bg }} className="w-10 h-10 rounded-full flex items-center justify-center font-mono font-bold">{account.name[0]}</div>
+        <div className="flex-1 min-w-0">
+          <div style={{ color: C.text }} className="text-sm font-bold">{account.name}</div>
+          <div style={{ color: C.muted }} className="text-[11px] font-mono">{account.role} · {account.accountId}</div>
+        </div>
+        <button onClick={onLogout} style={{ color: C.muted }} className="p-2"><LogOut size={16} /></button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">EQUITY</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.equity.toLocaleString()}</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">BUYING POWER</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.buyingPower.toLocaleString()}</div>
+        </div>
+      </div>
+      <div style={{ backgroundColor: C.surface, borderColor: account.dayPnL >= 0 ? C.long : C.short }} className="border-2 rounded-xl p-2.5">
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">TODAY'S P/L</div>
+        <div className="flex items-baseline gap-2 mt-0.5">
+          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-xl font-mono font-bold">{account.dayPnL >= 0 ? "+" : ""}${account.dayPnL}</div>
+          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-sm font-mono">({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)</div>
+          <div style={{ color: C.dim }} className="text-[10px] font-mono ml-auto">{account.tradesToday} trades</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[8px] tracking-wider">WIN RATE</div>
+          <div style={{ color: C.text }} className="text-sm font-mono font-bold mt-0.5">{(account.winRate * 100).toFixed(0)}%</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[8px] tracking-wider">AVG R</div>
+          <div style={{ color: C.text }} className="text-sm font-mono font-bold mt-0.5">{account.avgR.toFixed(2)}R</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[8px] tracking-wider">MAX DD</div>
+          <div style={{ color: C.short }} className="text-sm font-mono font-bold mt-0.5">{account.maxDD.toFixed(1)}%</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">WEEK</div>
+          <div style={{ color: account.weekPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.weekPnL >= 0 ? "+" : ""}${account.weekPnL} ({account.weekPnLPct.toFixed(2)}%)</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">MONTH</div>
+          <div style={{ color: account.monthPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.monthPnL >= 0 ? "+" : ""}${account.monthPnL} ({account.monthPnLPct.toFixed(2)}%)</div>
+        </div>
+      </div>
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1.5">OPEN POSITIONS · {openPositions.length}</div>
+        <div className="flex flex-col gap-1">
+          {openPositions.map(p => (
+            <button key={p.sym} onClick={() => onSelect(p.sym)} className="flex items-center gap-2 py-0.5 active:opacity-60">
+              <div style={{ color: p.side === "long" ? C.long : C.short }} className="text-[9px] font-mono uppercase tracking-wider w-9">{p.side}</div>
+              <div style={{ color: C.text }} className="text-xs font-mono font-bold w-12">{p.sym}</div>
+              <div style={{ color: p.pnl.dollars >= 0 ? C.long : C.short }} className="text-xs font-mono ml-auto">{p.pnl.dollars >= 0 ? "+" : ""}${p.pnl.dollars.toFixed(0)} ({p.pnl.pct >= 0 ? "+" : ""}{p.pnl.pct.toFixed(2)}%)</div>
+            </button>
+          ))}
+          {openPositions.length === 0 && <div style={{ color: C.dim }} className="text-[10px] text-center py-2">no open positions</div>}
+        </div>
+      </div>
+
+      {/* PREFERENCES */}
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-2">PREFERENCES</div>
+        <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center gap-3 active:opacity-60">
+          <div style={{ backgroundColor: C.bg, color: C.text }} className="w-8 h-8 rounded-lg flex items-center justify-center">
+            {darkMode ? <Moon size={16} /> : <Sun size={16} />}
+          </div>
+          <div className="flex-1 text-left">
+            <div style={{ color: C.text }} className="text-sm font-medium">Dark Mode</div>
+            <div style={{ color: C.muted }} className="text-[10px]">{darkMode ? "Currently on" : "Currently off"}</div>
+          </div>
+          <div style={{ backgroundColor: darkMode ? C.text : C.track }} className="w-10 h-6 rounded-full p-0.5 transition-colors">
+            <div style={{ backgroundColor: C.surface, transform: darkMode ? "translateX(16px)" : "translateX(0)" }} className="w-5 h-5 rounded-full transition-transform shadow"></div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Library
+// ============================================================================
+function Library({ articles, onSelect }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mb-1">REFERENCE · {articles.length} articles</div>
+      {articles.map(a => (
+        <button key={a.id} onClick={() => onSelect(a.id)} style={{ backgroundColor: C.surface, borderColor: C.border }}
+          className="border rounded-xl p-3 text-left active:scale-[0.99] transition-transform">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] font-mono mb-1">{a.category}</div>
+          <div style={{ color: C.text }} className="text-sm font-bold mb-1">{a.title}</div>
+          <div style={{ color: C.muted }} className="text-[11px] leading-snug">{a.summary}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+function LibraryArticleDetail({ article, onBack }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} style={{ color: C.muted }} className="p-1 -ml-1"><ChevronLeft size={20} /></button>
+        <div style={{ color: C.muted }} className="text-[10px] tracking-[0.15em] font-mono">{article.category}</div>
+      </div>
+      <div style={{ color: C.text }} className="text-xl font-bold leading-tight">{article.title}</div>
+      <div style={{ color: C.muted }} className="text-xs italic leading-snug">{article.summary}</div>
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-4 space-y-3">
+        {article.body.map((block, i) => {
+          if (block.type === "h2") return <div key={i} style={{ color: C.text }} className="text-sm font-bold mt-2 first:mt-0">{block.text}</div>;
+          if (block.type === "p") return <div key={i} style={{ color: C.muted }} className="text-[12px] leading-relaxed">{block.text}</div>;
+          if (block.type === "list") return (
+            <ul key={i} className="space-y-1.5">
+              {block.items.map((item, j) => (
+                <li key={j} style={{ color: C.muted }} className="text-[12px] leading-relaxed flex gap-2">
+                  <span style={{ color: C.dim }} className="font-mono">·</span><span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          );
+          return null;
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Watchlist — with custom ticker input
+// ============================================================================
+function WatchlistView({ watchlists, setWatchlists, universe, addCustomTicker, positions, onSelect }) {
+  const [editing, setEditing] = useState(false);
+  const [addingTo, setAddingTo] = useState(null);
+  const [inputSym, setInputSym] = useState("");
+
+  const getTickerData = (sym) => {
+    const t = universe.find(u => u.sym === sym);
+    if (!t) return null;
+    const pos = positions[sym] || { side: "flat" };
+    const pnlInR = pnlR(pos, t.price, t.atr);
+    const scores = computeScores({ ...t, position: pos, atrDistance: 0.25, pnlInR });
+    const top = topAction(scores);
+    return { ...t, position: pos, top };
+  };
+
+  const moveItem = (listId, sym, dir) => {
+    setWatchlists(lists => lists.map(l => {
+      if (l.id !== listId) return l;
+      const idx = l.symbols.indexOf(sym);
+      if (idx < 0) return l;
+      const next = idx + dir;
+      if (next < 0 || next >= l.symbols.length) return l;
+      const arr = [...l.symbols];
+      [arr[idx], arr[next]] = [arr[next], arr[idx]];
+      return { ...l, symbols: arr };
+    }));
+  };
+  const removeItem = (listId, sym) => setWatchlists(lists => lists.map(l => l.id === listId ? { ...l, symbols: l.symbols.filter(s => s !== sym) } : l));
+  const addItemToList = (listId, sym) => {
+    sym = sym.toUpperCase().trim();
+    if (!sym || !/^[A-Z]{1,5}$/.test(sym)) return false;
+    if (!universe.find(t => t.sym === sym)) addCustomTicker(sym);
+    setWatchlists(lists => lists.map(l => l.id === listId && !l.symbols.includes(sym) ? { ...l, symbols: [...l.symbols, sym] } : l));
+    setInputSym("");
+    return true;
+  };
+  const addList = () => {
+    const name = prompt("Watchlist name?");
+    if (!name) return;
+    setWatchlists(lists => [...lists, { id: `wl-${Date.now()}`, name, symbols: [] }]);
+  };
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between">
+        <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em]">{watchlists.length} LISTS</div>
+        <div className="flex gap-2">
+          <button onClick={() => setEditing(!editing)} style={{ color: editing ? C.text : C.muted }} className="text-xs font-mono flex items-center gap-1"><Edit2 size={12} /> {editing ? "DONE" : "EDIT"}</button>
+          <button onClick={addList} style={{ color: C.text }} className="text-xs font-mono flex items-center gap-1 font-bold"><Plus size={14} /> LIST</button>
+        </div>
+      </div>
+      {watchlists.map(list => (
+        <div key={list.id} style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl overflow-hidden">
+          <div style={{ backgroundColor: C.bg, borderBottomColor: C.border }} className="border-b px-3 py-1.5 flex items-center justify-between">
+            <div style={{ color: C.text }} className="text-xs font-bold tracking-tight">{list.name}</div>
+            <div className="flex items-center gap-2">
+              <div style={{ color: C.dim }} className="text-[10px] font-mono">{list.symbols.length}</div>
+              <button onClick={() => { setAddingTo(addingTo === list.id ? null : list.id); setInputSym(""); }} style={{ color: C.muted }} className="p-0.5"><Plus size={14} /></button>
+            </div>
+          </div>
+          {addingTo === list.id && (
+            <div style={{ backgroundColor: C.bg, borderBottomColor: C.border }} className="border-b p-2 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={inputSym}
+                  onChange={(e) => setInputSym(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && addItemToList(list.id, inputSym)}
+                  placeholder="TYPE SYMBOL (e.g. RIVN)"
+                  maxLength={5}
+                  style={{ backgroundColor: C.surface, borderColor: C.borderStrong, color: C.text }}
+                  className="flex-1 border rounded px-2 py-1 text-xs font-mono tracking-wider focus:outline-none uppercase" />
+                <button onClick={() => addItemToList(list.id, inputSym)} style={{ backgroundColor: C.text, color: C.bg }} className="px-3 py-1 rounded text-[10px] font-mono font-bold">ADD</button>
+                <button onClick={() => setAddingTo(null)} style={{ color: C.muted }} className="p-1"><X size={14}/></button>
+              </div>
+              <div style={{ color: C.dim }} className="text-[9px] font-mono">QUICK ADD:</div>
+              <div className="flex flex-wrap gap-1">
+                {universe.filter(u => !list.symbols.includes(u.sym)).slice(0, 18).map(u => (
+                  <button key={u.sym} onClick={() => addItemToList(list.id, u.sym)} style={{ backgroundColor: C.surface, borderColor: C.border, color: C.text }} className="px-1.5 py-0.5 border rounded text-[10px] font-mono">{u.sym}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {list.symbols.map((sym, i) => {
+            const t = getTickerData(sym);
+            if (!t) return null;
+            const color = toneColor(t.top.tone);
+            const dim = t.top.score < 30;
+            return (
+              <div key={sym} style={{ borderBottomColor: C.border }} className="border-b last:border-b-0 flex items-center">
+                <button onClick={() => !editing && onSelect(sym)} className="flex-1 flex items-center gap-2 px-3 py-2 text-left active:opacity-60">
+                  <div style={{ backgroundColor: dim ? C.track : toneSoft(t.top.tone), borderColor: dim ? C.border : color, color: dim ? C.dim : color }} className="w-10 h-10 rounded-md border-2 flex flex-col items-center justify-center shrink-0">
+                    <div className="text-xs font-mono font-bold leading-none">{t.top.score}</div>
+                    <div className="text-[7px] font-mono tracking-wider mt-0.5">{t.top.code}</div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1.5">
+                      <div style={{ color: C.text }} className="text-sm font-mono font-bold">{t.sym}</div>
+                      {t.custom && <span style={{ color: C.dim }} className="text-[8px] font-mono">custom</span>}
+                      {t.position.side !== "flat" && <div style={{ color: t.position.side === "long" ? C.long : C.short }} className="text-[9px] font-mono uppercase">{t.position.side}</div>}
+                    </div>
+                    <div style={{ color: C.muted }} className="text-[10px] truncate">{t.mmgState}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div style={{ color: C.text }} className="text-xs font-mono">${t.price.toFixed(2)}</div>
+                    <div style={{ color: t.change >= 0 ? C.long : C.short }} className="text-[10px] font-mono">{t.change >= 0 ? "+" : ""}{t.change.toFixed(2)}%</div>
+                  </div>
+                </button>
+                {editing && (
+                  <div className="flex items-center gap-0 pr-2">
+                    <button onClick={() => moveItem(list.id, sym, -1)} disabled={i === 0} style={{ color: i === 0 ? C.dim : C.muted }} className="p-1"><ChevronUp size={14} /></button>
+                    <button onClick={() => moveItem(list.id, sym, 1)} disabled={i === list.symbols.length - 1} style={{ color: i === list.symbols.length - 1 ? C.dim : C.muted }} className="p-1"><ChevronDown size={14} /></button>
+                    <button onClick={() => removeItem(list.id, sym)} style={{ color: C.short }} className="p-1"><Trash2 size={14} /></button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {list.symbols.length === 0 && <div style={{ color: C.dim }} className="text-center text-[11px] py-3">no tickers yet</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// Ring, ActionCell, ConfirmModal
+// ============================================================================
+function Ring({ score, tone = "long", size = 56 }) {
+  const r = (size - 6) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = score == null ? circ : circ - (score / 100) * circ;
+  const stroke = score == null ? C.locked : toneColor(tone);
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <circle cx={size/2} cy={size/2} r={r} stroke={C.track} strokeWidth="3" fill="none" />
+      <circle cx={size/2} cy={size/2} r={r} stroke={stroke} strokeWidth="3" fill="none"
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 400ms ease, stroke 200ms ease" }} />
+    </svg>
+  );
+}
+function ActionCell({ code, label, score, lockedReason, tone, onTap, compact = false }) {
+  const locked = score == null;
+  const ringSize = compact ? 40 : 56;
+  return (
+    <button onClick={() => !locked && onTap()} disabled={locked}
+      style={{ backgroundColor: locked ? C.surfaceDisabled : C.surface, borderColor: locked ? C.border : C.borderStrong, cursor: locked ? "not-allowed" : "pointer" }}
+      className={`relative ${compact ? "p-2" : "p-3"} rounded-2xl border-2 transition-all active:scale-[0.97] disabled:active:scale-100`}>
+      <div className={`flex flex-col items-center ${compact ? "gap-1" : "gap-1.5"}`}>
+        <div className="relative">
+          <Ring score={score} tone={tone} size={ringSize} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            {locked ? (
+              <svg width={compact ? "12" : "16"} height={compact ? "12" : "16"} viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2.5">
+                <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+            ) : (
+              <div style={{ color: C.text }} className={`${compact ? "text-sm" : "text-lg"} font-mono font-bold leading-none`}>{score}</div>
+            )}
+          </div>
+        </div>
+        <div style={{ color: locked ? C.dim : C.text }} className={`font-mono font-bold ${compact ? "text-xs" : "text-base"} leading-none`}>{code}</div>
+        {!compact && <div style={{ color: locked ? C.dim : C.muted }} className="text-[10px] leading-tight text-center">{locked ? <em>{lockedReason}</em> : label}</div>}
+      </div>
+    </button>
+  );
+}
+function ConfirmModal({ action, ticker, price, position, onConfirm, onCancel }) {
+  const isEntry = action === "B2O" || action === "S2O";
+  const isAdd = action === "ADD1" || action === "ADD2";
+  const isTP = action === "TP1" || action === "TP2";
+  const isFullExit = action === "S2C" || action === "B2C";
+  const accent = isAdd ? C.add : isTP ? C.tp : (action === "B2O" ? C.long : action === "S2O" ? C.short : C.close);
+  let sizeChange, newSize, newAvg, realized;
+  if (isEntry) { sizeChange = 100; newSize = 100; newAvg = price; }
+  else if (isAdd) {
+    sizeChange = 50; newSize = position.size + 50;
+    newAvg = ((position.entryPrice * position.size) + (price * 50)) / newSize;
+  } else if (isTP) {
+    sizeChange = -Math.round(position.size / 2); newSize = position.size + sizeChange;
+    newAvg = position.entryPrice;
+    const sign = position.side === "long" ? 1 : -1;
+    realized = (price - position.entryPrice) * sign * Math.abs(sizeChange);
+  } else if (isFullExit) {
+    sizeChange = -position.size; newSize = 0;
+    const sign = position.side === "long" ? 1 : -1;
+    realized = (price - position.entryPrice) * sign * position.size;
+  }
+  const verb = isEntry ? "Open" : isAdd ? "Add to" : isTP ? "Take profit on" : "Close";
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+      <div style={{ backgroundColor: C.surface, borderColor: C.borderStrong }} className="border-2 rounded-2xl w-full max-w-md p-5">
+        <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mb-1">{verb.toUpperCase()} POSITION</div>
+        <div className="flex items-baseline gap-3 mb-4">
+          <div style={{ color: accent }} className="text-2xl font-mono font-bold">{action}</div>
+          <div style={{ color: C.text }} className="text-lg font-mono">{ticker}</div>
+          <div style={{ color: C.muted }} className="text-sm font-mono ml-auto">${price.toFixed(2)}</div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm font-mono mb-4">
+          <div className="flex justify-between"><span style={{ color: C.muted }}>Δ Size</span><span style={{ color: sizeChange > 0 ? C.long : C.short }}>{sizeChange > 0 ? "+" : ""}{sizeChange}sh</span></div>
+          <div className="flex justify-between"><span style={{ color: C.muted }}>New Size</span><span style={{ color: C.text }}>{newSize}sh</span></div>
+          {newAvg != null && <div className="flex justify-between"><span style={{ color: C.muted }}>{isAdd ? "New Avg" : "Avg"}</span><span style={{ color: C.text }}>${newAvg.toFixed(2)}</span></div>}
+          {realized != null && <div className="flex justify-between"><span style={{ color: C.muted }}>Realized</span><span style={{ color: realized >= 0 ? C.long : C.short }}>{realized >= 0 ? "+" : ""}${realized.toFixed(0)}</span></div>}
+        </div>
+        <div style={{ color: C.muted, borderColor: C.border }} className="text-[10px] leading-relaxed mb-4 border-l-2 pl-3">
+          You are the executing trader. MTS is decision support. By confirming, you accept all P&L and the possibility of total loss.
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onCancel} style={{ borderColor: C.borderStrong, color: C.muted }} className="flex-1 py-2.5 rounded-xl border-2 font-mono text-sm">CANCEL</button>
+          <button onClick={onConfirm} style={{ backgroundColor: accent, color: "#FFF" }} className="flex-1 py-2.5 rounded-xl font-mono text-sm font-bold">CONFIRM</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Scanner
+// ============================================================================
+function Scanner({ universe, positions, onSelect }) {
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("score");
+  const enriched = useMemo(() => universe.map(t => {
+    const pos = positions[t.sym] || { side: "flat" };
+    const pnlInR = pnlR(pos, t.price, t.atr);
+    const scores = computeScores({ ...t, position: pos, atrDistance: 0.25, pnlInR });
+    const top = topAction(scores);
+    return { ...t, position: pos, scores, top };
+  }), [universe, positions]);
+  const filtered = useMemo(() => enriched.filter(t => {
+    if (filter === "long") return t.top.tone === "long" || (t.top.tone === "add" && t.position.side === "long");
+    if (filter === "short") return t.top.tone === "short" || (t.top.tone === "add" && t.position.side === "short");
+    if (filter === "high") return t.top.score >= 60;
+    if (filter === "open") return t.position.side !== "flat";
+    return true;
+  }), [enriched, filter]);
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    if (sort === "score") arr.sort((a, b) => b.top.score - a.top.score);
+    if (sort === "alpha") arr.sort((a, b) => a.sym.localeCompare(b.sym));
+    if (sort === "chg") arr.sort((a, b) => b.change - a.change);
+    return arr;
+  }, [filtered, sort]);
+  const chips = [{ key: "all", label: "All" }, { key: "long", label: "Long" }, { key: "short", label: "Short" }, { key: "high", label: "≥60" }, { key: "open", label: "Open" }];
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-baseline gap-2"><div style={{ color: C.muted }} className="text-xs font-mono">{sorted.length}/{universe.length} tickers</div></div>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+        {chips.map(c => (
+          <button key={c.key} onClick={() => setFilter(c.key)}
+            style={{ backgroundColor: filter === c.key ? C.text : C.surface, color: filter === c.key ? C.bg : C.muted, borderColor: filter === c.key ? C.text : C.border }}
+            className="px-2.5 py-1 rounded-full border text-[11px] font-mono whitespace-nowrap">{c.label}</button>
+        ))}
+        <select value={sort} onChange={e => setSort(e.target.value)} style={{ borderColor: C.border, color: C.muted, backgroundColor: C.surface }} className="ml-auto border rounded-full px-2 py-1 text-[11px] font-mono">
+          <option value="score">↓ Score</option><option value="alpha">A→Z</option><option value="chg">↓ % Chg</option>
+        </select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {sorted.map(t => {
+          const color = toneColor(t.top.tone), dim = t.top.score < 30;
+          return (
+            <button key={t.sym} onClick={() => onSelect(t.sym)} style={{ backgroundColor: C.surface, borderColor: C.border }} className="flex items-center gap-3 border rounded-xl p-2.5 text-left active:scale-[0.99] transition-transform">
+              <div style={{ backgroundColor: dim ? C.track : toneSoft(t.top.tone), borderColor: dim ? C.border : color }} className="flex flex-col items-center justify-center w-12 h-12 rounded-lg border-2 shrink-0">
+                <div style={{ color: dim ? C.dim : color }} className="text-base font-mono font-bold leading-none">{t.top.score}</div>
+                <div style={{ color: dim ? C.dim : color }} className="text-[8px] font-mono tracking-wider mt-0.5">{t.top.code}</div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-1.5">
+                  <div style={{ color: C.text }} className="text-base font-mono font-bold">{t.sym}</div>
+                  {t.position.side !== "flat" && <div style={{ color: t.position.side === "long" ? C.long : C.short }} className="text-[9px] font-mono uppercase tracking-wider">• {t.position.side}</div>}
+                </div>
+                <div style={{ color: C.muted }} className="text-[11px] truncate">{t.mmgState} · {t.direction} · {t.rvol.toFixed(2)}x</div>
+              </div>
+              <div className="text-right shrink-0">
+                <div style={{ color: C.text }} className="text-sm font-mono">${t.price.toFixed(2)}</div>
+                <div style={{ color: t.change >= 0 ? C.long : C.short }} className="text-[11px] font-mono">{t.change >= 0 ? "+" : ""}{t.change.toFixed(2)}%</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Active
+// ============================================================================
+function Active({ universe, positions, onSelect }) {
+  const openTickers = useMemo(() => Object.keys(positions).filter(sym => positions[sym].side !== "flat"), [positions]);
+  const enriched = useMemo(() => openTickers.map(sym => {
+    const t = universe.find(u => u.sym === sym);
+    if (!t) return null;
+    const pos = positions[sym];
+    const pnl = calcPnL(pos, t.price);
+    const pnlInR = pnlR(pos, t.price, t.atr);
+    const scores = computeScores({ ...t, position: pos, atrDistance: 0.25, pnlInR });
+    const top = topAction(scores);
+    const targetOffset = t.atr * 1.7;
+    const target = pos.side === "long" ? pos.entryPrice + targetOffset : pos.entryPrice - targetOffset;
+    return { ...t, position: pos, pnl, top, target };
+  }).filter(Boolean), [openTickers, universe, positions]);
+  const totalPnL = enriched.reduce((sum, t) => sum + t.pnl.dollars, 0);
+  const winners = enriched.filter(t => t.pnl.dollars > 0).length;
+  const losers = enriched.filter(t => t.pnl.dollars < 0).length;
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-baseline gap-2">
+        <div style={{ color: C.muted }} className="text-xs font-mono">{enriched.length} open · {winners}W {losers}L</div>
+        <div style={{ color: totalPnL >= 0 ? C.long : C.short }} className="text-sm font-mono font-bold">{totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(0)}</div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {enriched.map(t => {
+          const color = toneColor(t.top.tone);
+          const sideColor = t.position.side === "long" ? C.long : C.short;
+          const pnlColor = t.pnl.dollars >= 0 ? C.long : C.short;
+          return (
+            <button key={t.sym} onClick={() => onSelect(t.sym)} style={{ backgroundColor: C.surface, borderColor: C.border }} className="flex flex-col gap-1.5 border rounded-xl p-2.5 text-left active:scale-[0.99] transition-transform">
+              <div className="flex items-center gap-3">
+                <div style={{ backgroundColor: toneSoft(t.top.tone), borderColor: color }} className="flex flex-col items-center justify-center w-12 h-12 rounded-lg border-2 shrink-0">
+                  <div style={{ color }} className="text-base font-mono font-bold leading-none">{t.top.score}</div>
+                  <div style={{ color }} className="text-[8px] font-mono tracking-wider mt-0.5">{t.top.code}</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-1.5">
+                    <div style={{ color: C.text }} className="text-base font-mono font-bold">{t.sym}</div>
+                    <div style={{ color: sideColor }} className="text-[10px] font-mono uppercase tracking-wider">{t.position.side}</div>
+                    <div style={{ color: C.muted }} className="text-[10px] font-mono ml-auto">{formatTime(t.position.entryTime)}</div>
+                  </div>
+                  <div style={{ color: pnlColor }} className="text-sm font-mono font-bold">{t.pnl.pct >= 0 ? "+" : ""}{t.pnl.pct.toFixed(2)}% · {t.pnl.dollars >= 0 ? "+" : ""}${t.pnl.dollars.toFixed(0)}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div style={{ color: C.text }} className="text-sm font-mono">${t.price.toFixed(2)}</div>
+                  <div style={{ color: C.muted }} className="text-[10px] font-mono">{t.position.size}sh</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2" style={{ paddingLeft: "60px" }}>
+                <div style={{ color: C.muted }} className="text-[10px] font-mono">
+                  <span style={{ color: C.dim }}>entry</span> ${t.position.entryPrice.toFixed(2)} · <span style={{ color: C.dim }}>tgt</span> ${t.target.toFixed(2)}
+                </div>
+                <div className="ml-auto flex gap-1">
+                  <span style={{ backgroundColor: t.position.adds > 0 ? "var(--add-soft)" : C.track, color: t.position.adds > 0 ? C.add : C.dim }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">{t.position.adds}A</span>
+                  <span style={{ backgroundColor: t.position.tpsTaken > 0 ? "var(--tp-soft)" : C.track, color: t.position.tpsTaken > 0 ? C.tp : C.dim }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">{t.position.tpsTaken}T</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+        {enriched.length === 0 && <div style={{ color: C.dim }} className="text-center text-xs py-12">No active trades.<br /><span className="text-[10px]">Open a position from the Scanner.</span></div>}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Deck
+// ============================================================================
+function Deck({ ticker, universe, positions, setPositions, fills, setFills, onBack }) {
+  const data = universe.find(t => t.sym === ticker);
+  const [mmgState, setMmgState] = useState(data.mmgState);
+  const [campaign, setCampaign] = useState(data.campaign);
+  const [direction, setDirection] = useState(data.direction);
+  const [rvol, setRvol] = useState(data.rvol);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [showSim, setShowSim] = useState(false);
+  const position = positions[ticker] || { side: "flat" };
+  const atrDistance = 0.25;
+  const pnlInR = pnlR(position, data.price, data.atr);
+  const pnl = calcPnL(position, data.price);
+  const scores = useMemo(() => computeScores({ mmgState, campaign, direction, rvol, position, atrDistance, pnlInR }), [mmgState, campaign, direction, rvol, position, pnlInR]);
+  const stopOffset = data.atr * 1.0, targetOffset = data.atr * 1.7;
+  const refPrice = position.side === "flat" ? data.price : position.entryPrice;
+  const stop = position.side === "short" ? refPrice + stopOffset : refPrice - stopOffset;
+  const target = position.side === "short" ? refPrice - targetOffset : refPrice + targetOffset;
+  const handleConfirm = () => {
+    const a = pendingAction, price = data.price;
+    setPositions(p => {
+      const cur = p[ticker] || { side: "flat" };
+      let next = { ...cur };
+      if (a === "B2O") next = { side: "long", entryPrice: price, size: 100, adds: 0, tpsTaken: 0, entryTime: Date.now() };
+      else if (a === "S2O") next = { side: "short", entryPrice: price, size: 100, adds: 0, tpsTaken: 0, entryTime: Date.now() };
+      else if (a === "ADD1" || a === "ADD2") {
+        const newSize = cur.size + 50;
+        const newAvg = ((cur.entryPrice * cur.size) + (price * 50)) / newSize;
+        next = { ...cur, size: newSize, entryPrice: newAvg, adds: cur.adds + 1 };
+      } else if (a === "TP1" || a === "TP2") {
+        const sold = Math.round(cur.size / 2);
+        next = { ...cur, size: cur.size - sold, tpsTaken: cur.tpsTaken + 1 };
+      } else if (a === "S2C" || a === "B2C") next = { side: "flat" };
+      return { ...p, [ticker]: next };
+    });
+    setFills(f => ({ ...f, [ticker]: { action: a, price, at: Date.now() } }));
+    setPendingAction(null);
+  };
+  const posColor = position.side === "long" ? C.long : position.side === "short" ? C.short : C.muted;
+  const pnlColor = pnl.dollars >= 0 ? C.long : C.short;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} style={{ color: C.muted }} className="p-1 -ml-1"><ChevronLeft size={20} /></button>
+        <div style={{ color: C.text }} className="text-xl font-mono font-bold">{ticker}</div>
+        <div style={{ color: C.text }} className="text-xl font-mono">${data.price.toFixed(2)}</div>
+        <div style={{ color: data.change >= 0 ? C.long : C.short }} className="text-sm font-mono">{data.change >= 0 ? "+" : ""}{data.change.toFixed(2)}%</div>
+        <button onClick={() => setShowSim(!showSim)} style={{ color: C.dim }} className="p-1 ml-auto"><Settings size={14} /></button>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl px-2.5 py-1.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">WHERE</div>
+          <div style={{ color: C.text }} className="text-sm font-medium leading-tight">{mmgState}</div>
+          <div style={{ color: C.muted }} className="text-[10px]">{direction} bias</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl px-2.5 py-1.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">WHEN</div>
+          <div style={{ color: C.text }} className="text-sm font-medium leading-tight">{campaign}</div>
+          <div style={{ color: C.muted }} className="text-[10px] font-mono">{rvol.toFixed(2)}x RVOL</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl px-2.5 py-1.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">POSITION</div>
+          <div style={{ color: posColor }} className="text-sm font-mono font-bold leading-tight uppercase">{position.side}</div>
+          {position.side !== "flat" ? <div style={{ color: pnlColor }} className="text-[10px] font-mono">{pnl.pct >= 0 ? "+" : ""}{pnl.pct.toFixed(2)}% · {position.adds}A·{position.tpsTaken}T</div> : <div style={{ color: C.dim }} className="text-[10px]">no fills</div>}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <ActionCell code="B2O" label="enter long" score={scores.b2o} lockedReason="in position" tone="long" onTap={() => setPendingAction("B2O")} />
+        <ActionCell code="S2O" label="enter short" score={scores.s2o} lockedReason="in position" tone="short" onTap={() => setPendingAction("S2O")} />
+      </div>
+      <div className="grid grid-cols-4 gap-1.5">
+        <ActionCell code="ADD1" score={scores.add1} tone="add" onTap={() => setPendingAction("ADD1")} compact />
+        <ActionCell code="ADD2" score={scores.add2} tone="add" onTap={() => setPendingAction("ADD2")} compact />
+        <ActionCell code="TP1" score={scores.tp1} tone="tp" onTap={() => setPendingAction("TP1")} compact />
+        <ActionCell code="TP2" score={scores.tp2} tone="tp" onTap={() => setPendingAction("TP2")} compact />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <ActionCell code="S2C" label="close long" score={scores.s2c} lockedReason="no long position" tone="close" onTap={() => setPendingAction("S2C")} />
+        <ActionCell code="B2C" label="cover short" score={scores.b2c} lockedReason="no short position" tone="close" onTap={() => setPendingAction("B2C")} />
+      </div>
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl px-3 py-2">
+        <div className="grid grid-cols-6 gap-1 font-mono text-[10px]">
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">STOP</div><div style={{ color: C.short }}>${stop.toFixed(2)}</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">TGT</div><div style={{ color: C.long }}>${target.toFixed(2)}</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">R:R</div><div style={{ color: C.text }}>1:{(targetOffset / stopOffset).toFixed(1)}</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">SIZE</div><div style={{ color: C.text }}>{position.side !== "flat" ? position.size : 100}sh</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">{position.side !== "flat" ? "PnL" : "RISK"}</div><div style={{ color: position.side !== "flat" ? pnlColor : C.close }}>{position.side !== "flat" ? `${pnl.dollars >= 0 ? "+" : ""}$${pnl.dollars.toFixed(0)}` : `$${(stopOffset*100).toFixed(0)}`}</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">ATR</div><div style={{ color: C.text }}>${data.atr.toFixed(2)}</div></div>
+        </div>
+      </div>
+      {showSim && (
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3 space-y-2 text-xs">
+          <div>
+            <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1">MMG STATE</div>
+            <div className="flex flex-wrap gap-1">{MMG_STATES.map(s => (
+              <button key={s} onClick={() => setMmgState(s)} style={{ backgroundColor: mmgState === s ? C.text : C.bg, color: mmgState === s ? C.bg : C.muted }} className="px-1.5 py-0.5 rounded font-mono text-[9px]">{s}</button>
+            ))}</div>
+          </div>
+          <div>
+            <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1">CAMPAIGN</div>
+            <div className="flex flex-wrap gap-1">{CAMPAIGN_STATES.map(s => (
+              <button key={s} onClick={() => setCampaign(s)} style={{ backgroundColor: campaign === s ? C.text : C.bg, color: campaign === s ? C.bg : C.muted }} className="px-1.5 py-0.5 rounded font-mono text-[9px]">{s}</button>
+            ))}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1">BIAS</div>
+              <div className="flex gap-1">{["long", "short", "neutral"].map(d => (
+                <button key={d} onClick={() => setDirection(d)} style={{ backgroundColor: direction === d ? C.text : C.bg, color: direction === d ? C.bg : C.muted }} className="px-1.5 py-0.5 rounded font-mono text-[9px]">{d}</button>
+              ))}</div>
+            </div>
+            <div>
+              <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1">RVOL · {rvol.toFixed(2)}x</div>
+              <input type="range" min="0.3" max="3" step="0.1" value={rvol} onChange={(e) => setRvol(parseFloat(e.target.value))} className="w-full" />
+            </div>
+          </div>
+        </div>
+      )}
+      {pendingAction && <ConfirmModal action={pendingAction} ticker={ticker} price={data.price} position={position.side !== "flat" ? position : null} onConfirm={handleConfirm} onCancel={() => setPendingAction(null)} />}
+    </div>
+  );
+}
+
+// ============================================================================
+// BottomTabBar
+// ============================================================================
+function BottomTabBar({ view, setView, activeCount }) {
+  const tabs = [
+    { key: "scanner", icon: Search, label: "Scan" },
+    { key: "active", icon: Zap, label: "Active", badge: activeCount > 0 ? activeCount : null },
+    { key: "watchlist", icon: Eye, label: "Watch" },
+    { key: "library", icon: BookOpen, label: "Library" },
+    { key: "account", icon: User, label: "Account" },
+  ];
+  return (
+    <div style={{ backgroundColor: C.surface, borderTopColor: C.border }} className="fixed bottom-0 left-0 right-0 border-t z-40">
+      <div className="max-w-md mx-auto grid grid-cols-5">
+        {tabs.map(t => {
+          const Icon = t.icon, active = view === t.key;
+          return (
+            <button key={t.key} onClick={() => setView(t.key)} className="flex flex-col items-center gap-0.5 py-2 active:opacity-60">
+              <div className="relative">
+                <Icon size={18} color={active ? "var(--text)" : "var(--muted)"} strokeWidth={active ? 2.5 : 2} />
+                {t.badge != null && <div style={{ backgroundColor: C.long, color: "#FFF" }} className="absolute -top-1 -right-2 min-w-[14px] h-[14px] rounded-full text-[8px] font-mono font-bold flex items-center justify-center px-1">{t.badge}</div>}
+              </div>
+              <div style={{ color: active ? C.text : C.muted }} className="text-[9px] font-mono tracking-wider">{t.label.toUpperCase()}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Main App
+// ============================================================================
+function MTSApp() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [view, setView] = useState("scanner");
+  const [returnTo, setReturnTo] = useState("scanner");
+  const [selected, setSelected] = useState(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [positions, setPositions] = useState(initialPositions);
+  const [fills, setFills] = useState({});
+  const [watchlists, setWatchlists] = useState(initialWatchlists);
+  const [universe, setUniverse] = useState(UNIVERSE_SEED);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", darkMode);
+  }, [darkMode]);
+
+  const activeCount = Object.values(positions).filter(p => p.side !== "flat").length;
+  const addCustomTicker = (sym) => {
+    setUniverse(u => {
+      if (u.find(t => t.sym === sym)) return u;
+      return [...u, generateMockTicker(sym)];
+    });
+  };
+  const handleSelect = (sym, from) => { setSelected(sym); setReturnTo(from); setView("deck"); };
+  const handleSelectArticle = (id) => { setSelectedArticle(id); setView("library-article"); };
+
+  if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />;
+  const showMacro = view !== "library-article";
+  const showTabs = view !== "deck" && view !== "library-article";
+  const article = LIBRARY_ARTICLES.find(a => a.id === selectedArticle);
+
+  return (
+    <div style={{ backgroundColor: C.bg, color: C.text }} className="min-h-screen font-sans">
+      {showMacro && <MacroBar account={ACCOUNT_DATA} />}
+      <div className={`max-w-md mx-auto px-3 py-3 ${showTabs ? "pb-20" : "pb-4"}`}>
+        {view === "scanner" && <Scanner universe={universe} positions={positions} onSelect={(sym) => handleSelect(sym, "scanner")} />}
+        {view === "active" && <Active universe={universe} positions={positions} onSelect={(sym) => handleSelect(sym, "active")} />}
+        {view === "watchlist" && <WatchlistView watchlists={watchlists} setWatchlists={setWatchlists} universe={universe} addCustomTicker={addCustomTicker} positions={positions} onSelect={(sym) => handleSelect(sym, "watchlist")} />}
+        {view === "library" && <Library articles={LIBRARY_ARTICLES} onSelect={handleSelectArticle} />}
+        {view === "library-article" && article && <LibraryArticleDetail article={article} onBack={() => setView("library")} />}
+        {view === "account" && <AccountSummary account={ACCOUNT_DATA} positions={positions} universe={universe} darkMode={darkMode} setDarkMode={setDarkMode} onLogout={() => setLoggedIn(false)} onSelect={(sym) => handleSelect(sym, "account")} />}
+        {view === "deck" && <Deck ticker={selected} universe={universe} positions={positions} setPositions={setPositions} fills={fills} setFills={setFills} onBack={() => setView(returnTo)} />}
+      </div>
+      {showTabs && <BottomTabBar view={view} setView={setView} activeCount={activeCount} />}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<MTSApp />);
+</script>
+</body>
+</html>
