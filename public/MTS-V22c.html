@@ -1,0 +1,2617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>MTS v.22b — MMG Gates + Entry Triggers</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: #F7F7F4; --surface: #FFFFFF; --border: #E8E6E0; --border-strong: #D4D2CC;
+      --text: #1A1A1A; --muted: #6B6B6B; --dim: #A8A8A8; --locked: #C8C6C0;
+      --long: #16A34A; --short: #DC2626; --close: #D97706;
+      --add: #0891B2; --tp: #7C3AED; --neutral: #A8A8A8; --track: #EFEDE7;
+      --long-soft: rgba(22,163,74,0.12); --short-soft: rgba(220,38,38,0.12);
+      --close-soft: rgba(217,119,6,0.12); --add-soft: rgba(8,145,178,0.12); --tp-soft: rgba(124,58,237,0.12);
+      --surface-disabled: #FAFAF7;
+    }
+    body.dark {
+      --bg: #0E1014; --surface: #181B22; --border: #262A33; --border-strong: #3A3F4B;
+      --text: #E8E6E0; --muted: #9CA0AB; --dim: #5C6171; --locked: #3A3F4B;
+      --long: #4ADE80; --short: #F87171; --close: #FBBF24;
+      --add: #38BDF8; --tp: #C084FC; --neutral: #9CA0AB; --track: #262A33;
+      --long-soft: rgba(74,222,128,0.16); --short-soft: rgba(248,113,113,0.16);
+      --close-soft: rgba(251,191,36,0.16); --add-soft: rgba(56,189,248,0.16); --tp-soft: rgba(192,132,252,0.16);
+      --surface-disabled: #14171D;
+    }
+    html, body { margin: 0; padding: 0; background: var(--bg); -webkit-tap-highlight-color: transparent; }
+    * { -webkit-user-select: none; user-select: none; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="padding: 40px 20px; font-family: monospace; color: #6B6B6B; text-align: center;">
+      <div style="font-size: 28px; font-weight: bold; color: #1A1A1A;">MTS</div>
+      <div style="font-size: 10px; letter-spacing: 0.25em; margin-top: 4px;">MONGOL TRADING SYSTEM</div>
+      <div style="margin-top: 24px; font-size: 12px;">compiling React + JSX (v.22b / Gates)...</div>
+    </div>
+  </div>
+  <script>
+    window.addEventListener('error', function(e) {
+      var r = document.getElementById('root');
+      if (r) r.innerHTML = '<div style="padding:20px;font-family:monospace;color:#DC2626;font-size:12px;"><b>Error:</b><br><br>' + (e.message||'unknown') + '<br><br><small style="color:#6B6B6B;">' + (e.filename||'') + (e.lineno?':'+e.lineno:'') + '</small></div>';
+    });
+  </script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect } = React;
+
+// ---- Icons ----
+function Icon({ size = 16, color = "currentColor", strokeWidth = 2, children }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
+}
+const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Icon>;
+const Zap = (p) => <Icon {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
+const Eye = (p) => <Icon {...p}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></Icon>;
+const BookOpen = (p) => <Icon {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>;
+const User = (p) => <Icon {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Icon>;
+const ChevronLeft = (p) => <Icon {...p}><polyline points="15 18 9 12 15 6"/></Icon>;
+const ChevronUp = (p) => <Icon {...p}><polyline points="18 15 12 9 6 15"/></Icon>;
+const ChevronDown = (p) => <Icon {...p}><polyline points="6 9 12 15 18 9"/></Icon>;
+const Settings = (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
+const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
+const Plus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
+const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
+const Edit2 = (p) => <Icon {...p}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></Icon>;
+const Trash2 = (p) => <Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Icon>;
+const Sun = (p) => <Icon {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></Icon>;
+const Moon = (p) => <Icon {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></Icon>;
+const Shield = (p) => <Icon {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></Icon>;
+const Calendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Icon>;
+const Key = (p) => <Icon {...p}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></Icon>;
+const Wallet = (p) => <Icon {...p}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></Icon>;
+const Check = (p) => <Icon {...p}><polyline points="20 6 9 17 4 12"/></Icon>;
+const Lock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Icon>;
+const Heart = (p) => <Icon {...p}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></Icon>;
+
+// ---- Theme tokens (use CSS variables) ----
+const C = {
+  bg: "var(--bg)", surface: "var(--surface)", border: "var(--border)", borderStrong: "var(--border-strong)",
+  text: "var(--text)", muted: "var(--muted)", dim: "var(--dim)", locked: "var(--locked)",
+  long: "var(--long)", short: "var(--short)", close: "var(--close)",
+  add: "var(--add)", tp: "var(--tp)", neutral: "var(--neutral)", track: "var(--track)",
+  surfaceDisabled: "var(--surface-disabled)",
+};
+
+const MMG_STATES = ["Compression", "Expansion", "Midline", "SAR", "Volume", "B2O-signal", "S2O-signal", "Caution", "GetOff"];
+const CAMPAIGN_STATES = ["Boarding", "Rolling", "Departed", "Station"];
+
+// ---- Data ----
+const UNIVERSE_SEED = [
+  { sym: "NVDA", price: 132.07, change: -1.21, atr: 4.62, mmgState: "B2O-signal", campaign: "Boarding", direction: "long",  rvol: 1.92 },
+  { sym: "AVGO", price: 1620.4, change:  2.14, atr: 38.2, mmgState: "B2O-signal", campaign: "Boarding", direction: "long",  rvol: 1.74 },
+  { sym: "TSLA", price: 248.91, change:  2.07, atr: 7.83, mmgState: "Expansion",  campaign: "Boarding", direction: "long",  rvol: 1.68 },
+  { sym: "AAPL", price: 184.52, change:  0.84, atr: 2.38, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.40 },
+  { sym: "META", price: 580.12, change:  1.32, atr: 11.4, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.55 },
+  { sym: "AMZN", price: 195.34, change:  0.62, atr: 3.21, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.28 },
+  { sym: "MSFT", price: 420.18, change:  0.41, atr: 5.84, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.12 },
+  { sym: "GOOGL",price: 175.62, change:  0.28, atr: 3.04, mmgState: "Compression", campaign: "Boarding", direction: "long",  rvol: 0.92 },
+  { sym: "AMD",  price: 165.83, change: -2.41, atr: 5.97, mmgState: "S2O-signal", campaign: "Rolling",  direction: "short", rvol: 1.81 },
+  { sym: "NFLX", price: 705.21, change: -1.84, atr: 13.8, mmgState: "S2O-signal", campaign: "Boarding", direction: "short", rvol: 1.62 },
+  { sym: "CRM",  price: 285.44, change: -1.12, atr: 6.21, mmgState: "Expansion",  campaign: "Boarding", direction: "short", rvol: 1.48 },
+  { sym: "ORCL", price: 152.18, change:  0.52, atr: 2.84, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.08 },
+  { sym: "JPM",  price: 220.45, change:  0.31, atr: 3.12, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 0.94 },
+  { sym: "V",    price: 285.62, change:  0.18, atr: 3.41, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.81 },
+  { sym: "MA",   price: 470.34, change:  0.22, atr: 5.62, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.78 },
+  { sym: "WMT",  price:  88.12, change: -0.42, atr: 1.34, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 0.88 },
+  { sym: "COST", price: 880.45, change: -0.81, atr: 12.4, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 1.02 },
+  { sym: "UNH",  price: 510.18, change: -1.32, atr: 8.92, mmgState: "GetOff",     campaign: "Station",  direction: "long",  rvol: 1.45 },
+  { sym: "JNJ",  price: 152.34, change:  0.12, atr: 1.82, mmgState: "SAR",        campaign: "Rolling",  direction: "long",  rvol: 0.92 },
+  { sym: "PG",   price: 168.52, change:  0.08, atr: 1.94, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.72 },
+  { sym: "XOM",  price: 115.24, change:  1.42, atr: 2.18, mmgState: "Volume",     campaign: "Rolling",  direction: "long",  rvol: 1.62 },
+  { sym: "ABBV", price: 198.42, change: -0.32, atr: 3.04, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 0.98 },
+  { sym: "HD",   price: 388.62, change: -0.62, atr: 5.41, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 0.85 },
+  { sym: "KO",   price:  67.42, change:  0.18, atr: 0.84, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.68 },
+  { sym: "SPY",  price: 612.45, change:  0.31, atr: 3.94, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.22 },
+];
+
+const initialPositions = {
+  NVDA: { side: "long",  entryPrice: 128.50, size: 100, addFired: false, tpFired: false, entryTime: Date.now() - 23 * 60 * 1000 },
+  AMD:  { side: "short", entryPrice: 168.00, size: 100, addFired: true,  tpFired: false, entryTime: Date.now() - 47 * 60 * 1000 },
+  AAPL: { side: "long",  entryPrice: 182.00, size: 150, addFired: true,  tpFired: true,  entryTime: Date.now() - 132 * 60 * 1000 },
+};
+
+const MACRO_DATA = {
+  SPY:  { label: "SPY",  value: "612.45", change: 0.31,  type: "price" },
+  VIX:  { label: "VIX",  value: "14.20",  change: -2.14, type: "price" },
+  GC:   { label: "GOLD", value: "2,410",  change: 0.42,  type: "price" },
+  SI:   { label: "SILV", value: "32.50",  change: 0.68,  type: "price" },
+  CL:   { label: "OIL",  value: "78.40",  change: 1.21,  type: "price" },
+  DXY:  { label: "DXY",  value: "105.8",  change: -0.18, type: "price" },
+  T2:   { label: "2Y",   value: "4.18%",  change: -0.02, type: "yield" },
+  T5:   { label: "5Y",   value: "4.05%",  change: -0.03, type: "yield" },
+  T15:  { label: "15Y*", value: "4.38%",  change: -0.01, type: "yield" },
+  T20:  { label: "20Y",  value: "4.45%",  change:  0.00, type: "yield" },
+  MORT: { label: "MORT", value: "6.85%",  change: -0.04, type: "yield" },
+  FED:  { label: "FED",  value: "HAWK",   tone: "short", type: "fed" },
+  CONS: { label: "CONS", value: "71.4",   change: 1.20,  type: "macro" },
+  CPI:  { label: "CPI",  value: "2.4%",   change: -0.1,  type: "macro" },
+  PPI:  { label: "PPI",  value: "2.1%",   change:  0.1,  type: "macro" },
+  NFP:  { label: "NFP",  value: "+185K",  change: null,  type: "macro" },
+};
+const MACRO_ORDER = ["SPY", "VIX", "GC", "SI", "CL", "DXY", "T2", "T5", "T15", "T20", "MORT", "FED", "CONS", "CPI", "PPI", "NFP"];
+
+
+// ============================================================================
+// v.19 — Risk Assessment Constants
+// ============================================================================
+const RISK_QUESTIONS = [
+  { id: "experience", question: "How long have you been actively trading?",
+    options: ["Less than a year", "1 to 3 years", "3 to 7 years", "More than 7 years"] },
+  { id: "exposure", question: "Compared to your other savings, this trading account is:",
+    options: ["A small slice (under 5%)", "A meaningful chunk (5-15%)", "A big part (15-30%)", "Most of my savings (30%+)"] },
+  { id: "reaction", question: "If this account lost 20% in a single week, you would:",
+    options: ["Stop and reassess everything", "Trade smaller until comfortable", "Stick with my plan", "Press harder to recover faster"] },
+  { id: "maxLoss", question: "The biggest loss you would accept before quitting this strategy:",
+    options: ["5% (very tight)", "10%", "20%", "30% or more"] },
+  { id: "positions", question: "How many open positions do you want at once?",
+    options: ["Just one", "Two or three", "Four or five", "Six or more"] },
+  { id: "perTradeRisk", question: "How much are you willing to risk on a single trade?",
+    options: ["0.25% of account", "0.5%", "1.0%", "2.0%"] },
+  { id: "dailyStop", question: "You have lost money today. You stop trading when:",
+    options: ["Down 1.5%", "Down 3%", "Down 5%", "I keep going if setups are strong"] },
+  { id: "horizon", question: "You usually want to hold a trade for:",
+    options: ["Minutes (scalping)", "Hours, closed same day", "Days to a week", "Weeks or longer"] },
+];
+
+const RISK_TIERS = {
+  conservative: { name: "Conservative",     icon: "🛡️", risk: 0.25, rrMin: 1.5, maxPos: 1, dailyStop: -1.5, description: "Capital preservation first. One position at a time." },
+  moderate:     { name: "Moderate",         icon: "⚖️", risk: 0.50, rrMin: 2.0, maxPos: 3, dailyStop: -3.0, description: "Balanced growth. Small portfolio." },
+  aggressive:   { name: "Aggressive",       icon: "🎯", risk: 1.00, rrMin: 2.5, maxPos: 5, dailyStop: -5.0, description: "Higher conviction sizing. Multiple positions." },
+  vAggressive:  { name: "Very Aggressive",  icon: "⚡", risk: 2.00, rrMin: 3.0, maxPos: 7, dailyStop: -7.0, description: "Maximum exposure. Big swings expected." },
+};
+
+function scoreRiskAnswers(answers) {
+  const vals = Object.values(answers);
+  if (vals.length === 0) return { score: 0, tier: "conservative" };
+  const total = vals.reduce((a, b) => a + b, 0);
+  const avg = total / vals.length;
+  let tier;
+  if (avg < 0.75) tier = "conservative";
+  else if (avg < 1.5) tier = "moderate";
+  else if (avg < 2.25) tier = "aggressive";
+  else tier = "vAggressive";
+  return { score: avg, tier };
+}
+
+const STORAGE = {
+  RISK: "mts-v19-risk-profile",
+  KEY: "mts-v19-polygon-key",
+  ACCT: "mts-v19-paper-account",
+  SESS: "mts-v19-sessions",
+};
+function loadJSON(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function saveJSON(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+// ============================================================================
+// v.20 — Atomic Indicators (validated against MMG V9.9K-9.2 Pine reference)
+// All values match TradingView Data Window exactly (popStdev, Wilder RMA, etc.)
+// ============================================================================
+function _last(a) { return a[a.length - 1]; }
+function _slice(a, n) { return a.slice(Math.max(0, a.length - n)); }
+
+function sma(values, period) {
+  if (!values || values.length < period) return null;
+  const w = _slice(values, period);
+  return w.reduce((a, b) => a + b, 0) / period;
+}
+
+// Population stdev — TradingView ta.stdev() divides by n, not n-1
+function popStdev(values, period) {
+  if (!values || values.length < period) return null;
+  const w = _slice(values, period);
+  const mean = w.reduce((a, b) => a + b, 0) / period;
+  const sq = w.reduce((acc, v) => acc + (v - mean) * (v - mean), 0);
+  return Math.sqrt(sq / period);
+}
+
+// EMA with SMA seed (Pine convention)
+function emaSeries(values, period) {
+  if (!values || values.length < period) return [];
+  const out = [];
+  const seed = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  out.push(seed);
+  const k = 2 / (period + 1);
+  let v = seed;
+  for (let i = period; i < values.length; i++) {
+    v = values[i] * k + v * (1 - k);
+    out.push(v);
+  }
+  return out;
+}
+function ema(values, period) {
+  const s = emaSeries(values, period);
+  return s.length ? _last(s) : null;
+}
+
+// Wilder's RMA
+function wilderRMA(values, period) {
+  if (!values || values.length < period) return null;
+  let rma = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < values.length; i++) {
+    rma = (rma * (period - 1) + values[i]) / period;
+  }
+  return rma;
+}
+
+function rsi(closes, period = 14) {
+  if (!closes || closes.length < period + 1) return null;
+  const gains = [], losses = [];
+  for (let i = 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i - 1];
+    gains.push(d > 0 ? d : 0);
+    losses.push(d < 0 ? -d : 0);
+  }
+  const ag = wilderRMA(gains, period);
+  const al = wilderRMA(losses, period);
+  if (ag === null || al === null) return null;
+  if (al === 0) return 100;
+  const rs = ag / al;
+  return 100 - 100 / (1 + rs);
+}
+
+function roc(closes, period) {
+  if (!closes || closes.length < period + 1) return null;
+  const cur = _last(closes);
+  const past = closes[closes.length - 1 - period];
+  return (cur - past) / past * 100;
+}
+
+function macd(closes, fast = 12, slow = 26, signal = 9) {
+  if (!closes || closes.length < slow + signal) return null;
+  const fastS = emaSeries(closes, fast);
+  const slowS = emaSeries(closes, slow);
+  if (!slowS.length) return null;
+  const offset = slow - fast;
+  const macdLine = [];
+  for (let i = 0; i < slowS.length; i++) {
+    macdLine.push(fastS[i + offset] - slowS[i]);
+  }
+  if (macdLine.length < signal) return null;
+  const sigS = emaSeries(macdLine, signal);
+  if (!sigS.length) return null;
+  const m = _last(macdLine);
+  const s = _last(sigS);
+  return { macd: m, signal: s, hist: m - s };
+}
+
+function bollingerBands(closes, period = 20, mult = 2) {
+  const basis = sma(closes, period);
+  const sd = popStdev(closes, period);
+  if (basis === null || sd === null) return null;
+  const upper = basis + mult * sd;
+  const lower = basis - mult * sd;
+  return { basis, upper, lower, width: (upper - lower) / basis };
+}
+
+// Parabolic SAR (step=0.02, max=0.20) — full bar-walk
+function parabolicSAR(bars, step = 0.02, maxAF = 0.20) {
+  if (!bars || bars.length < 2) return null;
+  let isUp = bars[1].c >= bars[0].c;
+  let af = step;
+  let ep = isUp ? bars[0].h : bars[0].l;
+  let sar = isUp ? bars[0].l : bars[0].h;
+  for (let i = 1; i < bars.length; i++) {
+    const b = bars[i];
+    const prevSar = sar;
+    sar = prevSar + af * (ep - prevSar);
+    if (isUp) {
+      // Clamp SAR to be below prior two lows
+      sar = Math.min(sar, bars[i - 1].l, i >= 2 ? bars[i - 2].l : bars[i - 1].l);
+      if (b.l < sar) {
+        // Flip to down
+        isUp = false;
+        sar = ep;
+        ep = b.l;
+        af = step;
+      } else {
+        if (b.h > ep) { ep = b.h; af = Math.min(af + step, maxAF); }
+      }
+    } else {
+      // Clamp SAR to be above prior two highs
+      sar = Math.max(sar, bars[i - 1].h, i >= 2 ? bars[i - 2].h : bars[i - 1].h);
+      if (b.h > sar) {
+        // Flip to up
+        isUp = true;
+        sar = ep;
+        ep = b.h;
+        af = step;
+      } else {
+        if (b.l < ep) { ep = b.l; af = Math.min(af + step, maxAF); }
+      }
+    }
+  }
+  return sar;
+}
+
+// Wilder's ATR
+function atrWilder(bars, period = 14) {
+  if (!bars || bars.length < period + 1) return null;
+  const trs = [];
+  for (let i = 1; i < bars.length; i++) {
+    const b = bars[i], p = bars[i - 1];
+    trs.push(Math.max(b.h - b.l, Math.abs(b.h - p.c), Math.abs(b.l - p.c)));
+  }
+  return wilderRMA(trs, period);
+}
+
+// Session-anchored VWAP (resets each ET day at midnight; close enough for 15m bars)
+function sessionVWAP(bars) {
+  if (!bars || !bars.length) return null;
+  // Group by ET date; VWAP of the latest session only
+  const latest = _last(bars);
+  const latestDay = new Date(latest.t).toLocaleDateString("en-US", { timeZone: "America/New_York" });
+  let pv = 0, vv = 0;
+  for (const b of bars) {
+    const day = new Date(b.t).toLocaleDateString("en-US", { timeZone: "America/New_York" });
+    if (day === latestDay) {
+      const tp = (b.h + b.l + b.c) / 3;
+      pv += tp * b.v;
+      vv += b.v;
+    }
+  }
+  return vv > 0 ? pv / vv : null;
+}
+
+// Master indicator computation — runs all atoms on a bars array
+function computeIndicators(bars) {
+  if (!bars || bars.length < 70) return null;
+  const closes = bars.map(b => b.c);
+  const vols = bars.map(b => b.v);
+  const bb = bollingerBands(closes, 20, 2);
+  if (!bb) return null;
+  // bbWidth series: compute BB rolling, take width at each step (need 50 widths for bbWidthAvg)
+  const widthSeries = [];
+  for (let i = 20; i <= closes.length; i++) {
+    const bbi = bollingerBands(closes.slice(0, i), 20, 2);
+    if (bbi) widthSeries.push(bbi.width);
+  }
+  const bbWidthAvg = sma(widthSeries, 50);
+  const mac = macd(closes, 12, 26, 9);
+  const last = _last(bars);
+  const volAvg = sma(vols, 20);
+  return {
+    timestamp: last.t,
+    open: last.o, high: last.h, low: last.l, close: last.c, volume: last.v,
+    ema15: ema(closes, 21),  // v.22b fix: Pine emaLen=21
+    vwap: sessionVWAP(bars),
+    bbBasis: bb.basis,
+    bbUpper: bb.upper,
+    bbLower: bb.lower,
+    bbWidth: bb.width,
+    bbWidthAvg: bbWidthAvg,
+    sar: parabolicSAR(bars),
+    atr14: atrWilder(bars, 14),
+    rsi14: rsi(closes, 14),
+    roc9: roc(closes, 10),  // v.22b fix: Pine momLen=10
+    macdHist: mac ? mac.hist : null,
+    rvol: volAvg ? last.v / volAvg : null,
+    barsLoaded: bars.length,
+  };
+}
+
+// ============================================================================
+// v.22b — MMG Gates + Entry Triggers (port of K-9.2 Pine Modules 2-5)
+// Computes per-bar structural / momentum / turn / manipulation / entry gates.
+// Skips train state machine + ADD/TP (deferred to v.22c).
+// ============================================================================
+function _emaSeries21(closes, period) {
+  const n = closes.length;
+  const out = new Array(n).fill(NaN);
+  if (n < period) return out;
+  const seed = closes.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  out[period - 1] = seed;
+  const k = 2 / (period + 1);
+  let v = seed;
+  for (let i = period; i < n; i++) {
+    v = closes[i] * k + v * (1 - k);
+    out[i] = v;
+  }
+  return out;
+}
+
+function _vwapSeriesSessionET(bars) {
+  const n = bars.length;
+  const out = new Array(n).fill(NaN);
+  let pv = 0, vv = 0;
+  let lastDay = null;
+  for (let i = 0; i < n; i++) {
+    const day = new Date(bars[i].t).toLocaleDateString("en-US", { timeZone: "America/New_York" });
+    if (day !== lastDay) { pv = 0; vv = 0; lastDay = day; }
+    const tp = (bars[i].h + bars[i].l + bars[i].c) / 3;
+    pv += tp * bars[i].v;
+    vv += bars[i].v;
+    if (vv > 0) out[i] = pv / vv;
+  }
+  return out;
+}
+
+function _bbBasisSeries(closes, len) {
+  const n = closes.length;
+  const out = new Array(n).fill(NaN);
+  for (let i = len - 1; i < n; i++) {
+    let s = 0;
+    for (let j = i - len + 1; j <= i; j++) s += closes[j];
+    out[i] = s / len;
+  }
+  return out;
+}
+
+function _sarSeries(bars, step, maxAF) {
+  if (!bars || bars.length < 2) return [];
+  const n = bars.length;
+  const sarOut = new Array(n).fill(NaN);
+  let isUp = bars[1].c >= bars[0].c;
+  let af = step;
+  let ep = isUp ? bars[0].h : bars[0].l;
+  let sar = isUp ? bars[0].l : bars[0].h;
+  sarOut[0] = sar;
+  for (let i = 1; i < n; i++) {
+    const b = bars[i];
+    sar = sar + af * (ep - sar);
+    if (isUp) {
+      sar = Math.min(sar, bars[i - 1].l, i >= 2 ? bars[i - 2].l : bars[i - 1].l);
+      if (b.l < sar) { isUp = false; sar = ep; ep = b.l; af = step; }
+      else { if (b.h > ep) { ep = b.h; af = Math.min(af + step, maxAF); } }
+    } else {
+      sar = Math.max(sar, bars[i - 1].h, i >= 2 ? bars[i - 2].h : bars[i - 1].h);
+      if (b.h > sar) { isUp = true; sar = ep; ep = b.h; af = step; }
+      else { if (b.l < ep) { ep = b.l; af = Math.min(af + step, maxAF); } }
+    }
+    sarOut[i] = sar;
+  }
+  return sarOut;
+}
+
+function _rsiSeries(closes, period) {
+  const n = closes.length;
+  const out = new Array(n).fill(NaN);
+  if (n < period + 1) return out;
+  const gains = [], losses = [];
+  for (let i = 1; i < n; i++) {
+    const d = closes[i] - closes[i - 1];
+    gains.push(d > 0 ? d : 0);
+    losses.push(d < 0 ? -d : 0);
+  }
+  // Wilder seeded with SMA over first `period` deltas
+  let avgG = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  let avgL = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  out[period] = avgL === 0 ? 100 : 100 - 100 / (1 + (avgG / avgL));
+  for (let i = period; i < gains.length; i++) {
+    avgG = (avgG * (period - 1) + gains[i]) / period;
+    avgL = (avgL * (period - 1) + losses[i]) / period;
+    out[i + 1] = avgL === 0 ? 100 : 100 - 100 / (1 + (avgG / avgL));
+  }
+  return out;
+}
+
+function _rocSeries(closes, period) {
+  const n = closes.length;
+  const out = new Array(n).fill(NaN);
+  for (let i = period; i < n; i++) {
+    if (closes[i - period] !== 0) {
+      out[i] = ((closes[i] - closes[i - period]) / closes[i - period]) * 100;
+    }
+  }
+  return out;
+}
+
+function _macdHistSeries(closes, fast, slow, signal) {
+  const n = closes.length;
+  const out = new Array(n).fill(NaN);
+  if (n < slow + signal) return out;
+  const fastS = _emaSeries21(closes, fast);
+  const slowS = _emaSeries21(closes, slow);
+  const macdLine = new Array(n).fill(NaN);
+  for (let i = 0; i < n; i++) {
+    if (!isNaN(fastS[i]) && !isNaN(slowS[i])) macdLine[i] = fastS[i] - slowS[i];
+  }
+  // signal EMA of macdLine — seeded after `signal` valid macd values
+  let firstValid = -1;
+  for (let i = 0; i < n; i++) { if (!isNaN(macdLine[i])) { firstValid = i; break; } }
+  if (firstValid < 0 || firstValid + signal > n) return out;
+  let sum = 0;
+  for (let i = firstValid; i < firstValid + signal; i++) sum += macdLine[i];
+  let sig = sum / signal;
+  const sigSer = new Array(n).fill(NaN);
+  sigSer[firstValid + signal - 1] = sig;
+  const k = 2 / (signal + 1);
+  for (let i = firstValid + signal; i < n; i++) {
+    sig = macdLine[i] * k + sig * (1 - k);
+    sigSer[i] = sig;
+  }
+  for (let i = 0; i < n; i++) {
+    if (!isNaN(macdLine[i]) && !isNaN(sigSer[i])) out[i] = macdLine[i] - sigSer[i];
+  }
+  return out;
+}
+
+function _atrWilderSeries(bars, period) {
+  const n = bars.length;
+  const out = new Array(n).fill(NaN);
+  if (n < period + 1) return out;
+  const trs = new Array(n).fill(NaN);
+  for (let i = 1; i < n; i++) {
+    trs[i] = Math.max(bars[i].h - bars[i].l, Math.abs(bars[i].h - bars[i-1].c), Math.abs(bars[i].l - bars[i-1].c));
+  }
+  // Seed: SMA of first `period` TRs (indexes 1..period)
+  let atr = 0;
+  for (let i = 1; i <= period; i++) atr += trs[i];
+  atr = atr / period;
+  out[period] = atr;
+  for (let i = period + 1; i < n; i++) {
+    atr = (atr * (period - 1) + trs[i]) / period;
+    out[i] = atr;
+  }
+  return out;
+}
+
+function computeMMGGates(bars, bbCycle, opts) {
+  opts = opts || {};
+  const emaLen = opts.emaLen || 21;
+  const rsiLen = opts.rsiLen || 14;
+  const momLen = opts.momLen || 10;
+  const macdFast = opts.macdFast || 12, macdSlow = opts.macdSlow || 26, macdSignal = opts.macdSignal || 9;
+  const sarStart = opts.sarStart || 0.02, sarInc = opts.sarInc || 0.02, sarMax = opts.sarMax || 0.20;
+  const atrLen = opts.atrLen || 14;
+  const tangledATR = opts.tangledATR || 0.18;
+  const nearMidATR = opts.nearMidATR || 0.18;
+
+  if (!bars || bars.length < Math.max(emaLen, macdSlow + macdSignal) + 5) return null;
+  const n = bars.length;
+  const last = n - 1;
+  const closes = bars.map(b => b.c);
+
+  const emaSer = _emaSeries21(closes, emaLen);
+  const vwapSer = _vwapSeriesSessionET(bars);
+  const bbBasisSer = _bbBasisSeries(closes, 20);
+  const sarSer = _sarSeries(bars, sarStart, sarMax);
+  const rsiSer = _rsiSeries(closes, rsiLen);
+  const rocSer = _rocSeries(closes, momLen);
+  const macdHistSer = _macdHistSeries(closes, macdFast, macdSlow, macdSignal);
+  const atrSer = _atrWilderSeries(bars, atrLen);
+
+  const close = closes[last];
+  const closePrev = closes[last - 1];
+  const ema = emaSer[last];
+  const emaPrev = emaSer[last - 1];
+  const vwap = vwapSer[last];
+  const bbBasis = bbBasisSer[last];
+  const bbBasisPrev = bbBasisSer[last - 1];
+  const sar = sarSer[last];
+  const sarPrev = sarSer[last - 1];
+  const atr = atrSer[last];
+  const rsi = rsiSer[last];
+  const roc = rocSer[last];
+  const macdH = macdHistSer[last];
+  const macdHPrev = macdHistSer[last - 1];
+
+  // Structural gates (debug naming follows Pine)
+  const closeAboveEMA = close > ema;
+  const closeAboveVWAP = close > vwap;
+  const closeAboveBB = close > bbBasis;
+  const closeBelowEMA = close < ema;
+  const closeBelowVWAP = close < vwap;
+  const closeBelowBB = close < bbBasis;
+
+  // SAR gates
+  const sarBull = close > sar;
+  const sarBear = close < sar;
+  const sarBullPrev = closePrev > sarPrev;
+  const sarBearPrev = closePrev < sarPrev;
+  const sarFlipBull = sarBull && !sarBullPrev;
+  const sarFlipBear = sarBear && !sarBearPrev;
+
+  // Momentum
+  const momBull = rsi > 50 && roc > 0 && macdH > 0;
+  const momBear = rsi < 50 && roc < 0 && macdH < 0;
+  const momBullStrong = rsi > 60 && roc > 0 && macdH > macdHPrev;
+  const momBearStrong = rsi < 40 && roc < 0 && macdH < macdHPrev;
+  let momentumScore = 0;
+  momentumScore += momBull ? 0.35 : momBear ? -0.35 : 0;
+  momentumScore += momBullStrong ? 0.25 : momBearStrong ? -0.25 : 0;
+  momentumScore = Math.max(-1, Math.min(1, momentumScore));
+
+  // Turn detection (Pine ta.crossover/crossunder)
+  const crossUpEMA = close > ema && closePrev <= emaPrev;
+  const crossDnEMA = close < ema && closePrev >= emaPrev;
+  const crossUpBB = close > bbBasis && closePrev <= bbBasisPrev;
+  const crossDnBB = close < bbBasis && closePrev >= bbBasisPrev;
+  const longTurn = sarFlipBull || (crossUpEMA && close > bbBasis) || (crossUpBB && close > ema);
+  const shortTurn = sarFlipBear || (crossDnEMA && close < bbBasis) || (crossDnBB && close < ema);
+
+  // Manipulation phase
+  const emaVwapTangled = Math.abs(ema - vwap) <= atr * tangledATR;
+  const priceNearMid = Math.abs(close - bbBasis) <= atr * nearMidATR;
+  const bbSqueezing = bbCycle && bbCycle.bbSqueezing === 1;
+  const bbOpeningStart = bbCycle && bbCycle.bbOpeningStart === 1;
+  const bbTrueExpansion = bbCycle && bbCycle.bbTrueExpansion === 1;
+  const manipulationPhase = bbSqueezing && emaVwapTangled && priceNearMid;
+
+  // Entry triggers (skip liqBreakUp/Dn — not yet ported, treat as false)
+  const liqBreakUp = false, liqBreakDn = false;
+  const longEntryTrigger = !manipulationPhase && !bbSqueezing && bbOpeningStart
+    && closeAboveEMA && closeAboveVWAP && closeAboveBB && sarBull && momentumScore > 0
+    && (longTurn || liqBreakUp || (bbTrueExpansion && close > closePrev));
+  const shortEntryTrigger = !manipulationPhase && !bbSqueezing && bbOpeningStart
+    && closeBelowEMA && closeBelowVWAP && closeBelowBB && sarBear && momentumScore < 0
+    && (shortTurn || liqBreakDn || (bbTrueExpansion && close < closePrev));
+
+  return {
+    // raw values
+    ema: ema, vwap: vwap, bbBasis: bbBasis, sar: sar, atr: atr,
+    rsi: rsi, roc: roc, macdHist: macdH,
+    // gates
+    long_closeAboveEMA: closeAboveEMA ? 1 : 0,
+    long_closeAboveVWAP: closeAboveVWAP ? 1 : 0,
+    long_closeAboveBB: closeAboveBB ? 1 : 0,
+    long_sarBull: sarBull ? 1 : 0,
+    long_longTurn: longTurn ? 1 : 0,
+    long_liqBreakUp: liqBreakUp ? 1 : 0,
+    short_closeBelowEMA: closeBelowEMA ? 1 : 0,
+    short_closeBelowVWAP: closeBelowVWAP ? 1 : 0,
+    short_closeBelowBB: closeBelowBB ? 1 : 0,
+    short_sarBear: sarBear ? 1 : 0,
+    short_shortTurn: shortTurn ? 1 : 0,
+    short_liqBreakDn: liqBreakDn ? 1 : 0,
+    // composite
+    momentumScore: momentumScore,
+    emaVwapTangled: emaVwapTangled ? 1 : 0,
+    priceNearMid: priceNearMid ? 1 : 0,
+    manipulationPhase: manipulationPhase ? 1 : 0,
+    longEntryTrigger: longEntryTrigger ? 1 : 0,
+    shortEntryTrigger: shortEntryTrigger ? 1 : 0,
+  };
+}
+
+// ============================================================================
+// v.22a — BB Cycle State Machine (port of K-9.2 Pine Module 1, lines 330-348)
+// Validates against TradingView Data Window: DBG_bbSqueezing, DBG_bbOpeningStart,
+// DBG_bbTrueExpansion, DBG_barsSinceBBExpansion, DBG_bbExpansionRatePct,
+// DBG_bbExpansionAlive
+// ============================================================================
+function computeBBCycle(bars, opts) {
+  opts = opts || {};
+  const bbLen = opts.bbLen || 20;
+  const bbMult = opts.bbMult || 2.0;
+  const bbWidthLen = opts.bbWidthLen || 20;
+  const bbExpansionRateMin = opts.bbExpansionRateMin || 5.0;
+  const bbExpansionHoldBars = opts.bbExpansionHoldBars || 8;
+
+  if (!bars || bars.length < bbLen + bbWidthLen + 5) return null;
+  const closes = bars.map(b => b.c);
+  const n = closes.length;
+
+  // 1) Per-bar BB basis, width series
+  const bbBasisArr = new Array(n).fill(NaN);
+  const bbWidthArr = new Array(n).fill(NaN);
+  for (let i = bbLen - 1; i < n; i++) {
+    let sum = 0;
+    for (let j = i - bbLen + 1; j <= i; j++) sum += closes[j];
+    const basis = sum / bbLen;
+    let sq = 0;
+    for (let j = i - bbLen + 1; j <= i; j++) sq += (closes[j] - basis) * (closes[j] - basis);
+    const sd = Math.sqrt(sq / bbLen);   // population stdev (matches Pine ta.stdev)
+    const upper = basis + bbMult * sd;
+    const lower = basis - bbMult * sd;
+    bbBasisArr[i] = basis;
+    bbWidthArr[i] = basis !== 0 ? (upper - lower) / basis : NaN;
+  }
+
+  // 2) bbWidthAvg = SMA(bbWidth, bbWidthLen)
+  const bbWidthAvgArr = new Array(n).fill(NaN);
+  for (let i = bbLen - 1 + bbWidthLen - 1; i < n; i++) {
+    let sum = 0, ok = true;
+    for (let j = i - bbWidthLen + 1; j <= i; j++) {
+      if (isNaN(bbWidthArr[j])) { ok = false; break; }
+      sum += bbWidthArr[j];
+    }
+    if (ok) bbWidthAvgArr[i] = sum / bbWidthLen;
+  }
+
+  // 3) Per-bar cycle state series
+  const bbTrueExpansionArr = new Array(n).fill(false);
+  const bbSqueezingArr = new Array(n).fill(false);
+  const bbExpansionRatePctArr = new Array(n).fill(0);
+
+  for (let i = 0; i < n; i++) {
+    // bbCompressionRecent = lowest(bbWidth, len) < lowest(bbWidthAvg, len)
+    let compressionRecent = false;
+    if (i >= bbWidthLen - 1) {
+      let minW = Infinity, minA = Infinity;
+      let hasW = false, hasA = false;
+      for (let j = i - bbWidthLen + 1; j <= i; j++) {
+        if (!isNaN(bbWidthArr[j])) { hasW = true; if (bbWidthArr[j] < minW) minW = bbWidthArr[j]; }
+        if (!isNaN(bbWidthAvgArr[j])) { hasA = true; if (bbWidthAvgArr[j] < minA) minA = bbWidthAvgArr[j]; }
+      }
+      compressionRecent = hasW && hasA && minW < minA;
+    }
+    // bbWidthRising3
+    let rising3 = false;
+    if (i >= 2 && !isNaN(bbWidthArr[i]) && !isNaN(bbWidthArr[i-1]) && !isNaN(bbWidthArr[i-2])) {
+      rising3 = bbWidthArr[i] > bbWidthArr[i-1] && bbWidthArr[i-1] > bbWidthArr[i-2];
+    }
+    // bbExpansionRatePct
+    if (i >= bbWidthLen && !isNaN(bbWidthArr[i - bbWidthLen]) && bbWidthArr[i - bbWidthLen] > 0) {
+      bbExpansionRatePctArr[i] = ((bbWidthArr[i] - bbWidthArr[i - bbWidthLen]) / bbWidthArr[i - bbWidthLen]) * 100;
+    }
+    // bbTrueExpansion
+    bbTrueExpansionArr[i] = compressionRecent && !isNaN(bbWidthAvgArr[i])
+      && bbWidthArr[i] > bbWidthAvgArr[i]
+      && rising3
+      && bbExpansionRatePctArr[i] >= bbExpansionRateMin;
+    // bbSqueezing
+    if (i >= 1 && !isNaN(bbWidthArr[i]) && !isNaN(bbWidthAvgArr[i]) && !isNaN(bbWidthArr[i-1])) {
+      bbSqueezingArr[i] = bbWidthArr[i] < bbWidthAvgArr[i] && bbWidthArr[i] < bbWidthArr[i-1];
+    }
+  }
+
+  // 4) barssince(bbTrueExpansion) for the latest bar
+  const last = n - 1;
+  let barsSinceBBExpansion = null;
+  for (let i = last; i >= 0; i--) {
+    if (bbTrueExpansionArr[i]) { barsSinceBBExpansion = last - i; break; }
+  }
+
+  const bbOpeningStart = bbTrueExpansionArr[last] || (barsSinceBBExpansion !== null && barsSinceBBExpansion <= 3);
+  const bbExpansionAlive = bbTrueExpansionArr[last] || (
+    barsSinceBBExpansion !== null && barsSinceBBExpansion <= bbExpansionHoldBars
+    && !isNaN(bbWidthAvgArr[last]) && bbWidthArr[last] >= bbWidthAvgArr[last]
+  );
+
+  return {
+    bbBasis: bbBasisArr[last],
+    bbWidth: bbWidthArr[last],
+    bbWidthAvg: bbWidthAvgArr[last],
+    bbSqueezing: bbSqueezingArr[last] ? 1 : 0,
+    bbTrueExpansion: bbTrueExpansionArr[last] ? 1 : 0,
+    bbOpeningStart: bbOpeningStart ? 1 : 0,
+    bbExpansionAlive: bbExpansionAlive ? 1 : 0,
+    barsSinceBBExpansion: barsSinceBBExpansion,
+    bbExpansionRatePct: bbExpansionRatePctArr[last],
+  };
+}
+
+// ============================================================================
+// v.20 — Massive.com REST Client
+// ============================================================================
+async function fetchMassiveBars(ticker, multiplier, timespan, fromYMD, toYMD, apiKey) {
+  const url = `https://api.massive.com/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${fromYMD}/${toYMD}?adjusted=true&sort=asc&limit=5000&apiKey=${apiKey}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Massive HTTP ${resp.status}`);
+  const j = await resp.json();
+  if (j.status && j.status !== "OK" && j.status !== "DELAYED") {
+    throw new Error(`Massive status: ${j.status}`);
+  }
+  return (j.results || []).map(r => ({ o: r.o, h: r.h, l: r.l, c: r.c, v: r.v, t: r.t, vw: r.vw }));
+}
+
+function ymdDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+// ============================================================================
+// v.21 — Heartbeat live tickers (6 ETF proxies) + S&P 500 universe
+// ============================================================================
+const HEARTBEAT_LIVE = {
+  SPY:  { sym: "SPY",  label: "SPY",  type: "price" },
+  VIX:  { sym: "VXX",  label: "VIX",  type: "price" },  // VXX as VIX proxy
+  GC:   { sym: "GLD",  label: "GOLD", type: "price" },
+  SI:   { sym: "SLV",  label: "SILV", type: "price" },
+  CL:   { sym: "USO",  label: "OIL",  type: "price" },
+  DXY:  { sym: "UUP",  label: "DXY",  type: "price" },
+};
+
+// Curated S&P 500 (top ~200 most-traded, sufficient for RVOL ranking).
+// Massive will silently skip any unknown symbol.
+const SP500 = [
+  "AAPL","MSFT","NVDA","AMZN","GOOGL","GOOG","META","TSLA","AVGO","BRK.B",
+  "LLY","JPM","V","UNH","XOM","MA","COST","HD","PG","JNJ",
+  "ABBV","BAC","NFLX","KO","CRM","MRK","CVX","ORCL","WMT","AMD",
+  "TMO","PEP","ADBE","ACN","LIN","CSCO","ABT","MCD","WFC","DIS",
+  "DHR","PM","IBM","CAT","TXN","VZ","INTU","GS","CMCSA","NOW",
+  "QCOM","NEE","UBER","UNP","RTX","SPGI","T","ISRG","HON","AMGN",
+  "BKNG","LOW","AXP","BLK","NKE","PFE","MS","ETN","C","BSX",
+  "PLD","SCHW","COP","ADP","DE","BX","GILD","SYK","TJX","MDLZ",
+  "MMC","LMT","FI","ELV","CB","CI","ADI","SBUX","REGN","BMY",
+  "VRTX","AMT","PANW","SO","ZTS","MO","ICE","BA","DUK","CME",
+  "MDT","SHW","CDNS","INTC","TGT","WM","EQIX","MCO","GE","SNPS",
+  "AON","ITW","PYPL","CMG","NOC","KLAC","APH","FCX","CRWD","CVS",
+  "USB","ANET","FDX","CL","PNC","WELL","TDG","HCA","ECL","CTAS",
+  "MMM","MU","ORLY","GD","MAR","EMR","CSX","ADSK","PSX","ROP",
+  "AJG","PCAR","FTNT","APD","COF","NXPI","TFC","TT","NSC","DXCM",
+  "TRV","SPG","BDX","ABNB","HLT","CCI","ROST","AZO","O","KMB",
+  "AFL","OKE","PSA","SLB","MSI","DLR","STZ","AIG","DHI","WMB",
+  "MET","KHC","FAST","KMI","SRE","CMI","EW","CTSH","BK","HSY",
+  "EXC","KR","GIS","D","PRU","ALL","GWW","CTVA","FIS","IDXX",
+  "HUM","MNST","DOW","PCG","CHTR","MCK","ED","PEG","TRGP","CARR",
+  "WBD","LRCX","MAR","GEHC","ON","BIIB","COIN","SMCI","MSTR","NET",
+];
+
+async function fetchSnapshot(tickers, apiKey) {
+  // Fetch snapshot for a comma-separated list of tickers
+  const url = `https://api.massive.com/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${tickers.join(",")}&apiKey=${apiKey}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Snapshot HTTP ${resp.status}`);
+  const j = await resp.json();
+  if (j.status && j.status !== "OK" && j.status !== "DELAYED") {
+    throw new Error(`Snapshot status: ${j.status}`);
+  }
+  return j.tickers || [];
+}
+
+async function fetchGroupedDaily(dateYMD, apiKey) {
+  // Returns all US stocks' daily OHLCV for the given date
+  const url = `https://api.massive.com/v2/aggs/grouped/locale/us/market/stocks/${dateYMD}?adjusted=true&apiKey=${apiKey}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Grouped HTTP ${resp.status}`);
+  const j = await resp.json();
+  if (j.status && j.status !== "OK" && j.status !== "DELAYED") {
+    throw new Error(`Grouped status: ${j.status}`);
+  }
+  return j.results || [];
+}
+
+async function buildAvgVolume20d(tickers, apiKey) {
+  // Pull last ~30 calendar days of grouped daily, build 20-day avg per ticker
+  const days = [];
+  for (let i = 1; i <= 30; i++) {
+    days.push(ymdDaysAgo(i));
+  }
+  const tickerSet = new Set(tickers);
+  const volMap = {}; // sym -> [vols]
+  let pulled = 0;
+  for (const day of days) {
+    try {
+      const results = await fetchGroupedDaily(day, apiKey);
+      for (const r of results) {
+        if (tickerSet.has(r.T)) {
+          if (!volMap[r.T]) volMap[r.T] = [];
+          volMap[r.T].push(r.v);
+        }
+      }
+      pulled++;
+      if (pulled >= 22) break; // ~22 trading days = 20-day window with weekend slack
+    } catch (e) {
+      // Skip days that fail (weekends, holidays)
+    }
+    // Small delay to avoid burst
+    await new Promise(r => setTimeout(r, 50));
+  }
+  const avg = {};
+  for (const sym of Object.keys(volMap)) {
+    const vols = volMap[sym].slice(0, 20);
+    if (vols.length >= 5) {
+      avg[sym] = vols.reduce((a, b) => a + b, 0) / vols.length;
+    }
+  }
+  return { avg, builtAt: Date.now(), tickersFound: Object.keys(avg).length };
+}
+
+const STORAGE_AVGVOL = "mts-v21-avgvol-cache";
+
+
+
+const ACCOUNT_DATA = {
+  name: "Khanh", email: "khanh@mts.app", role: "Trader", accountId: "****1234",
+  equity: 124580, buyingPower: 48320, dayPnL: 324, dayPnLPct: 0.26,
+  weekPnL: 1840, weekPnLPct: 1.50, monthPnL: 4250, monthPnLPct: 3.54,
+  winRate: 0.68, avgR: 1.42, maxDD: -3.2, tradesToday: 4, tradesActive: 3, tradesMonth: 47,
+};
+
+const LIBRARY_ARTICLES = [
+  { id: "mmg-state-machine", title: "MMG State Machine", category: "Indicator",
+    summary: "The sequence: Compression → Expansion → Midline → SAR → Volume → B2O/S2O",
+    body: [
+      { type: "h2", text: "Overview" },
+      { type: "p", text: "MMG (Market Momentum Guide) is a strict sequential state machine. Each state must trigger before the next becomes valid. This forces patience and prevents premature entries." },
+      { type: "h2", text: "The six base states" },
+      { type: "list", items: ["Compression — price coils, volatility contracts. Setup phase.", "Expansion — range breaks, directional move begins.", "Midline — price reaches the regression midline; trend confirmation.", "SAR — stop-and-reverse level engages; momentum reversal signal.", "Volume — volume confirms or rejects the move (RVOL > 1.5x is strong).", "B2O / S2O signal — entry trigger fires only after the full sequence."]},
+      { type: "h2", text: "Degradation states" },
+      { type: "list", items: ["Caution — trend integrity weakening; tighten stops, no new adds.", "GetOff — momentum broken; exit signal is high-conviction."]},
+    ]},
+  { id: "eight-actions", title: "The 8 Actions", category: "Execution",
+    summary: "B2O · S2O · ADD1 · ADD2 · TP1 · TP2 · S2C · B2C",
+    body: [
+      { type: "h2", text: "Entries (when flat)" },
+      { type: "list", items: ["B2O — Buy to Open. Initiate a long position. Size: 100 sh.", "S2O — Sell to Open. Initiate a short position. Size: 100 sh."]},
+      { type: "h2", text: "Management (when in position)" },
+      { type: "list", items: ["ADD1 — first scale-in. +50 sh.", "ADD2 — second scale-in. After ADD1.", "TP1 — first partial profit. Sells 50%.", "TP2 — second partial. After TP1."]},
+      { type: "h2", text: "Full exits" },
+      { type: "list", items: ["S2C — Sell to Close. Exit entire long.", "B2C — Buy to Close. Cover entire short."]},
+    ]},
+  { id: "campaign-states", title: "Campaign States", category: "Framework",
+    summary: "Boarding → Rolling → Departed → Station",
+    body: [
+      { type: "h2", text: "The train metaphor" },
+      { type: "p", text: "Every trade is a train ride. The campaign state tells you where you are in the journey." },
+      { type: "list", items: ["Boarding — signal fresh, RVOL building. Best for entries.", "Rolling — trend established. Good for re-confirms (ADD2). TP1 attractive.", "Departed — past peak velocity. ADDs risky. TP2 is right.", "Station — reached next station. Full exit or TP2 high conviction."]},
+    ]},
+  { id: "position-sizing", title: "Position Sizing & ATR", category: "Risk",
+    summary: "Why MTS sizes positions off Average True Range",
+    body: [
+      { type: "p", text: "ATR is your volatility unit. Sizing trades based on ATR (not a fixed share count) keeps risk per trade constant regardless of price." },
+      { type: "h2", text: "MTS conventions" },
+      { type: "list", items: ["Stop distance = 1 × ATR from entry", "First target = 1.7 × ATR (≈ 1:1.7 R:R)", "TP1 typically at 1R", "TP2 typically at 1.7R"]},
+    ]},
+  { id: "reading-the-deck", title: "Reading the Decision Deck", category: "Execution",
+    summary: "How to interpret WHERE, WHEN, scores, and rings",
+    body: [
+      { type: "h2", text: "Context strip" },
+      { type: "list", items: ["WHERE — MMG state and direction bias.", "WHEN — campaign state and RVOL.", "POSITION — side, P&L, scaling state (nA · nT)."]},
+      { type: "h2", text: "Rings" },
+      { type: "p", text: "Each ring fills proportionally to the action score. Below 30 means weak setup." },
+    ]},
+  { id: "glossary", title: "Glossary", category: "Reference",
+    summary: "Key terms",
+    body: [
+      { type: "h2", text: "Order codes" },
+      { type: "list", items: ["B2O — Buy to Open", "S2O — Sell to Open", "S2C — Sell to Close", "B2C — Buy to Close", "ADD — scale-in", "TP — take profit"]},
+      { type: "h2", text: "Metrics" },
+      { type: "list", items: ["ATR — Average True Range", "RVOL — Relative Volume (>1.5x strong)", "R — risk-multiple (1R = 1 ATR move)", "R:R — risk-to-reward ratio"]},
+    ]},
+];
+
+const initialWatchlists = [
+  { id: "tech",      name: "Mega Cap Tech",   symbols: ["NVDA", "AAPL", "MSFT", "GOOGL", "META", "AMZN"] },
+  { id: "defensive", name: "Defensive Plays", symbols: ["JNJ", "PG", "KO", "WMT"] },
+  { id: "bearish",   name: "Bearish Watch",   symbols: ["AMD", "NFLX", "CRM"] },
+];
+
+// ---- Helpers ----
+function calcPnL(position, currentPrice) {
+  if (!position || position.side === "flat") return { pct: 0, dollars: 0 };
+  const sign = position.side === "long" ? 1 : -1;
+  const diff = (currentPrice - position.entryPrice) * sign;
+  return { pct: (diff / position.entryPrice) * 100, dollars: diff * position.size };
+}
+function pnlR(position, currentPrice, atr) {
+  if (!position || position.side === "flat") return 0;
+  const sign = position.side === "long" ? 1 : -1;
+  return ((currentPrice - position.entryPrice) * sign) / atr;
+}
+function generateMockTicker(sym) {
+  const price = Math.round((20 + Math.random() * 480) * 100) / 100;
+  return {
+    sym,
+    price,
+    change: Math.round((Math.random() - 0.5) * 6 * 100) / 100,
+    atr: Math.round(price * 0.02 * 100) / 100,
+    mmgState: MMG_STATES[Math.floor(Math.random() * MMG_STATES.length)],
+    campaign: CAMPAIGN_STATES[Math.floor(Math.random() * CAMPAIGN_STATES.length)],
+    direction: ["long", "short", "neutral"][Math.floor(Math.random() * 3)],
+    rvol: Math.round((0.7 + Math.random() * 1.5) * 100) / 100,
+    custom: true,
+  };
+}
+function computeScores({ mmgState, campaign, direction, rvol, position, atrDistance, atr, currentPrice }) {
+  const rvolMult = Math.min(rvol / 1.5, 1.0);
+  const stopMult = Math.max(0, 1 - atrDistance);
+  const side = (position && position.side) || "flat";
+
+  // Entry scores (only valid when flat)
+  const b2o = side !== "flat" ? null : Math.min(95, Math.round(
+    (mmgState === "B2O-signal" ? 82 : mmgState === "Expansion" && direction === "long" ? 64 : mmgState === "Midline" && direction === "long" ? 48 : mmgState === "Compression" ? 28 : 14)
+    * rvolMult * (campaign === "Boarding" ? 1.18 : campaign === "Rolling" ? 1.05 : 0.85) * stopMult));
+  const s2o = side !== "flat" ? null : Math.min(95, Math.round(
+    (mmgState === "S2O-signal" ? 82 : mmgState === "Expansion" && direction === "short" ? 64 : mmgState === "Midline" && direction === "short" ? 48 : mmgState === "Compression" ? 28 : 14)
+    * rvolMult * (campaign === "Boarding" ? 1.18 : campaign === "Rolling" ? 1.05 : 0.85) * stopMult));
+
+  // Campaign progress (K-9.1 style)
+  let campaignProgress = null;
+  if (side === "long" && position && position.entryPrice && atr) {
+    const target = position.entryPrice + 1.7 * atr;
+    campaignProgress = (currentPrice - position.entryPrice) / (target - position.entryPrice);
+  } else if (side === "short" && position && position.entryPrice && atr) {
+    const target = position.entryPrice - 1.7 * atr;
+    campaignProgress = (position.entryPrice - currentPrice) / (position.entryPrice - target);
+  }
+  const addInWindow = campaignProgress !== null && campaignProgress >= 0.45 && campaignProgress <= 0.55;
+  const tpInWindow  = campaignProgress !== null && campaignProgress >= 0.70 && campaignProgress <= 0.80;
+
+  // ADD score — K-9.1 single-shot, 45-55% window
+  const inLong = side === "long", inShort = side === "short";
+  const directionMatch = (inLong && direction === "long") || (inShort && direction === "short");
+  const reconfirm = (inLong && mmgState === "B2O-signal") || (inShort && mmgState === "S2O-signal");
+  let add = null;
+  if (side !== "flat" && !position.addFired && addInWindow) {
+    const base = directionMatch ? (reconfirm ? 82 : mmgState === "Expansion" ? 72 : mmgState === "Midline" ? 58 : 40) : 25;
+    const campaignMult = campaign === "Rolling" ? 1.12 : campaign === "Boarding" ? 1.0 : 0.7;
+    add = Math.min(95, Math.round(base * rvolMult * campaignMult));
+  }
+
+  // TP score — K-9.1 single-shot, 70-80% window
+  let tp = null;
+  if (side !== "flat" && !position.tpFired && tpInWindow) {
+    const base = mmgState === "GetOff" ? 92 : mmgState === "Caution" ? 84 : campaign === "Station" ? 82 : campaign === "Departed" ? 72 : 68;
+    tp = Math.min(95, base);
+  }
+
+  // Full exits
+  const baseExit = mmgState === "GetOff" ? 90 : mmgState === "Caution" ? 68 : campaign === "Station" ? 58 : campaign === "Departed" ? 26 : 16;
+  const s2c = inLong ? Math.min(95, baseExit) : null;
+  const b2c = inShort ? Math.min(95, baseExit) : null;
+
+  return { b2o, s2o, add, tp, s2c, b2c, campaignProgress };
+}
+function topAction(scores) {
+  const entries = Object.entries(scores).filter(([k, v]) => k !== "campaignProgress" && v != null);
+  if (entries.length === 0) return { code: "—", score: 0, tone: "neutral" };
+  entries.sort((a, b) => b[1] - a[1]);
+  const [code, score] = entries[0];
+  const map = { b2o: "long", s2o: "short", add: "add", tp: "tp", s2c: "close", b2c: "close" };
+  return { code: code.toUpperCase(), score, tone: map[code] };
+}
+function addLockReason(position, campaignProgress) {
+  if (!position || position.side === "flat") return "no position";
+  if (position.addFired) return "already added";
+  if (campaignProgress == null) return "no target set";
+  const pct = Math.round(campaignProgress * 100);
+  if (campaignProgress < 0.45) return "wait · " + pct + "% to station";
+  if (campaignProgress > 0.55) return "window missed (" + pct + "%)";
+  return "weak setup";
+}
+function tpLockReason(position, campaignProgress) {
+  if (!position || position.side === "flat") return "no position";
+  if (position.tpFired) return "already taken";
+  if (campaignProgress == null) return "no target set";
+  const pct = Math.round(campaignProgress * 100);
+  if (campaignProgress < 0.70) return "wait · " + pct + "% to station";
+  if (campaignProgress > 0.80) return "window missed (" + pct + "%)";
+  return "weak setup";
+}
+
+function toneColor(tone) {
+  return tone === "long" ? C.long : tone === "short" ? C.short : tone === "close" ? C.close : tone === "add" ? C.add : tone === "tp" ? C.tp : C.neutral;
+}
+function toneSoft(tone) {
+  return tone === "long" ? "var(--long-soft)" : tone === "short" ? "var(--short-soft)" : tone === "close" ? "var(--close-soft)" : tone === "add" ? "var(--add-soft)" : tone === "tp" ? "var(--tp-soft)" : C.track;
+}
+function formatTime(ms) {
+  const mins = Math.floor((Date.now() - ms) / 60000);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  return `${hrs}h${mins % 60}m`;
+}
+
+// ============================================================================
+// Market Heartbeat — 4×4 grid (16 macro tiles + account row), no scroll
+// ============================================================================
+function MarketHeartbeat({ account, liveHeartbeat }) {
+  const tiles = MACRO_ORDER.map(k => (liveHeartbeat && liveHeartbeat[k]) ? liveHeartbeat[k] : MACRO_DATA[k]);
+  return (
+    <div style={{ backgroundColor: C.surface, borderBottomColor: C.border }} className="border-b">
+      <div className="max-w-md mx-auto px-2 py-1.5">
+        {/* Title + account compact row */}
+        <div className="flex items-center gap-2 mb-1.5">
+          <div style={{ color: C.short }} className="flex items-center"><Heart size={11} color={C.short}/></div>
+          <div style={{ color: C.muted }} className="text-[8px] tracking-[0.2em] font-mono font-bold">MARKET HEARTBEAT</div>
+          <div className="ml-auto flex items-center gap-2">
+            <div>
+              <span style={{ color: C.muted }} className="text-[8px] tracking-[0.1em]">BP </span>
+              <span style={{ color: C.text }} className="text-[11px] font-mono font-bold">${(account.buyingPower / 1000).toFixed(1)}K</span>
+            </div>
+            <div style={{ borderColor: C.border }} className="h-3 border-l" />
+            <div>
+              <span style={{ color: C.muted }} className="text-[8px] tracking-[0.1em]">P/L </span>
+              <span style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-[11px] font-mono font-bold">
+                {account.dayPnL >= 0 ? "+" : ""}${account.dayPnL} ({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)
+              </span>
+            </div>
+          </div>
+        </div>
+        {/* 4×4 macro grid */}
+        <div className="grid grid-cols-4 gap-1">
+          {tiles.map((t, i) => {
+            const isFed = t.type === "fed", noChange = t.change == null;
+            const chgColor = isFed ? toneColor(t.tone) : t.change > 0 ? C.long : t.change < 0 ? C.short : C.dim;
+            const valColor = isFed ? toneColor(t.tone) : C.text;
+            return (
+              <div key={i} style={{ backgroundColor: C.bg }} className="rounded px-1.5 py-0.5">
+                <div style={{ color: C.muted }} className="text-[8px] tracking-wider leading-none">{t.label}</div>
+                <div style={{ color: valColor }} className="text-[11px] font-mono font-bold leading-tight mt-0.5">{t.value}</div>
+                {!noChange && !isFed && (
+                  <div style={{ color: chgColor }} className="text-[8px] font-mono leading-none">
+                    {t.change > 0 ? "+" : ""}{t.change.toFixed(t.type === "macro" ? 1 : 2)}{t.type === "yield" || t.type === "macro" ? "" : "%"}
+                  </div>
+                )}
+                {noChange && <div style={{ color: C.dim }} className="text-[8px] leading-none">—</div>}
+                {isFed && <div style={{ color: C.dim }} className="text-[8px] leading-none">posture</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// LoginPage
+// ============================================================================
+function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  return (
+    <div style={{ backgroundColor: C.bg, color: C.text }} className="min-h-screen flex flex-col font-sans">
+      <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
+        <div className="mb-10">
+          <div style={{ color: C.text }} className="text-4xl font-mono font-bold tracking-tight">MTS</div>
+          <div style={{ color: C.muted }} className="text-xs tracking-[0.25em] mt-1">MONGOL TRADING SYSTEM</div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mb-1">EMAIL</div>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="trader@example.com"
+              style={{ backgroundColor: C.surface, borderColor: C.borderStrong, color: C.text }}
+              className="w-full border-2 rounded-xl px-3 py-3 text-sm font-mono focus:outline-none" />
+          </div>
+          <div>
+            <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mb-1">PASSWORD</div>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
+              style={{ backgroundColor: C.surface, borderColor: C.borderStrong, color: C.text }}
+              className="w-full border-2 rounded-xl px-3 py-3 text-sm font-mono focus:outline-none" />
+          </div>
+          <button onClick={onLogin} style={{ backgroundColor: C.text, color: C.bg }}
+            className="w-full py-3 rounded-xl text-sm font-mono font-bold tracking-wider active:scale-[0.98] transition-transform mt-4">LOG IN</button>
+        </div>
+        <div className="flex flex-col items-center gap-3 mt-8 text-xs">
+          <button style={{ color: C.muted }} className="font-mono">Forgot password?</button>
+          <div style={{ color: C.dim }} className="flex items-center gap-1.5 font-mono">
+            <span>First time?</span>
+            <button style={{ color: C.text }} className="font-bold underline underline-offset-2">Register here</button>
+          </div>
+        </div>
+      </div>
+      <div style={{ color: C.dim }} className="text-[9px] text-center leading-relaxed px-6 pb-6 max-w-md mx-auto">
+        MTS is a decision-support tool. All orders require manual confirmation. You bear all P&L. By logging in you accept these terms.
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// AccountSummary — with dark mode toggle
+// ============================================================================
+function AccountSummary({ account, positions, universe, darkMode, setDarkMode, onLogout, onSelect, riskProfile, onRetakeRisk, polygonKey, onSetPolygonKey, paperAccount, onResetAccount, sessions, onNewSession, liveData, scannerStatus, topRVOL }) {
+  const openTickers = Object.keys(positions).filter(sym => positions[sym].side !== "flat");
+  const openPositions = openTickers.map(sym => {
+    const t = universe.find(u => u.sym === sym);
+    if (!t) return null;
+    const pnl = calcPnL(positions[sym], t.price);
+    return { sym, side: positions[sym].side, pnl };
+  }).filter(Boolean);
+  return (
+    <div className="flex flex-col gap-2">
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3 flex items-center gap-3">
+        <div style={{ backgroundColor: C.text, color: C.bg }} className="w-10 h-10 rounded-full flex items-center justify-center font-mono font-bold">{account.name[0]}</div>
+        <div className="flex-1 min-w-0">
+          <div style={{ color: C.text }} className="text-sm font-bold">{account.name}</div>
+          <div style={{ color: C.muted }} className="text-[11px] font-mono">{account.role} · {account.accountId}</div>
+        </div>
+        <button onClick={onLogout} style={{ color: C.muted }} className="p-2"><LogOut size={16} /></button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">EQUITY</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.equity.toLocaleString()}</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">BUYING POWER</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.buyingPower.toLocaleString()}</div>
+        </div>
+      </div>
+      <div style={{ backgroundColor: C.surface, borderColor: account.dayPnL >= 0 ? C.long : C.short }} className="border-2 rounded-xl p-2.5">
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">TODAY'S P/L</div>
+        <div className="flex items-baseline gap-2 mt-0.5">
+          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-xl font-mono font-bold">{account.dayPnL >= 0 ? "+" : ""}${account.dayPnL}</div>
+          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-sm font-mono">({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)</div>
+          <div style={{ color: C.dim }} className="text-[10px] font-mono ml-auto">{account.tradesToday} trades</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[8px] tracking-wider">WIN RATE</div>
+          <div style={{ color: C.text }} className="text-sm font-mono font-bold mt-0.5">{(account.winRate * 100).toFixed(0)}%</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[8px] tracking-wider">AVG R</div>
+          <div style={{ color: C.text }} className="text-sm font-mono font-bold mt-0.5">{account.avgR.toFixed(2)}R</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[8px] tracking-wider">MAX DD</div>
+          <div style={{ color: C.short }} className="text-sm font-mono font-bold mt-0.5">{account.maxDD.toFixed(1)}%</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">WEEK</div>
+          <div style={{ color: account.weekPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.weekPnL >= 0 ? "+" : ""}${account.weekPnL} ({account.weekPnLPct.toFixed(2)}%)</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">MONTH</div>
+          <div style={{ color: account.monthPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.monthPnL >= 0 ? "+" : ""}${account.monthPnL} ({account.monthPnLPct.toFixed(2)}%)</div>
+        </div>
+      </div>
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1.5">OPEN POSITIONS · {openPositions.length}</div>
+        <div className="flex flex-col gap-1">
+          {openPositions.map(p => (
+            <button key={p.sym} onClick={() => onSelect(p.sym)} className="flex items-center gap-2 py-0.5 active:opacity-60">
+              <div style={{ color: p.side === "long" ? C.long : C.short }} className="text-[9px] font-mono uppercase tracking-wider w-9">{p.side}</div>
+              <div style={{ color: C.text }} className="text-xs font-mono font-bold w-12">{p.sym}</div>
+              <div style={{ color: p.pnl.dollars >= 0 ? C.long : C.short }} className="text-xs font-mono ml-auto">{p.pnl.dollars >= 0 ? "+" : ""}${p.pnl.dollars.toFixed(0)} ({p.pnl.pct >= 0 ? "+" : ""}{p.pnl.pct.toFixed(2)}%)</div>
+            </button>
+          ))}
+          {openPositions.length === 0 && <div style={{ color: C.dim }} className="text-[10px] text-center py-2">no open positions</div>}
+        </div>
+      </div>
+
+      {/* v.19 — Risk Profile */}
+      <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] font-mono font-bold flex items-center gap-1.5 mt-1"><Shield size={10} color={C.muted}/> RISK PROFILE</div>
+      <RiskProfileCard profile={riskProfile} onRetake={onRetakeRisk} />
+
+      {/* v.19 — Paper Account */}
+      <PaperAccountCard account={paperAccount} onReset={onResetAccount} />
+
+      {/* v.19 — Polygon Key */}
+      <PolygonKeyField value={polygonKey} onChange={onSetPolygonKey} />
+      <LiveDataStatus liveData={liveData} />
+      <ScannerStatus status={scannerStatus} topRVOL={topRVOL} />
+
+      {/* v.19 — Sessions */}
+      <SessionListCard sessions={sessions} onCreate={onNewSession} />
+
+      {/* PREFERENCES */}
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-2">PREFERENCES</div>
+        <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center gap-3 active:opacity-60">
+          <div style={{ backgroundColor: C.bg, color: C.text }} className="w-8 h-8 rounded-lg flex items-center justify-center">
+            {darkMode ? <Moon size={16} /> : <Sun size={16} />}
+          </div>
+          <div className="flex-1 text-left">
+            <div style={{ color: C.text }} className="text-sm font-medium">Dark Mode</div>
+            <div style={{ color: C.muted }} className="text-[10px]">{darkMode ? "Currently on" : "Currently off"}</div>
+          </div>
+          <div style={{ backgroundColor: darkMode ? C.text : C.track }} className="w-10 h-6 rounded-full p-0.5 transition-colors">
+            <div style={{ backgroundColor: C.surface, transform: darkMode ? "translateX(16px)" : "translateX(0)" }} className="w-5 h-5 rounded-full transition-transform shadow"></div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Library
+// ============================================================================
+function Library({ articles, onSelect }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mb-1">REFERENCE · {articles.length} articles</div>
+      {articles.map(a => (
+        <button key={a.id} onClick={() => onSelect(a.id)} style={{ backgroundColor: C.surface, borderColor: C.border }}
+          className="border rounded-xl p-3 text-left active:scale-[0.99] transition-transform">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] font-mono mb-1">{a.category}</div>
+          <div style={{ color: C.text }} className="text-sm font-bold mb-1">{a.title}</div>
+          <div style={{ color: C.muted }} className="text-[11px] leading-snug">{a.summary}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+function LibraryArticleDetail({ article, onBack }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} style={{ color: C.muted }} className="p-1 -ml-1"><ChevronLeft size={20} /></button>
+        <div style={{ color: C.muted }} className="text-[10px] tracking-[0.15em] font-mono">{article.category}</div>
+      </div>
+      <div style={{ color: C.text }} className="text-xl font-bold leading-tight">{article.title}</div>
+      <div style={{ color: C.muted }} className="text-xs italic leading-snug">{article.summary}</div>
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-4 space-y-3">
+        {article.body.map((block, i) => {
+          if (block.type === "h2") return <div key={i} style={{ color: C.text }} className="text-sm font-bold mt-2 first:mt-0">{block.text}</div>;
+          if (block.type === "p") return <div key={i} style={{ color: C.muted }} className="text-[12px] leading-relaxed">{block.text}</div>;
+          if (block.type === "list") return (
+            <ul key={i} className="space-y-1.5">
+              {block.items.map((item, j) => (
+                <li key={j} style={{ color: C.muted }} className="text-[12px] leading-relaxed flex gap-2">
+                  <span style={{ color: C.dim }} className="font-mono">·</span><span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          );
+          return null;
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Watchlist — with custom ticker input
+// ============================================================================
+function WatchlistView({ watchlists, setWatchlists, universe, addCustomTicker, positions, onSelect }) {
+  const [editing, setEditing] = useState(false);
+  const [addingTo, setAddingTo] = useState(null);
+  const [inputSym, setInputSym] = useState("");
+
+  const getTickerData = (sym) => {
+    const t = universe.find(u => u.sym === sym);
+    if (!t) return null;
+    const pos = positions[sym] || { side: "flat" };
+    const scores = computeScores({ ...t, position: pos, atrDistance: 0.25, atr: t.atr, currentPrice: t.price });
+    const top = topAction(scores);
+    return { ...t, position: pos, top };
+  };
+
+  const moveItem = (listId, sym, dir) => {
+    setWatchlists(lists => lists.map(l => {
+      if (l.id !== listId) return l;
+      const idx = l.symbols.indexOf(sym);
+      if (idx < 0) return l;
+      const next = idx + dir;
+      if (next < 0 || next >= l.symbols.length) return l;
+      const arr = [...l.symbols];
+      [arr[idx], arr[next]] = [arr[next], arr[idx]];
+      return { ...l, symbols: arr };
+    }));
+  };
+  const removeItem = (listId, sym) => setWatchlists(lists => lists.map(l => l.id === listId ? { ...l, symbols: l.symbols.filter(s => s !== sym) } : l));
+  const addItemToList = (listId, sym) => {
+    sym = sym.toUpperCase().trim();
+    if (!sym || !/^[A-Z]{1,5}$/.test(sym)) return false;
+    if (!universe.find(t => t.sym === sym)) addCustomTicker(sym);
+    setWatchlists(lists => lists.map(l => l.id === listId && !l.symbols.includes(sym) ? { ...l, symbols: [...l.symbols, sym] } : l));
+    setInputSym("");
+    return true;
+  };
+  const addList = () => {
+    const name = prompt("Watchlist name?");
+    if (!name) return;
+    setWatchlists(lists => [...lists, { id: `wl-${Date.now()}`, name, symbols: [] }]);
+  };
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between">
+        <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em]">{watchlists.length} LISTS</div>
+        <div className="flex gap-2">
+          <button onClick={() => setEditing(!editing)} style={{ color: editing ? C.text : C.muted }} className="text-xs font-mono flex items-center gap-1"><Edit2 size={12} /> {editing ? "DONE" : "EDIT"}</button>
+          <button onClick={addList} style={{ color: C.text }} className="text-xs font-mono flex items-center gap-1 font-bold"><Plus size={14} /> LIST</button>
+        </div>
+      </div>
+      {watchlists.map(list => (
+        <div key={list.id} style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl overflow-hidden">
+          <div style={{ backgroundColor: C.bg, borderBottomColor: C.border }} className="border-b px-3 py-1.5 flex items-center justify-between">
+            <div style={{ color: C.text }} className="text-xs font-bold tracking-tight">{list.name}</div>
+            <div className="flex items-center gap-2">
+              <div style={{ color: C.dim }} className="text-[10px] font-mono">{list.symbols.length}</div>
+              <button onClick={() => { setAddingTo(addingTo === list.id ? null : list.id); setInputSym(""); }} style={{ color: C.muted }} className="p-0.5"><Plus size={14} /></button>
+            </div>
+          </div>
+          {addingTo === list.id && (
+            <div style={{ backgroundColor: C.bg, borderBottomColor: C.border }} className="border-b p-2 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={inputSym}
+                  onChange={(e) => setInputSym(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && addItemToList(list.id, inputSym)}
+                  placeholder="TYPE SYMBOL (e.g. RIVN)"
+                  maxLength={5}
+                  style={{ backgroundColor: C.surface, borderColor: C.borderStrong, color: C.text }}
+                  className="flex-1 border rounded px-2 py-1 text-xs font-mono tracking-wider focus:outline-none uppercase" />
+                <button onClick={() => addItemToList(list.id, inputSym)} style={{ backgroundColor: C.text, color: C.bg }} className="px-3 py-1 rounded text-[10px] font-mono font-bold">ADD</button>
+                <button onClick={() => setAddingTo(null)} style={{ color: C.muted }} className="p-1"><X size={14}/></button>
+              </div>
+              <div style={{ color: C.dim }} className="text-[9px] font-mono">QUICK ADD:</div>
+              <div className="flex flex-wrap gap-1">
+                {universe.filter(u => !list.symbols.includes(u.sym)).slice(0, 18).map(u => (
+                  <button key={u.sym} onClick={() => addItemToList(list.id, u.sym)} style={{ backgroundColor: C.surface, borderColor: C.border, color: C.text }} className="px-1.5 py-0.5 border rounded text-[10px] font-mono">{u.sym}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {list.symbols.map((sym, i) => {
+            const t = getTickerData(sym);
+            if (!t) return null;
+            const color = toneColor(t.top.tone);
+            const dim = t.top.score < 30;
+            return (
+              <div key={sym} style={{ borderBottomColor: C.border }} className="border-b last:border-b-0 flex items-center">
+                <button onClick={() => !editing && onSelect(sym)} className="flex-1 flex items-center gap-2 px-3 py-2 text-left active:opacity-60">
+                  <div style={{ backgroundColor: dim ? C.track : toneSoft(t.top.tone), borderColor: dim ? C.border : color, color: dim ? C.dim : color }} className="w-10 h-10 rounded-md border-2 flex flex-col items-center justify-center shrink-0">
+                    <div className="text-xs font-mono font-bold leading-none">{t.top.score}</div>
+                    <div className="text-[7px] font-mono tracking-wider mt-0.5">{t.top.code}</div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1.5">
+                      <div style={{ color: C.text }} className="text-sm font-mono font-bold">{t.sym}</div>
+                      {t.custom && <span style={{ color: C.dim }} className="text-[8px] font-mono">custom</span>}
+                      {t.position.side !== "flat" && <div style={{ color: t.position.side === "long" ? C.long : C.short }} className="text-[9px] font-mono uppercase">{t.position.side}</div>}
+                    </div>
+                    <div style={{ color: C.muted }} className="text-[10px] truncate">{t.mmgState}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div style={{ color: C.text }} className="text-xs font-mono">${t.price.toFixed(2)}</div>
+                    <div style={{ color: t.change >= 0 ? C.long : C.short }} className="text-[10px] font-mono">{t.change >= 0 ? "+" : ""}{t.change.toFixed(2)}%</div>
+                  </div>
+                </button>
+                {editing && (
+                  <div className="flex items-center gap-0 pr-2">
+                    <button onClick={() => moveItem(list.id, sym, -1)} disabled={i === 0} style={{ color: i === 0 ? C.dim : C.muted }} className="p-1"><ChevronUp size={14} /></button>
+                    <button onClick={() => moveItem(list.id, sym, 1)} disabled={i === list.symbols.length - 1} style={{ color: i === list.symbols.length - 1 ? C.dim : C.muted }} className="p-1"><ChevronDown size={14} /></button>
+                    <button onClick={() => removeItem(list.id, sym)} style={{ color: C.short }} className="p-1"><Trash2 size={14} /></button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {list.symbols.length === 0 && <div style={{ color: C.dim }} className="text-center text-[11px] py-3">no tickers yet</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// Ring, ActionCell, ConfirmModal
+// ============================================================================
+function Ring({ score, tone = "long", size = 56 }) {
+  const r = (size - 6) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = score == null ? circ : circ - (score / 100) * circ;
+  const stroke = score == null ? C.locked : toneColor(tone);
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <circle cx={size/2} cy={size/2} r={r} stroke={C.track} strokeWidth="3" fill="none" />
+      <circle cx={size/2} cy={size/2} r={r} stroke={stroke} strokeWidth="3" fill="none"
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 400ms ease, stroke 200ms ease" }} />
+    </svg>
+  );
+}
+function ActionCell({ code, label, score, lockedReason, tone, onTap, compact = false }) {
+  const locked = score == null;
+  const ringSize = compact ? 40 : 56;
+  return (
+    <button onClick={() => !locked && onTap()} disabled={locked}
+      style={{ backgroundColor: locked ? C.surfaceDisabled : C.surface, borderColor: locked ? C.border : C.borderStrong, cursor: locked ? "not-allowed" : "pointer" }}
+      className={`relative ${compact ? "p-2" : "p-3"} rounded-2xl border-2 transition-all active:scale-[0.97] disabled:active:scale-100`}>
+      <div className={`flex flex-col items-center ${compact ? "gap-1" : "gap-1.5"}`}>
+        <div className="relative">
+          <Ring score={score} tone={tone} size={ringSize} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            {locked ? (
+              <svg width={compact ? "12" : "16"} height={compact ? "12" : "16"} viewBox="0 0 24 24" fill="none" stroke={C.dim} strokeWidth="2.5">
+                <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+            ) : (
+              <div style={{ color: C.text }} className={`${compact ? "text-sm" : "text-lg"} font-mono font-bold leading-none`}>{score}</div>
+            )}
+          </div>
+        </div>
+        <div style={{ color: locked ? C.dim : C.text }} className={`font-mono font-bold ${compact ? "text-xs" : "text-base"} leading-none`}>{code}</div>
+        {!compact && <div style={{ color: locked ? C.dim : C.muted }} className="text-[10px] leading-tight text-center">{locked ? <em>{lockedReason}</em> : label}</div>}
+      </div>
+    </button>
+  );
+}
+function ConfirmModal({ action, ticker, price, position, onConfirm, onCancel }) {
+  const isEntry = action === "B2O" || action === "S2O";
+  const isAdd = action === "ADD";
+  const isTP = action === "TP";
+  const isFullExit = action === "S2C" || action === "B2C";
+  const accent = isAdd ? C.add : isTP ? C.tp : (action === "B2O" ? C.long : action === "S2O" ? C.short : C.close);
+  let sizeChange, newSize, newAvg, realized;
+  if (isEntry) { sizeChange = 100; newSize = 100; newAvg = price; }
+  else if (isAdd) {
+    sizeChange = 50; newSize = position.size + 50;
+    newAvg = ((position.entryPrice * position.size) + (price * 50)) / newSize;
+  } else if (isTP) {
+    sizeChange = -Math.round(position.size / 2); newSize = position.size + sizeChange;
+    newAvg = position.entryPrice;
+    const sign = position.side === "long" ? 1 : -1;
+    realized = (price - position.entryPrice) * sign * Math.abs(sizeChange);
+  } else if (isFullExit) {
+    sizeChange = -position.size; newSize = 0;
+    const sign = position.side === "long" ? 1 : -1;
+    realized = (price - position.entryPrice) * sign * position.size;
+  }
+  const verb = isEntry ? "Open" : isAdd ? "Add to" : isTP ? "Take profit on" : "Close";
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+      <div style={{ backgroundColor: C.surface, borderColor: C.borderStrong }} className="border-2 rounded-2xl w-full max-w-md p-5">
+        <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mb-1">{verb.toUpperCase()} POSITION</div>
+        <div className="flex items-baseline gap-3 mb-4">
+          <div style={{ color: accent }} className="text-2xl font-mono font-bold">{action}</div>
+          <div style={{ color: C.text }} className="text-lg font-mono">{ticker}</div>
+          <div style={{ color: C.muted }} className="text-sm font-mono ml-auto">${price.toFixed(2)}</div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm font-mono mb-4">
+          <div className="flex justify-between"><span style={{ color: C.muted }}>Δ Size</span><span style={{ color: sizeChange > 0 ? C.long : C.short }}>{sizeChange > 0 ? "+" : ""}{sizeChange}sh</span></div>
+          <div className="flex justify-between"><span style={{ color: C.muted }}>New Size</span><span style={{ color: C.text }}>{newSize}sh</span></div>
+          {newAvg != null && <div className="flex justify-between"><span style={{ color: C.muted }}>{isAdd ? "New Avg" : "Avg"}</span><span style={{ color: C.text }}>${newAvg.toFixed(2)}</span></div>}
+          {realized != null && <div className="flex justify-between"><span style={{ color: C.muted }}>Realized</span><span style={{ color: realized >= 0 ? C.long : C.short }}>{realized >= 0 ? "+" : ""}${realized.toFixed(0)}</span></div>}
+        </div>
+        <div style={{ color: C.muted, borderColor: C.border }} className="text-[10px] leading-relaxed mb-4 border-l-2 pl-3">
+          You are the executing trader. MTS is decision support. By confirming, you accept all P&L and the possibility of total loss.
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onCancel} style={{ borderColor: C.borderStrong, color: C.muted }} className="flex-1 py-2.5 rounded-xl border-2 font-mono text-sm">CANCEL</button>
+          <button onClick={onConfirm} style={{ backgroundColor: accent, color: "#FFF" }} className="flex-1 py-2.5 rounded-xl font-mono text-sm font-bold">CONFIRM</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Scanner
+// ============================================================================
+function Scanner({ universe, positions, onSelect }) {
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("score");
+  const enriched = useMemo(() => universe.map(t => {
+    const pos = positions[t.sym] || { side: "flat" };
+    const scores = computeScores({ ...t, position: pos, atrDistance: 0.25, atr: t.atr, currentPrice: t.price });
+    const top = topAction(scores);
+    return { ...t, position: pos, scores, top };
+  }), [universe, positions]);
+  const filtered = useMemo(() => enriched.filter(t => {
+    if (filter === "long") return t.top.tone === "long" || (t.top.tone === "add" && t.position.side === "long");
+    if (filter === "short") return t.top.tone === "short" || (t.top.tone === "add" && t.position.side === "short");
+    if (filter === "high") return t.top.score >= 60;
+    if (filter === "open") return t.position.side !== "flat";
+    return true;
+  }), [enriched, filter]);
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    if (sort === "score") arr.sort((a, b) => b.top.score - a.top.score);
+    if (sort === "alpha") arr.sort((a, b) => a.sym.localeCompare(b.sym));
+    if (sort === "chg") arr.sort((a, b) => b.change - a.change);
+    return arr;
+  }, [filtered, sort]);
+  const chips = [{ key: "all", label: "All" }, { key: "long", label: "Long" }, { key: "short", label: "Short" }, { key: "high", label: "≥60" }, { key: "open", label: "Open" }];
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-baseline gap-2"><div style={{ color: C.muted }} className="text-xs font-mono">{sorted.length}/{universe.length} tickers</div></div>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+        {chips.map(c => (
+          <button key={c.key} onClick={() => setFilter(c.key)}
+            style={{ backgroundColor: filter === c.key ? C.text : C.surface, color: filter === c.key ? C.bg : C.muted, borderColor: filter === c.key ? C.text : C.border }}
+            className="px-2.5 py-1 rounded-full border text-[11px] font-mono whitespace-nowrap">{c.label}</button>
+        ))}
+        <select value={sort} onChange={e => setSort(e.target.value)} style={{ borderColor: C.border, color: C.muted, backgroundColor: C.surface }} className="ml-auto border rounded-full px-2 py-1 text-[11px] font-mono">
+          <option value="score">↓ Score</option><option value="alpha">A→Z</option><option value="chg">↓ % Chg</option>
+        </select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {sorted.map(t => {
+          const color = toneColor(t.top.tone), dim = t.top.score < 30;
+          return (
+            <button key={t.sym} onClick={() => onSelect(t.sym)} style={{ backgroundColor: C.surface, borderColor: C.border }} className="flex items-center gap-3 border rounded-xl p-2.5 text-left active:scale-[0.99] transition-transform">
+              <div style={{ backgroundColor: dim ? C.track : toneSoft(t.top.tone), borderColor: dim ? C.border : color }} className="flex flex-col items-center justify-center w-12 h-12 rounded-lg border-2 shrink-0">
+                <div style={{ color: dim ? C.dim : color }} className="text-base font-mono font-bold leading-none">{t.top.score}</div>
+                <div style={{ color: dim ? C.dim : color }} className="text-[8px] font-mono tracking-wider mt-0.5">{t.top.code}</div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-1.5">
+                  <div style={{ color: C.text }} className="text-base font-mono font-bold">{t.sym}</div>
+                  {t.position.side !== "flat" && <div style={{ color: t.position.side === "long" ? C.long : C.short }} className="text-[9px] font-mono uppercase tracking-wider">• {t.position.side}</div>}
+                </div>
+                <div style={{ color: C.muted }} className="text-[11px] truncate">{t.mmgState} · {t.direction} · {t.rvol.toFixed(2)}x</div>
+              </div>
+              <div className="text-right shrink-0">
+                <div style={{ color: C.text }} className="text-sm font-mono">${t.price.toFixed(2)}</div>
+                <div style={{ color: t.change >= 0 ? C.long : C.short }} className="text-[11px] font-mono">{t.change >= 0 ? "+" : ""}{t.change.toFixed(2)}%</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Active
+// ============================================================================
+function Active({ universe, positions, onSelect }) {
+  const openTickers = useMemo(() => Object.keys(positions).filter(sym => positions[sym].side !== "flat"), [positions]);
+  const enriched = useMemo(() => openTickers.map(sym => {
+    const t = universe.find(u => u.sym === sym);
+    if (!t) return null;
+    const pos = positions[sym];
+    const pnl = calcPnL(pos, t.price);
+    const scores = computeScores({ ...t, position: pos, atrDistance: 0.25, atr: t.atr, currentPrice: t.price });
+    const top = topAction(scores);
+    const targetOffset = t.atr * 1.7;
+    const target = pos.side === "long" ? pos.entryPrice + targetOffset : pos.entryPrice - targetOffset;
+    return { ...t, position: pos, pnl, top, target };
+  }).filter(Boolean), [openTickers, universe, positions]);
+  const totalPnL = enriched.reduce((sum, t) => sum + t.pnl.dollars, 0);
+  const winners = enriched.filter(t => t.pnl.dollars > 0).length;
+  const losers = enriched.filter(t => t.pnl.dollars < 0).length;
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-baseline gap-2">
+        <div style={{ color: C.muted }} className="text-xs font-mono">{enriched.length} open · {winners}W {losers}L</div>
+        <div style={{ color: totalPnL >= 0 ? C.long : C.short }} className="text-sm font-mono font-bold">{totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(0)}</div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {enriched.map(t => {
+          const color = toneColor(t.top.tone);
+          const sideColor = t.position.side === "long" ? C.long : C.short;
+          const pnlColor = t.pnl.dollars >= 0 ? C.long : C.short;
+          return (
+            <button key={t.sym} onClick={() => onSelect(t.sym)} style={{ backgroundColor: C.surface, borderColor: C.border }} className="flex flex-col gap-1.5 border rounded-xl p-2.5 text-left active:scale-[0.99] transition-transform">
+              <div className="flex items-center gap-3">
+                <div style={{ backgroundColor: toneSoft(t.top.tone), borderColor: color }} className="flex flex-col items-center justify-center w-12 h-12 rounded-lg border-2 shrink-0">
+                  <div style={{ color }} className="text-base font-mono font-bold leading-none">{t.top.score}</div>
+                  <div style={{ color }} className="text-[8px] font-mono tracking-wider mt-0.5">{t.top.code}</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-1.5">
+                    <div style={{ color: C.text }} className="text-base font-mono font-bold">{t.sym}</div>
+                    <div style={{ color: sideColor }} className="text-[10px] font-mono uppercase tracking-wider">{t.position.side}</div>
+                    <div style={{ color: C.muted }} className="text-[10px] font-mono ml-auto">{formatTime(t.position.entryTime)}</div>
+                  </div>
+                  <div style={{ color: pnlColor }} className="text-sm font-mono font-bold">{t.pnl.pct >= 0 ? "+" : ""}{t.pnl.pct.toFixed(2)}% · {t.pnl.dollars >= 0 ? "+" : ""}${t.pnl.dollars.toFixed(0)}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div style={{ color: C.text }} className="text-sm font-mono">${t.price.toFixed(2)}</div>
+                  <div style={{ color: C.muted }} className="text-[10px] font-mono">{t.position.size}sh</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2" style={{ paddingLeft: "60px" }}>
+                <div style={{ color: C.muted }} className="text-[10px] font-mono">
+                  <span style={{ color: C.dim }}>entry</span> ${t.position.entryPrice.toFixed(2)} · <span style={{ color: C.dim }}>tgt</span> ${t.target.toFixed(2)}
+                </div>
+                <div className="ml-auto flex gap-1">
+                  <span style={{ backgroundColor: t.position.addFired ? "var(--add-soft)" : "transparent", borderColor: t.position.addFired ? C.add : C.border, color: t.position.addFired ? C.add : C.dim }} className="text-[9px] font-mono px-1.5 py-0.5 rounded border">ADD{t.position.addFired ? " ✓" : ""}</span>
+                  <span style={{ backgroundColor: t.position.tpFired ? "var(--tp-soft)" : "transparent", borderColor: t.position.tpFired ? C.tp : C.border, color: t.position.tpFired ? C.tp : C.dim }} className="text-[9px] font-mono px-1.5 py-0.5 rounded border">TP{t.position.tpFired ? " ✓" : ""}</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+        {enriched.length === 0 && <div style={{ color: C.dim }} className="text-center text-xs py-12">No active trades.<br /><span className="text-[10px]">Open a position from the Scanner.</span></div>}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Deck
+// ============================================================================
+function Deck({ ticker, universe, positions, setPositions, fills, setFills, onBack }) {
+  const data = universe.find(t => t.sym === ticker);
+  const [mmgState, setMmgState] = useState(data.mmgState);
+  const [campaign, setCampaign] = useState(data.campaign);
+  const [direction, setDirection] = useState(data.direction);
+  const [rvol, setRvol] = useState(data.rvol);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [showSim, setShowSim] = useState(false);
+  const position = positions[ticker] || { side: "flat" };
+  const atrDistance = 0.25;
+  const pnl = calcPnL(position, data.price);
+  const scores = useMemo(() => computeScores({ mmgState, campaign, direction, rvol, position, atrDistance, atr: data.atr, currentPrice: data.price }), [mmgState, campaign, direction, rvol, position, data.atr, data.price]);
+  const stopOffset = data.atr * 1.0, targetOffset = data.atr * 1.7;
+  const refPrice = position.side === "flat" ? data.price : position.entryPrice;
+  const stop = position.side === "short" ? refPrice + stopOffset : refPrice - stopOffset;
+  const target = position.side === "short" ? refPrice - targetOffset : refPrice + targetOffset;
+  const handleConfirm = () => {
+    const a = pendingAction, price = data.price;
+    setPositions(p => {
+      const cur = p[ticker] || { side: "flat" };
+      let next = { ...cur };
+      if (a === "B2O") next = { side: "long", entryPrice: price, size: 100, addFired: false, tpFired: false, entryTime: Date.now() };
+      else if (a === "S2O") next = { side: "short", entryPrice: price, size: 100, addFired: false, tpFired: false, entryTime: Date.now() };
+      else if (a === "ADD") {
+        const newSize = cur.size + 50;
+        const newAvg = ((cur.entryPrice * cur.size) + (price * 50)) / newSize;
+        next = { ...cur, size: newSize, entryPrice: newAvg, addFired: true };
+      } else if (a === "TP") {
+        const sold = Math.round(cur.size / 2);
+        next = { ...cur, size: cur.size - sold, tpFired: true };
+      } else if (a === "S2C" || a === "B2C") next = { side: "flat" };
+      return { ...p, [ticker]: next };
+    });
+    setFills(f => ({ ...f, [ticker]: { action: a, price, at: Date.now() } }));
+    setPendingAction(null);
+  };
+  const posColor = position.side === "long" ? C.long : position.side === "short" ? C.short : C.muted;
+  const pnlColor = pnl.dollars >= 0 ? C.long : C.short;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} style={{ color: C.muted }} className="p-1 -ml-1"><ChevronLeft size={20} /></button>
+        <div style={{ color: C.text }} className="text-xl font-mono font-bold">{ticker}</div>
+        <div style={{ color: C.text }} className="text-xl font-mono">${data.price.toFixed(2)}</div>
+        <div style={{ color: data.change >= 0 ? C.long : C.short }} className="text-sm font-mono">{data.change >= 0 ? "+" : ""}{data.change.toFixed(2)}%</div>
+        <button onClick={() => setShowSim(!showSim)} style={{ color: C.dim }} className="p-1 ml-auto"><Settings size={14} /></button>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl px-2.5 py-1.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">WHERE</div>
+          <div style={{ color: C.text }} className="text-sm font-medium leading-tight">{mmgState}</div>
+          <div style={{ color: C.muted }} className="text-[10px]">{direction} bias</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl px-2.5 py-1.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">WHEN</div>
+          <div style={{ color: C.text }} className="text-sm font-medium leading-tight">{campaign}</div>
+          <div style={{ color: C.muted }} className="text-[10px] font-mono">{rvol.toFixed(2)}x RVOL</div>
+        </div>
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl px-2.5 py-1.5">
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em]">POSITION</div>
+          <div style={{ color: posColor }} className="text-sm font-mono font-bold leading-tight uppercase">{position.side}</div>
+          {position.side !== "flat" ? <div style={{ color: pnlColor }} className="text-[10px] font-mono">{pnl.pct >= 0 ? "+" : ""}{pnl.pct.toFixed(2)}% · {position.addFired ? "A✓" : "a"}·{position.tpFired ? "T✓" : "t"}</div> : <div style={{ color: C.dim }} className="text-[10px]">no fills</div>}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <ActionCell code="B2O" label="enter long" score={scores.b2o} lockedReason="in position" tone="long" onTap={() => setPendingAction("B2O")} />
+        <ActionCell code="S2O" label="enter short" score={scores.s2o} lockedReason="in position" tone="short" onTap={() => setPendingAction("S2O")} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <ActionCell code="ADD" label="scale in · 50% mark" score={scores.add} lockedReason={addLockReason(position, scores.campaignProgress)} tone="add" onTap={() => setPendingAction("ADD")} />
+        <ActionCell code="TP"  label="take profit · 75% mark" score={scores.tp} lockedReason={tpLockReason(position, scores.campaignProgress)} tone="tp" onTap={() => setPendingAction("TP")} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <ActionCell code="S2C" label="close long" score={scores.s2c} lockedReason="no long position" tone="close" onTap={() => setPendingAction("S2C")} />
+        <ActionCell code="B2C" label="cover short" score={scores.b2c} lockedReason="no short position" tone="close" onTap={() => setPendingAction("B2C")} />
+      </div>
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl px-3 py-2">
+        <div className="grid grid-cols-6 gap-1 font-mono text-[10px]">
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">STOP</div><div style={{ color: C.short }}>${stop.toFixed(2)}</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">TGT</div><div style={{ color: C.long }}>${target.toFixed(2)}</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">R:R</div><div style={{ color: C.text }}>1:{(targetOffset / stopOffset).toFixed(1)}</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">SIZE</div><div style={{ color: C.text }}>{position.side !== "flat" ? position.size : 100}sh</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">{position.side !== "flat" ? "PnL" : "RISK"}</div><div style={{ color: position.side !== "flat" ? pnlColor : C.close }}>{position.side !== "flat" ? `${pnl.dollars >= 0 ? "+" : ""}$${pnl.dollars.toFixed(0)}` : `$${(stopOffset*100).toFixed(0)}`}</div></div>
+          <div><div style={{ color: C.muted }} className="text-[8px] tracking-wider">ATR</div><div style={{ color: C.text }}>${data.atr.toFixed(2)}</div></div>
+        </div>
+      </div>
+      {showSim && (
+        <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3 space-y-2 text-xs">
+          <div>
+            <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1">MMG STATE</div>
+            <div className="flex flex-wrap gap-1">{MMG_STATES.map(s => (
+              <button key={s} onClick={() => setMmgState(s)} style={{ backgroundColor: mmgState === s ? C.text : C.bg, color: mmgState === s ? C.bg : C.muted }} className="px-1.5 py-0.5 rounded font-mono text-[9px]">{s}</button>
+            ))}</div>
+          </div>
+          <div>
+            <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1">CAMPAIGN</div>
+            <div className="flex flex-wrap gap-1">{CAMPAIGN_STATES.map(s => (
+              <button key={s} onClick={() => setCampaign(s)} style={{ backgroundColor: campaign === s ? C.text : C.bg, color: campaign === s ? C.bg : C.muted }} className="px-1.5 py-0.5 rounded font-mono text-[9px]">{s}</button>
+            ))}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1">BIAS</div>
+              <div className="flex gap-1">{["long", "short", "neutral"].map(d => (
+                <button key={d} onClick={() => setDirection(d)} style={{ backgroundColor: direction === d ? C.text : C.bg, color: direction === d ? C.bg : C.muted }} className="px-1.5 py-0.5 rounded font-mono text-[9px]">{d}</button>
+              ))}</div>
+            </div>
+            <div>
+              <div style={{ color: C.muted }} className="text-[9px] tracking-[0.15em] mb-1">RVOL · {rvol.toFixed(2)}x</div>
+              <input type="range" min="0.3" max="3" step="0.1" value={rvol} onChange={(e) => setRvol(parseFloat(e.target.value))} className="w-full" />
+            </div>
+          </div>
+        </div>
+      )}
+      {pendingAction && <ConfirmModal action={pendingAction} ticker={ticker} price={data.price} position={position.side !== "flat" ? position : null} onConfirm={handleConfirm} onCancel={() => setPendingAction(null)} />}
+    </div>
+  );
+}
+
+// ============================================================================
+// BottomTabBar
+// ============================================================================
+function BottomTabBar({ view, setView, activeCount }) {
+  const tabs = [
+    { key: "scanner", icon: Search, label: "Scan" },
+    { key: "active", icon: Zap, label: "Active", badge: activeCount > 0 ? activeCount : null },
+    { key: "watchlist", icon: Eye, label: "Watch" },
+    { key: "library", icon: BookOpen, label: "Library" },
+    { key: "account", icon: User, label: "Account" },
+  ];
+  return (
+    <div style={{ backgroundColor: C.surface, borderTopColor: C.border }} className="fixed bottom-0 left-0 right-0 border-t z-40">
+      <div className="max-w-md mx-auto grid grid-cols-5">
+        {tabs.map(t => {
+          const Icon = t.icon, active = view === t.key;
+          return (
+            <button key={t.key} onClick={() => setView(t.key)} className="flex flex-col items-center gap-0.5 py-2 active:opacity-60">
+              <div className="relative">
+                <Icon size={18} color={active ? "var(--text)" : "var(--muted)"} strokeWidth={active ? 2.5 : 2} />
+                {t.badge != null && <div style={{ backgroundColor: C.long, color: "#FFF" }} className="absolute -top-1 -right-2 min-w-[14px] h-[14px] rounded-full text-[8px] font-mono font-bold flex items-center justify-center px-1">{t.badge}</div>}
+              </div>
+              <div style={{ color: active ? C.text : C.muted }} className="text-[9px] font-mono tracking-wider">{t.label.toUpperCase()}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Main App
+// ============================================================================
+// ============================================================================
+// v.21 — ScannerStatus card (Top-20 RVOL diagnostics)
+// ============================================================================
+function ScannerStatus({ status, topRVOL }) {
+  const dot = status.status === "ok" ? C.long : status.status === "error" ? C.short : status.status === "building" ? "#f59e0b" : C.dim;
+  return (
+    <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <div style={{ backgroundColor: dot }} className="w-2 h-2 rounded-full"></div>
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.2em] font-mono font-bold flex-1">SCANNER — TOP 20 RVOL</div>
+        <div style={{ color: C.dim }} className="text-[9px] font-mono">{status.lastFetch ? new Date(status.lastFetch).toLocaleTimeString() : "—"}</div>
+      </div>
+      {status.status === "building" && <div style={{ color: "#f59e0b" }} className="text-[10px] font-mono">Building 20-day avg vol cache, please wait...</div>}
+      {status.status === "error" && <div style={{ color: C.short }} className="text-[10px] font-mono">{status.error}</div>}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono mt-1">
+        <div style={{ color: C.muted }}>Avg-vol cache</div><div style={{ color: C.text }} className="text-right">{status.avgVolDate || "—"}</div>
+        <div style={{ color: C.muted }}>Tickers w/ avg</div><div style={{ color: C.text }} className="text-right">{status.tickersFound || 0}</div>
+        <div style={{ color: C.muted }}>Top 20 loaded</div><div style={{ color: C.text }} className="text-right">{(topRVOL && topRVOL.length) || 0}</div>
+      </div>
+      <div style={{ color: C.dim }} className="text-[9px] mt-2">Scanner shows top 20 S&amp;P stocks by Relative Volume vs 20-day average.</div>
+    </div>
+  );
+}
+
+// ============================================================================
+// v.20 — LiveDataStatus card
+// ============================================================================
+function LiveDataStatus({ liveData }) {
+  const tsla = liveData && liveData.TSLA;
+  if (!tsla) {
+    return (
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.2em] font-mono font-bold mb-1">LIVE DATA</div>
+        <div style={{ color: C.dim }} className="text-[11px]">Idle — set API key to start polling TSLA.</div>
+      </div>
+    );
+  }
+  const dot = tsla.status === "ok" ? C.long : tsla.status === "error" ? C.short : C.dim;
+  const ind = tsla.indicators;
+  return (
+    <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <div style={{ backgroundColor: dot }} className="w-2 h-2 rounded-full"></div>
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.2em] font-mono font-bold flex-1">LIVE DATA — TSLA 15m</div>
+        <div style={{ color: C.dim }} className="text-[9px] font-mono">{new Date(tsla.lastFetch).toLocaleTimeString()}</div>
+      </div>
+      {tsla.status === "error" && <div style={{ color: C.short }} className="text-[10px] font-mono">{tsla.error}</div>}
+      {ind && (
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono">
+          <div style={{ color: C.muted }}>Close</div><div style={{ color: C.text }} className="text-right font-bold">{ind.close.toFixed(2)}</div>
+          <div style={{ color: C.muted }}>EMA 21</div><div style={{ color: C.text }} className="text-right">{ind.ema15 ? ind.ema15.toFixed(2) : "—"}</div>
+          <div style={{ color: C.muted }}>VWAP</div><div style={{ color: C.text }} className="text-right">{ind.vwap ? ind.vwap.toFixed(2) : "—"}</div>
+          <div style={{ color: C.muted }}>BB Basis</div><div style={{ color: C.text }} className="text-right">{ind.bbBasis.toFixed(2)}</div>
+          <div style={{ color: C.muted }}>BB Upper</div><div style={{ color: C.short }} className="text-right">{ind.bbUpper.toFixed(2)}</div>
+          <div style={{ color: C.muted }}>BB Lower</div><div style={{ color: C.long }} className="text-right">{ind.bbLower.toFixed(2)}</div>
+          <div style={{ color: C.muted }}>SAR</div><div style={{ color: C.text }} className="text-right">{ind.sar ? ind.sar.toFixed(2) : "—"}</div>
+          <div style={{ color: C.muted }}>ATR 14</div><div style={{ color: C.text }} className="text-right">{ind.atr14 ? ind.atr14.toFixed(4) : "—"}</div>
+          <div style={{ color: C.muted }}>RSI 14</div><div style={{ color: C.text }} className="text-right">{ind.rsi14 ? ind.rsi14.toFixed(2) : "—"}</div>
+          <div style={{ color: C.muted }}>ROC 10</div><div style={{ color: C.text }} className="text-right">{ind.roc9 ? ind.roc9.toFixed(4) : "—"}</div>
+          <div style={{ color: C.muted }}>MACD Hist</div><div style={{ color: C.text }} className="text-right">{ind.macdHist ? ind.macdHist.toFixed(4) : "—"}</div>
+          <div style={{ color: C.muted }}>bbWidth</div><div style={{ color: C.text }} className="text-right">{ind.bbWidth.toFixed(4)}</div>
+          <div style={{ color: C.muted }}>bbWidthAvg</div><div style={{ color: C.text }} className="text-right">{ind.bbWidthAvg ? ind.bbWidthAvg.toFixed(4) : "—"}</div>
+          <div style={{ color: C.muted }}>rvol</div><div style={{ color: C.text }} className="text-right">{ind.rvol ? ind.rvol.toFixed(4) : "—"}</div>
+          <div style={{ color: C.muted }}>Bars</div><div style={{ color: C.dim }} className="text-right">{ind.barsLoaded}</div>
+        </div>
+      )}
+      {tsla.bbCycle && (
+        <div className="mt-3 pt-3" style={{ borderTopColor: C.border, borderTopWidth: 1, borderTopStyle: "solid" }}>
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.2em] font-mono font-bold mb-2">BB CYCLE (v.22a port)</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono">
+            <div style={{ color: C.muted }}>bbSqueezing</div><div style={{ color: tsla.bbCycle.bbSqueezing ? C.long : C.dim }} className="text-right font-bold">{tsla.bbCycle.bbSqueezing}</div>
+            <div style={{ color: C.muted }}>bbOpeningStart</div><div style={{ color: tsla.bbCycle.bbOpeningStart ? C.long : C.dim }} className="text-right font-bold">{tsla.bbCycle.bbOpeningStart}</div>
+            <div style={{ color: C.muted }}>bbTrueExpansion</div><div style={{ color: tsla.bbCycle.bbTrueExpansion ? C.long : C.dim }} className="text-right font-bold">{tsla.bbCycle.bbTrueExpansion}</div>
+            <div style={{ color: C.muted }}>bbExpansionAlive</div><div style={{ color: tsla.bbCycle.bbExpansionAlive ? C.long : C.dim }} className="text-right font-bold">{tsla.bbCycle.bbExpansionAlive}</div>
+            <div style={{ color: C.muted }}>barsSinceBBExp</div><div style={{ color: C.text }} className="text-right">{tsla.bbCycle.barsSinceBBExpansion !== null ? tsla.bbCycle.barsSinceBBExpansion : "—"}</div>
+            <div style={{ color: C.muted }}>bbExpRatePct</div><div style={{ color: C.text }} className="text-right">{tsla.bbCycle.bbExpansionRatePct.toFixed(2)}</div>
+          </div>
+        </div>
+      )}
+      {tsla.gates && (
+        <div className="mt-3 pt-3" style={{ borderTopColor: C.border, borderTopWidth: 1, borderTopStyle: "solid" }}>
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.2em] font-mono font-bold mb-2">MMG GATES (v.22b port)</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono">
+            <div style={{ color: C.muted }}>long c{'>'}EMA</div><div style={{ color: tsla.gates.long_closeAboveEMA ? C.long : C.dim }} className="text-right font-bold">{tsla.gates.long_closeAboveEMA}</div>
+            <div style={{ color: C.muted }}>long c{'>'}VWAP</div><div style={{ color: tsla.gates.long_closeAboveVWAP ? C.long : C.dim }} className="text-right font-bold">{tsla.gates.long_closeAboveVWAP}</div>
+            <div style={{ color: C.muted }}>long c{'>'}bbBasis</div><div style={{ color: tsla.gates.long_closeAboveBB ? C.long : C.dim }} className="text-right font-bold">{tsla.gates.long_closeAboveBB}</div>
+            <div style={{ color: C.muted }}>long sarBull</div><div style={{ color: tsla.gates.long_sarBull ? C.long : C.dim }} className="text-right font-bold">{tsla.gates.long_sarBull}</div>
+            <div style={{ color: C.muted }}>long longTurn</div><div style={{ color: tsla.gates.long_longTurn ? C.long : C.dim }} className="text-right font-bold">{tsla.gates.long_longTurn}</div>
+            <div style={{ color: C.muted }}>long liqBreakUp</div><div style={{ color: tsla.gates.long_liqBreakUp ? C.long : C.dim }} className="text-right font-bold">{tsla.gates.long_liqBreakUp}</div>
+            <div style={{ color: C.muted }}>short c{'<'}EMA</div><div style={{ color: tsla.gates.short_closeBelowEMA ? C.short : C.dim }} className="text-right font-bold">{tsla.gates.short_closeBelowEMA}</div>
+            <div style={{ color: C.muted }}>short c{'<'}VWAP</div><div style={{ color: tsla.gates.short_closeBelowVWAP ? C.short : C.dim }} className="text-right font-bold">{tsla.gates.short_closeBelowVWAP}</div>
+            <div style={{ color: C.muted }}>short c{'<'}bbBasis</div><div style={{ color: tsla.gates.short_closeBelowBB ? C.short : C.dim }} className="text-right font-bold">{tsla.gates.short_closeBelowBB}</div>
+            <div style={{ color: C.muted }}>short sarBear</div><div style={{ color: tsla.gates.short_sarBear ? C.short : C.dim }} className="text-right font-bold">{tsla.gates.short_sarBear}</div>
+            <div style={{ color: C.muted }}>short shortTurn</div><div style={{ color: tsla.gates.short_shortTurn ? C.short : C.dim }} className="text-right font-bold">{tsla.gates.short_shortTurn}</div>
+            <div style={{ color: C.muted }}>short liqBreakDn</div><div style={{ color: tsla.gates.short_liqBreakDn ? C.short : C.dim }} className="text-right font-bold">{tsla.gates.short_liqBreakDn}</div>
+            <div style={{ color: C.muted }}>momentumScore</div><div style={{ color: C.text }} className="text-right">{tsla.gates.momentumScore.toFixed(2)}</div>
+            <div style={{ color: C.muted }}>emaVwapTangled</div><div style={{ color: tsla.gates.emaVwapTangled ? "#f59e0b" : C.dim }} className="text-right font-bold">{tsla.gates.emaVwapTangled}</div>
+            <div style={{ color: C.muted }}>priceNearMid</div><div style={{ color: tsla.gates.priceNearMid ? "#f59e0b" : C.dim }} className="text-right font-bold">{tsla.gates.priceNearMid}</div>
+            <div style={{ color: C.muted }}>manipulationPhase</div><div style={{ color: tsla.gates.manipulationPhase ? "#f59e0b" : C.dim }} className="text-right font-bold">{tsla.gates.manipulationPhase}</div>
+            <div style={{ color: C.muted }}>longEntryTrigger</div><div style={{ color: tsla.gates.longEntryTrigger ? C.long : C.dim }} className="text-right font-bold">{tsla.gates.longEntryTrigger}</div>
+            <div style={{ color: C.muted }}>shortEntryTrigger</div><div style={{ color: tsla.gates.shortEntryTrigger ? C.short : C.dim }} className="text-right font-bold">{tsla.gates.shortEntryTrigger}</div>
+          </div>
+          <div style={{ color: C.dim }} className="text-[9px] mt-2">liqBreakUp/Dn hardcoded to 0 (Phase 2 liquidity zones pending v.22c).</div>
+        </div>
+      )}
+      <div style={{ color: C.dim }} className="text-[9px] mt-2">Compare values with TradingView Data Window to validate JS port.</div>
+    </div>
+  );
+}
+
+// ============================================================================
+// v.19 — RiskAssessmentWizard
+// ============================================================================
+function RiskAssessmentWizard({ onComplete, onCancel, existingProfile, allowCancel }) {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState(existingProfile ? existingProfile.answers : {});
+  const totalSteps = RISK_QUESTIONS.length + 1;
+  const isResult = step === RISK_QUESTIONS.length;
+  const currentQ = !isResult ? RISK_QUESTIONS[step] : null;
+  const currentAnswer = currentQ ? answers[currentQ.id] : null;
+  const { score, tier } = scoreRiskAnswers(answers);
+  const tierData = RISK_TIERS[tier];
+
+  const choose = (idx) => {
+    setAnswers({ ...answers, [currentQ.id]: idx });
+    setTimeout(() => setStep(step + 1), 180);
+  };
+  const finish = () => {
+    const profile = { tier, score, answers, completedAt: Date.now() };
+    saveJSON(STORAGE.RISK, profile);
+    onComplete(profile);
+  };
+
+  return (
+    <div style={{ backgroundColor: C.bg, color: C.text }} className="fixed inset-0 z-50 flex flex-col">
+      <div style={{ backgroundColor: C.surface, borderBottomColor: C.border }} className="border-b px-4 py-3">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            {allowCancel ? <button onClick={onCancel} style={{ color: C.dim }} className="text-xs font-mono uppercase tracking-wider">Cancel</button> : <div className="w-12" />}
+            <div style={{ color: C.dim }} className="text-xs font-mono">{isResult ? "Done" : `${step + 1} / ${RISK_QUESTIONS.length}`}</div>
+          </div>
+          <div style={{ backgroundColor: C.track }} className="h-1 rounded-full overflow-hidden">
+            <div style={{ backgroundColor: C.long, width: `${((step + (isResult ? 1 : 0)) / totalSteps) * 100}%`, transition: "width 0.3s ease" }} className="h-full" />
+          </div>
+          <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] mt-2 font-mono font-bold">RISK ASSESSMENT</div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="max-w-md mx-auto">
+          {!isResult && currentQ && (
+            <div>
+              <div style={{ color: C.dim }} className="text-[10px] tracking-[0.2em] mb-3 font-mono">QUESTION {step + 1}</div>
+              <h2 style={{ color: C.text }} className="text-xl font-bold leading-snug mb-6">{currentQ.question}</h2>
+              <div className="space-y-2">
+                {currentQ.options.map((opt, idx) => {
+                  const selected = currentAnswer === idx;
+                  return (
+                    <button key={idx} onClick={() => choose(idx)}
+                      style={{ backgroundColor: selected ? "var(--long-soft)" : C.surface, borderColor: selected ? C.long : C.border, color: C.text }}
+                      className="w-full text-left px-4 py-3.5 rounded-lg border-2 text-sm active:opacity-70">
+                      <div className="flex items-center gap-3">
+                        <div style={{ backgroundColor: selected ? C.long : "transparent", borderColor: selected ? C.long : C.border }} className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0">
+                          {selected && <Check size={12} color="#fff" />}
+                        </div>
+                        <span>{opt}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {step > 0 && (
+                <button onClick={() => setStep(step - 1)} style={{ color: C.dim }} className="mt-6 text-xs font-mono uppercase tracking-wider">
+                  &larr; Back
+                </button>
+              )}
+            </div>
+          )}
+
+          {isResult && (
+            <div>
+              <div style={{ color: C.dim }} className="text-[10px] tracking-[0.2em] mb-3 font-mono">YOUR PROFILE</div>
+              <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-6 text-center mb-6">
+                <div className="text-5xl mb-3">{tierData.icon}</div>
+                <h2 style={{ color: C.text }} className="text-2xl font-bold mb-2">{tierData.name}</h2>
+                <div style={{ color: C.dim }} className="text-xs font-mono mb-4">Score: {score.toFixed(2)} / 3.00</div>
+                <p style={{ color: C.muted }} className="text-sm">{tierData.description}</p>
+              </div>
+              <div style={{ color: C.dim }} className="text-[10px] tracking-[0.2em] mb-2 font-mono">YOUR PARAMETERS</div>
+              <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-lg overflow-hidden mb-6">
+                <div style={{ borderColor: C.border }} className="flex justify-between px-4 py-3 border-b">
+                  <span style={{ color: C.muted }} className="text-sm">Per-trade risk</span>
+                  <span style={{ color: C.text }} className="text-sm font-mono font-bold">{tierData.risk.toFixed(2)}%</span>
+                </div>
+                <div style={{ borderColor: C.border }} className="flex justify-between px-4 py-3 border-b">
+                  <span style={{ color: C.muted }} className="text-sm">R:R minimum</span>
+                  <span style={{ color: C.text }} className="text-sm font-mono font-bold">{tierData.rrMin.toFixed(1)}R</span>
+                </div>
+                <div style={{ borderColor: C.border }} className="flex justify-between px-4 py-3 border-b">
+                  <span style={{ color: C.muted }} className="text-sm">Max concurrent positions</span>
+                  <span style={{ color: C.text }} className="text-sm font-mono font-bold">{tierData.maxPos}</span>
+                </div>
+                <div className="flex justify-between px-4 py-3">
+                  <span style={{ color: C.muted }} className="text-sm">Daily stop loss</span>
+                  <span style={{ color: C.short }} className="text-sm font-mono font-bold">{tierData.dailyStop.toFixed(1)}%</span>
+                </div>
+              </div>
+              <p style={{ color: C.dim }} className="text-xs text-center mb-6">
+                You can retake this assessment any time from Account &rarr; Risk Profile.
+              </p>
+              <button onClick={finish} style={{ backgroundColor: C.long, color: "#fff" }} className="w-full py-3.5 rounded-lg font-bold text-sm tracking-wide active:opacity-80">
+                Continue to App
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// v.19 — RiskProfileCard
+// ============================================================================
+function RiskProfileCard({ profile, onRetake }) {
+  if (!profile) {
+    return (
+      <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
+        <div style={{ color: C.muted }} className="text-sm mb-3">No risk profile set.</div>
+        <button onClick={onRetake} style={{ backgroundColor: C.long, color: "#fff" }} className="w-full py-2.5 rounded font-bold text-sm">Take Assessment</button>
+      </div>
+    );
+  }
+  const tier = RISK_TIERS[profile.tier];
+  const ageMs = Date.now() - profile.completedAt;
+  const days = Math.floor(ageMs / 86400000);
+  const ageText = days === 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+  return (
+    <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl overflow-hidden">
+      <div style={{ borderColor: C.border }} className="px-3 py-2.5 border-b flex items-center gap-3">
+        <div className="text-2xl">{tier.icon}</div>
+        <div className="flex-1">
+          <div style={{ color: C.text }} className="text-sm font-bold">{tier.name}</div>
+          <div style={{ color: C.dim }} className="text-[10px] font-mono">Score {profile.score.toFixed(2)} &middot; taken {ageText}</div>
+        </div>
+      </div>
+      <div className="px-3 py-2.5 grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs">
+        <div style={{ color: C.muted }}>Per-trade</div><div style={{ color: C.text }} className="font-mono font-bold text-right">{tier.risk.toFixed(2)}%</div>
+        <div style={{ color: C.muted }}>R:R min</div><div style={{ color: C.text }} className="font-mono font-bold text-right">{tier.rrMin.toFixed(1)}R</div>
+        <div style={{ color: C.muted }}>Max positions</div><div style={{ color: C.text }} className="font-mono font-bold text-right">{tier.maxPos}</div>
+        <div style={{ color: C.muted }}>Daily stop</div><div style={{ color: C.short }} className="font-mono font-bold text-right">{tier.dailyStop.toFixed(1)}%</div>
+      </div>
+      <div style={{ borderColor: C.border }} className="px-3 py-2 border-t">
+        <button onClick={onRetake} style={{ borderColor: C.border, color: C.text }} className="w-full py-1.5 rounded border text-xs font-mono uppercase tracking-wider active:opacity-70">Retake</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// v.19 — PolygonKeyField
+// ============================================================================
+function PolygonKeyField({ value, onChange }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value || "");
+  const masked = value ? "••••••••" + value.slice(-4) : "(not set)";
+  return (
+    <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Key size={12} color={C.muted} />
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.2em] font-mono font-bold">MASSIVE.COM API KEY</div>
+      </div>
+      {!editing ? (
+        <div className="flex items-center gap-2">
+          <div style={{ color: value ? C.text : C.dim }} className="flex-1 text-xs font-mono">{masked}</div>
+          <button onClick={() => { setDraft(value || ""); setEditing(true); }} style={{ borderColor: C.border, color: C.text }} className="text-[10px] px-2.5 py-1 border rounded">Edit</button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <input type="password" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="paste API key"
+            style={{ backgroundColor: C.bg, borderColor: C.border, color: C.text }}
+            className="w-full px-2.5 py-1.5 border rounded text-xs font-mono" />
+          <div className="flex gap-2">
+            <button onClick={() => { onChange(draft); setEditing(false); }} style={{ backgroundColor: C.long, color: "#fff" }} className="flex-1 py-1.5 rounded text-[11px] font-bold">Save</button>
+            <button onClick={() => setEditing(false)} style={{ borderColor: C.border, color: C.text }} className="flex-1 py-1.5 border rounded text-[11px]">Cancel</button>
+          </div>
+        </div>
+      )}
+      <div style={{ color: C.dim }} className="text-[9px] mt-2">Stocks Starter: 15-min delayed, unlimited calls.</div>
+    </div>
+  );
+}
+
+// ============================================================================
+// v.19 — PaperAccountCard
+// ============================================================================
+function PaperAccountCard({ account, onReset }) {
+  const pnl = account.balance - account.startingBalance;
+  const pnlPct = (pnl / account.startingBalance) * 100;
+  return (
+    <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl overflow-hidden">
+      <div className="px-3 py-2.5">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Wallet size={12} color={C.muted} />
+          <div style={{ color: C.muted }} className="text-[9px] tracking-[0.2em] font-mono font-bold">PAPER ACCOUNT</div>
+        </div>
+        <div style={{ color: C.text }} className="text-xl font-mono font-bold">${account.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div className="flex items-center gap-2 text-[10px] font-mono mt-1">
+          <span style={{ color: C.dim }}>start ${account.startingBalance.toLocaleString()}</span>
+          <span style={{ color: pnl >= 0 ? C.long : C.short }}>{pnl >= 0 ? "+" : ""}${pnl.toFixed(2)} ({pnl >= 0 ? "+" : ""}{pnlPct.toFixed(2)}%)</span>
+        </div>
+      </div>
+      <div style={{ borderColor: C.border }} className="px-3 py-2 border-t">
+        <button onClick={onReset} style={{ borderColor: C.border, color: C.text }} className="w-full py-1.5 rounded border text-[10px] font-mono uppercase tracking-wider">Reset to $100,000</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// v.19 — Sessions
+// ============================================================================
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function plusDaysStr(d) { const x = new Date(); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); }
+
+function SessionCreateForm({ riskProfile, onCancel, onCreate }) {
+  const [name, setName] = useState("");
+  const [start, setStart] = useState(todayStr());
+  const [end, setEnd] = useState(plusDaysStr(14));
+  const tier = riskProfile ? RISK_TIERS[riskProfile.tier] : null;
+  const valid = start && end && new Date(end) >= new Date(start) && riskProfile;
+
+  const create = () => {
+    if (!valid) return;
+    const session = {
+      id: "sess_" + Date.now(),
+      name: name || `Session ${new Date(start).toLocaleDateString()}`,
+      startDate: start, endDate: end,
+      status: "planned", universe: "SP500",
+      riskProfile: riskProfile.tier, initialBalance: 100000,
+      createdAt: Date.now(),
+    };
+    onCreate(session);
+  };
+
+  return (
+    <div style={{ backgroundColor: C.bg, color: C.text }} className="fixed inset-0 z-50 flex flex-col">
+      <div style={{ backgroundColor: C.surface, borderBottomColor: C.border }} className="border-b px-4 py-3">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <button onClick={onCancel} style={{ color: C.dim }} className="text-xs font-mono uppercase tracking-wider">Cancel</button>
+          <div style={{ color: C.text }} className="text-sm font-bold">New Session</div>
+          <div className="w-12" />
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="max-w-md mx-auto space-y-4">
+          <div>
+            <label style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] font-mono font-bold block mb-1">SESSION NAME (optional)</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. July 2026 Paper Run"
+              style={{ backgroundColor: C.surface, borderColor: C.border, color: C.text }}
+              className="w-full px-3 py-2.5 border rounded text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] font-mono font-bold block mb-1">START DATE</label>
+              <input type="date" value={start} onChange={(e) => setStart(e.target.value)}
+                style={{ backgroundColor: C.surface, borderColor: C.border, color: C.text }}
+                className="w-full px-3 py-2.5 border rounded text-sm font-mono" />
+            </div>
+            <div>
+              <label style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] font-mono font-bold block mb-1">END DATE</label>
+              <input type="date" value={end} onChange={(e) => setEnd(e.target.value)}
+                style={{ backgroundColor: C.surface, borderColor: C.border, color: C.text }}
+                className="w-full px-3 py-2.5 border rounded text-sm font-mono" />
+            </div>
+          </div>
+          <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-lg p-3">
+            <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] font-mono font-bold mb-2">UNIVERSE</div>
+            <div className="flex items-center gap-2"><Lock size={11} color={C.dim}/><span style={{ color: C.text }} className="text-sm">S&amp;P 500 (locked)</span></div>
+          </div>
+          {tier ? (
+            <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-lg p-3">
+              <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] font-mono font-bold mb-2">RISK PROFILE (SNAPSHOT)</div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-base">{tier.icon}</span>
+                <span style={{ color: C.text }} className="text-sm font-bold">{tier.name}</span>
+              </div>
+              <div style={{ color: C.dim }} className="text-[11px] font-mono">{tier.risk.toFixed(2)}%/trade &middot; {tier.rrMin.toFixed(1)}R &middot; {tier.maxPos} positions &middot; {tier.dailyStop.toFixed(1)}% daily stop</div>
+            </div>
+          ) : (
+            <div style={{ backgroundColor: C.surface, borderColor: C.short }} className="border rounded-lg p-3">
+              <div style={{ color: C.short }} className="text-xs">Risk profile required. Take the assessment first.</div>
+            </div>
+          )}
+          <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-lg p-3">
+            <div style={{ color: C.muted }} className="text-[10px] tracking-[0.2em] font-mono font-bold mb-1">INITIAL BALANCE</div>
+            <div style={{ color: C.text }} className="text-lg font-mono font-bold">$100,000.00</div>
+          </div>
+          <button disabled={!valid} onClick={create}
+            style={{ backgroundColor: valid ? C.long : C.track, color: valid ? "#fff" : C.dim }}
+            className="w-full py-3.5 rounded-lg font-bold text-sm tracking-wide">
+            Create Session
+          </button>
+          <div style={{ color: C.dim }} className="text-[10px] text-center px-4">
+            Session execution pending the MMG JS engine port (v.20-v.22). Sessions save now; auto-trading runs once the engine is wired.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SessionListCard({ sessions, onCreate }) {
+  return (
+    <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl overflow-hidden">
+      <div style={{ borderColor: C.border }} className="px-3 py-2.5 border-b flex items-center gap-2">
+        <Calendar size={12} color={C.muted} />
+        <div style={{ color: C.muted }} className="text-[9px] tracking-[0.2em] font-mono font-bold flex-1">TRADING SESSIONS</div>
+        <div style={{ color: C.dim }} className="text-[10px] font-mono">{sessions.length}</div>
+      </div>
+      {sessions.length === 0 ? (
+        <div className="px-3 py-2.5">
+          <div style={{ color: C.dim }} className="text-[11px] mb-2">No sessions yet.</div>
+          <button onClick={onCreate} style={{ backgroundColor: C.long, color: "#fff" }} className="w-full py-2 rounded font-bold text-xs">+ Create Session</button>
+        </div>
+      ) : (
+        <div>
+          {sessions.map((s) => {
+            const tier = RISK_TIERS[s.riskProfile];
+            return (
+              <div key={s.id} style={{ borderColor: C.border }} className="px-3 py-2 border-b last:border-b-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <div style={{ color: C.text }} className="text-xs font-bold flex-1">{s.name}</div>
+                  <span style={{ backgroundColor: C.track, color: C.dim }} className="text-[8px] font-mono px-1.5 py-0.5 rounded uppercase">{s.status}</span>
+                </div>
+                <div style={{ color: C.dim }} className="text-[10px] font-mono">{s.startDate} &rarr; {s.endDate}</div>
+                {tier && <div style={{ color: C.muted }} className="text-[10px] mt-0.5">{tier.icon} {tier.name} &middot; ${s.initialBalance.toLocaleString()}</div>}
+              </div>
+            );
+          })}
+          <div className="px-3 py-2">
+            <button onClick={onCreate} style={{ backgroundColor: C.long, color: "#fff" }} className="w-full py-2 rounded font-bold text-xs">+ Create Session</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MTSApp() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [view, setView] = useState("scanner");
+  const [returnTo, setReturnTo] = useState("scanner");
+  const [selected, setSelected] = useState(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [positions, setPositions] = useState(initialPositions);
+  const [fills, setFills] = useState({});
+  const [watchlists, setWatchlists] = useState(initialWatchlists);
+  const [universe, setUniverse] = useState(UNIVERSE_SEED);
+  const [darkMode, setDarkMode] = useState(false);
+  // v.19 state
+  const [riskProfile, setRiskProfile] = useState(() => loadJSON(STORAGE.RISK, null));
+  const [polygonKey, setPolygonKey] = useState(() => loadJSON(STORAGE.KEY, ""));
+  const [paperAccount, setPaperAccount] = useState(() => loadJSON(STORAGE.ACCT, { balance: 100000, startingBalance: 100000, openedAt: Date.now() }));
+  const [sessions, setSessions] = useState(() => loadJSON(STORAGE.SESS, []));
+  const [overlay, setOverlay] = useState(null);
+
+  const completeRiskAssessment = (profile) => { setRiskProfile(profile); saveJSON(STORAGE.RISK, profile); setOverlay(null); };
+  const cancelRiskAssessment = () => { if (riskProfile) setOverlay(null); };
+  const updatePolygonKey = (k) => { setPolygonKey(k); saveJSON(STORAGE.KEY, k); };
+  const resetPaperAccount = () => { const fresh = { balance: 100000, startingBalance: 100000, openedAt: Date.now() }; setPaperAccount(fresh); saveJSON(STORAGE.ACCT, fresh); };
+  const createSession = (session) => { const next = [session, ...sessions]; setSessions(next); saveJSON(STORAGE.SESS, next); setOverlay(null); };
+
+  useEffect(() => {
+    if (loggedIn && !riskProfile && !overlay) setOverlay("risk-assessment");
+  }, [loggedIn, riskProfile, overlay]);
+
+  // v.20 — live data polling for TSLA
+  const [liveData, setLiveData] = useState({});
+  useEffect(() => {
+    if (!polygonKey || !loggedIn) return;
+    let cancelled = false;
+    const pull = async () => {
+      try {
+        const to = ymdDaysAgo(0);
+        const from = ymdDaysAgo(10);
+        const bars = await fetchMassiveBars("TSLA", 15, "minute", from, to, polygonKey);
+        if (cancelled) return;
+        const ind = computeIndicators(bars);
+        const bbCycle = computeBBCycle(bars);
+        const gates = computeMMGGates(bars, bbCycle);
+        const status = ind ? "ok" : "warmup";
+        setLiveData(prev => ({ ...prev, TSLA: { indicators: ind, bbCycle, gates, bars, status, lastFetch: Date.now() } }));
+        if (ind) {
+          console.log("[v.20] TSLA " + new Date(ind.timestamp).toLocaleString("en-US", { timeZone: "America/New_York" }) +
+            " | O=" + ind.open + " H=" + ind.high + " L=" + ind.low + " C=" + ind.close +
+            "\n  EMA15=" + (ind.ema15 ? ind.ema15.toFixed(2) : "n/a") +
+            "  VWAP=" + (ind.vwap ? ind.vwap.toFixed(2) : "n/a") +
+            "  BB=" + ind.bbBasis.toFixed(2) + "/" + ind.bbUpper.toFixed(2) + "/" + ind.bbLower.toFixed(2) +
+            "  bbWidth=" + ind.bbWidth.toFixed(4) + "  bbWidthAvg=" + (ind.bbWidthAvg ? ind.bbWidthAvg.toFixed(4) : "n/a") +
+            "  SAR=" + (ind.sar ? ind.sar.toFixed(2) : "n/a") +
+            "\n  ATR14=" + (ind.atr14 ? ind.atr14.toFixed(4) : "n/a") +
+            "  RSI14=" + (ind.rsi14 ? ind.rsi14.toFixed(2) : "n/a") +
+            "  ROC9=" + (ind.roc9 ? ind.roc9.toFixed(4) : "n/a") +
+            "  macdHist=" + (ind.macdHist ? ind.macdHist.toFixed(4) : "n/a") +
+            "  rvol=" + (ind.rvol ? ind.rvol.toFixed(4) : "n/a") +
+            "  bars=" + ind.barsLoaded);
+          if (bbCycle) {
+            console.log("[v.22a] TSLA BB Cycle:" +
+              " sqz=" + bbCycle.bbSqueezing +
+              " openStart=" + bbCycle.bbOpeningStart +
+              " trueExp=" + bbCycle.bbTrueExpansion +
+              " alive=" + bbCycle.bbExpansionAlive +
+              " barsSince=" + bbCycle.barsSinceBBExpansion +
+              " expRatePct=" + bbCycle.bbExpansionRatePct.toFixed(2));
+          }
+          if (gates) {
+            console.log("[v.22b] TSLA Gates:" +
+              " manip=" + gates.manipulationPhase +
+              " longEntry=" + gates.longEntryTrigger +
+              " shortEntry=" + gates.shortEntryTrigger +
+              " momScore=" + gates.momentumScore.toFixed(2) +
+              " sarBull=" + gates.long_sarBull +
+              " sarBear=" + gates.short_sarBear +
+              " longTurn=" + gates.long_longTurn +
+              " shortTurn=" + gates.short_shortTurn);
+          }
+        }
+      } catch (e) {
+        if (cancelled) return;
+        console.error("[v.20] Massive fetch error:", e.message);
+        setLiveData(prev => ({ ...prev, TSLA: { ...(prev.TSLA || {}), status: "error", error: e.message, lastFetch: Date.now() } }));
+      }
+    };
+    pull();
+    const iv = setInterval(pull, 60000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [polygonKey, loggedIn]);
+
+  // Enrich universe with TSLA live close + volume
+  const enrichedUniverse = useMemo(() => {
+    const tsla = liveData.TSLA && liveData.TSLA.indicators;
+    if (!tsla) return universe;
+    return universe.map(t => {
+      if (t.sym !== "TSLA") return t;
+      const prevClose = liveData.TSLA.bars && liveData.TSLA.bars.length > 1 
+        ? liveData.TSLA.bars[liveData.TSLA.bars.length - 2].c 
+        : tsla.close;
+      const change = tsla.close - prevClose;
+      return {
+        ...t,
+        price: tsla.close,
+        change: change,
+        changePct: (change / prevClose) * 100,
+        volume: tsla.volume,
+        atr: tsla.atr14 || t.atr,
+        rvol: tsla.rvol || t.rvol,
+        _live: tsla,
+      };
+    });
+  }, [universe, liveData]);
+
+  // v.21 — Live Heartbeat polling for 6 ETF proxies
+  const [liveHeartbeat, setLiveHeartbeat] = useState({});
+  useEffect(() => {
+    if (!polygonKey || !loggedIn) return;
+    let cancelled = false;
+    const pull = async () => {
+      try {
+        const syms = Object.values(HEARTBEAT_LIVE).map(h => h.sym);
+        const snaps = await fetchSnapshot(syms, polygonKey);
+        if (cancelled) return;
+        const map = {};
+        for (const key of Object.keys(HEARTBEAT_LIVE)) {
+          const def = HEARTBEAT_LIVE[key];
+          const s = snaps.find(x => x.ticker === def.sym);
+          if (s && s.day && s.day.c) {
+            map[key] = {
+              label: def.label, type: "price",
+              value: s.day.c < 100 ? s.day.c.toFixed(2) : s.day.c.toFixed(0),
+              change: s.todaysChangePerc != null ? s.todaysChangePerc : 0,
+              live: true,
+            };
+          }
+        }
+        setLiveHeartbeat(map);
+      } catch (e) {
+        if (!cancelled) console.error("[v.21] Heartbeat error:", e.message);
+      }
+    };
+    pull();
+    const iv = setInterval(pull, 60000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [polygonKey, loggedIn]);
+
+  // v.21 — Top-20 RVOL scanner
+  const [topRVOL, setTopRVOL] = useState([]);
+  const [scannerStatus, setScannerStatus] = useState({ status: "idle", lastFetch: null, avgVolDate: null, tickersFound: 0 });
+
+  useEffect(() => {
+    if (!polygonKey || !loggedIn) return;
+    let cancelled = false;
+
+    // Ensure 20-day avg vol cache is fresh (rebuilds if missing or >24h old)
+    const ensureAvgVolume = async () => {
+      const cached = loadJSON(STORAGE_AVGVOL, null);
+      const stale = !cached || (Date.now() - cached.builtAt) > 24 * 3600 * 1000;
+      if (!stale) {
+        setScannerStatus(s => ({ ...s, avgVolDate: new Date(cached.builtAt).toLocaleDateString(), tickersFound: cached.tickersFound }));
+        return cached.avg;
+      }
+      setScannerStatus(s => ({ ...s, status: "building" }));
+      console.log("[v.21] Building 20-day avg volume cache (one-time, ~30s)...");
+      const built = await buildAvgVolume20d(SP500, polygonKey);
+      if (cancelled) return null;
+      saveJSON(STORAGE_AVGVOL, built);
+      setScannerStatus(s => ({ ...s, avgVolDate: new Date(built.builtAt).toLocaleDateString(), tickersFound: built.tickersFound }));
+      console.log(`[v.21] avg-vol cache built for ${built.tickersFound} tickers`);
+      return built.avg;
+    };
+
+    const pullScanner = async () => {
+      try {
+        const avg = await ensureAvgVolume();
+        if (cancelled || !avg) return;
+        const snaps = await fetchSnapshot(SP500, polygonKey);
+        if (cancelled) return;
+        const ranked = [];
+        for (const s of snaps) {
+          if (!s.day || !s.day.v) continue;
+          const avgV = avg[s.ticker];
+          if (!avgV || avgV < 100000) continue; // skip illiquid
+          const rvol = s.day.v / avgV;
+          ranked.push({
+            sym: s.ticker,
+            price: s.day.c,
+            change: s.todaysChange || 0,
+            changePct: s.todaysChangePerc || 0,
+            volume: s.day.v,
+            avgVol: avgV,
+            rvol: rvol,
+            high: s.day.h, low: s.day.l, open: s.day.o,
+          });
+        }
+        ranked.sort((a, b) => b.rvol - a.rvol);
+        setTopRVOL(ranked.slice(0, 20));
+        setScannerStatus(s => ({ ...s, status: "ok", lastFetch: Date.now() }));
+      } catch (e) {
+        if (cancelled) return;
+        console.error("[v.21] Scanner error:", e.message);
+        setScannerStatus(s => ({ ...s, status: "error", error: e.message }));
+      }
+    };
+
+    pullScanner();
+    const iv = setInterval(pullScanner, 60000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [polygonKey, loggedIn]);
+
+  // Build the Scanner's universe from top-20 RVOL, enriching with mock MMG fields
+  // until v.22 ports the engine. Heartbeat tickers get the same treatment for the
+  // <Deck/> path. Falls back to existing enrichedUniverse if no live scanner data.
+  const liveScanner = useMemo(() => {
+    if (!topRVOL || topRVOL.length === 0) return null;
+    return topRVOL.map(r => ({
+      sym: r.sym,
+      name: r.sym,
+      sector: "—",
+      price: r.price,
+      change: r.change,
+      changePct: r.changePct,
+      volume: r.volume,
+      avgVol: r.avgVol,
+      rvol: r.rvol,
+      atr: 0,
+      atrDistance: 0,
+      mmgState: "Departed",      // placeholder until v.22 engine ports
+      campaign: "—",
+      direction: "Neutral",
+      _liveRow: true,
+    }));
+  }, [topRVOL]);
+
+  // Final universe presented to Scanner/Active/etc: top-20 RVOL if available, else mock.
+  const universeForUI = liveScanner || enrichedUniverse;
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", darkMode);
+  }, [darkMode]);
+
+  const activeCount = Object.values(positions).filter(p => p.side !== "flat").length;
+  const addCustomTicker = (sym) => {
+    setUniverse(u => {
+      if (u.find(t => t.sym === sym)) return u;
+      return [...u, generateMockTicker(sym)];
+    });
+  };
+  const handleSelect = (sym, from) => { setSelected(sym); setReturnTo(from); setView("deck"); };
+  const handleSelectArticle = (id) => { setSelectedArticle(id); setView("library-article"); };
+
+  if (!loggedIn) return <LoginPage onLogin={() => setLoggedIn(true)} />;
+  const showMacro = view !== "library-article";
+  const showTabs = view !== "deck" && view !== "library-article";
+  const article = LIBRARY_ARTICLES.find(a => a.id === selectedArticle);
+
+  return (
+    <div style={{ backgroundColor: C.bg, color: C.text }} className="min-h-screen font-sans">
+      {showMacro && <MarketHeartbeat account={ACCOUNT_DATA} liveHeartbeat={liveHeartbeat} />}
+      <div className={`max-w-md mx-auto px-3 py-3 ${showTabs ? "pb-20" : "pb-4"}`}>
+        {view === "scanner" && <Scanner universe={universeForUI} positions={positions} onSelect={(sym) => handleSelect(sym, "scanner")} />}
+        {view === "active" && <Active universe={enrichedUniverse} positions={positions} onSelect={(sym) => handleSelect(sym, "active")} />}
+        {view === "watchlist" && <WatchlistView watchlists={watchlists} setWatchlists={setWatchlists} universe={enrichedUniverse} addCustomTicker={addCustomTicker} positions={positions} onSelect={(sym) => handleSelect(sym, "watchlist")} />}
+        {view === "library" && <Library articles={LIBRARY_ARTICLES} onSelect={handleSelectArticle} />}
+        {view === "library-article" && article && <LibraryArticleDetail article={article} onBack={() => setView("library")} />}
+        {view === "account" && <AccountSummary 
+          account={ACCOUNT_DATA} positions={positions} universe={enrichedUniverse}
+          darkMode={darkMode} setDarkMode={setDarkMode}
+          onLogout={() => setLoggedIn(false)} onSelect={(sym) => handleSelect(sym, "account")}
+          riskProfile={riskProfile} onRetakeRisk={() => setOverlay("risk-assessment")}
+          polygonKey={polygonKey} onSetPolygonKey={updatePolygonKey}
+          paperAccount={paperAccount} onResetAccount={resetPaperAccount}
+          sessions={sessions} onNewSession={() => setOverlay("session-create")}
+          liveData={liveData}
+          scannerStatus={scannerStatus} topRVOL={topRVOL}
+        />}
+        {view === "deck" && <Deck ticker={selected} universe={enrichedUniverse} positions={positions} setPositions={setPositions} fills={fills} setFills={setFills} onBack={() => setView(returnTo)} />}
+      </div>
+      {showTabs && <BottomTabBar view={view} setView={setView} activeCount={activeCount} />}
+      {overlay === "risk-assessment" && (
+        <RiskAssessmentWizard
+          onComplete={completeRiskAssessment}
+          onCancel={cancelRiskAssessment}
+          existingProfile={riskProfile}
+          allowCancel={!!riskProfile}
+        />
+      )}
+      {overlay === "session-create" && (
+        <SessionCreateForm
+          riskProfile={riskProfile}
+          onCancel={() => setOverlay(null)}
+          onCreate={createSession}
+        />
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<MTSApp />);
+</script>
+</body>
+</html>
