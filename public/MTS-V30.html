@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>MTS v.30 — Options Class Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: #F7F7F4; --surface: #FFFFFF; --border: #DCDAD2; --border-strong: #C0BEB6;
+      --text: #0A0A0A; --muted: #4A4A4A; --dim: #777777; --locked: #B0AEA6;
+      --long: #16A34A; --short: #DC2626; --close: #D97706;
+      --add: #0891B2; --tp: #7C3AED; --neutral: #A8A8A8; --track: #EFEDE7;
+      --long-soft: rgba(22,163,74,0.12); --short-soft: rgba(220,38,38,0.12);
+      --close-soft: rgba(217,119,6,0.12); --add-soft: rgba(8,145,178,0.12); --tp-soft: rgba(124,58,237,0.12);
+      --surface-disabled: #FAFAF7;
+    }
+    body.dark {
+      --bg: #0E1014; --surface: #181B22; --border: #3A3F4B; --border-strong: #4E5360;
+      --text: #FFFFFF; --muted: #C8CCD6; --dim: #8E94A4; --locked: #5A5F6B;
+      --long: #4ADE80; --short: #F87171; --close: #FBBF24;
+      --add: #38BDF8; --tp: #C084FC; --neutral: #9CA0AB; --track: #262A33;
+      --long-soft: rgba(74,222,128,0.16); --short-soft: rgba(248,113,113,0.16);
+      --close-soft: rgba(251,191,36,0.16); --add-soft: rgba(56,189,248,0.16); --tp-soft: rgba(192,132,252,0.16);
+      --surface-disabled: #14171D;
+    }
+    html, body { margin: 0; padding: 0; background: var(--bg); -webkit-tap-highlight-color: transparent; }
+    * { -webkit-user-select: none; user-select: none; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="padding: 40px 20px; font-family: monospace; color: #6B6B6B; text-align: center;">
+      <div style="font-size: 28px; font-weight: bold; color: #1A1A1A;">MTS</div>
+      <div style="font-size: 10px; letter-spacing: 0.25em; margin-top: 4px;">MONGOL TRADING SYSTEM</div>
+      <div style="margin-top: 24px; font-size: 12px;">compiling React + JSX (v.30 / Options Class Manager)...</div>
+    </div>
+  </div>
+  <script>
+    window.addEventListener('error', function(e) {
+      var r = document.getElementById('root');
+      if (r) r.innerHTML = '<div style="padding:20px;font-family:monospace;color:#DC2626;font-size:12px;"><b>Error:</b><br><br>' + (e.message||'unknown') + '<br><br><small style="color:#6B6B6B;">' + (e.filename||'') + (e.lineno?':'+e.lineno:'') + '</small></div>';
+    });
+  </script>
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect, useRef } = React;
+// ---- Icons ----
+function Icon({ size = 16, color = "currentColor", strokeWidth = 2, children }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
+}
+const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Icon>;
+const Zap = (p) => <Icon {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
+const Eye = (p) => <Icon {...p}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></Icon>;
+const BookOpen = (p) => <Icon {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>;
+const User = (p) => <Icon {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Icon>;
+const ChevronLeft = (p) => <Icon {...p}><polyline points="15 18 9 12 15 6"/></Icon>;
+const ChevronUp = (p) => <Icon {...p}><polyline points="18 15 12 9 6 15"/></Icon>;
+const ChevronDown = (p) => <Icon {...p}><polyline points="6 9 12 15 18 9"/></Icon>;
+const Settings = (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
+const LogOut = (p) => <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
+const Plus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
+const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
+const Edit2 = (p) => <Icon {...p}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></Icon>;
+const Trash2 = (p) => <Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Icon>;
+const Sun = (p) => <Icon {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></Icon>;
+const Moon = (p) => <Icon {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></Icon>;
+const Shield = (p) => <Icon {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></Icon>;
+const Calendar = (p) => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Icon>;
+const Key = (p) => <Icon {...p}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></Icon>;
+const Wallet = (p) => <Icon {...p}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></Icon>;
+const Check = (p) => <Icon {...p}><polyline points="20 6 9 17 4 12"/></Icon>;
+const Lock = (p) => <Icon {...p}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Icon>;
+const Heart = (p) => <Icon {...p}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></Icon>;
+// v.30 new icons
+const BarChart2 = (p) => <Icon {...p}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></Icon>;
+const Target = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></Icon>;
+// ---- Theme tokens ----
+const C = {
+  bg: "var(--bg)", surface: "var(--surface)", border: "var(--border)", borderStrong: "var(--border-strong)",
+  text: "var(--text)", muted: "var(--muted)", dim: "var(--dim)", locked: "var(--locked)",
+  long: "var(--long)", short: "var(--short)", close: "var(--close)",
+  add: "var(--add)", tp: "var(--tp)", neutral: "var(--neutral)", track: "var(--track)",
+  surfaceDisabled: "var(--surface-disabled)",
+};
+const MMG_STATES = ["Compression", "Expansion", "Midline", "SAR", "Volume", "B2O-signal", "S2O-signal", "Caution", "GetOff"];
+const CAMPAIGN_STATES = ["Boarding", "Rolling", "Departed", "Station"];
+// ---- Data ----
+const UNIVERSE_SEED = [
+  { sym: "NVDA", price: 132.07, change: -1.21, atr: 4.62, mmgState: "B2O-signal", campaign: "Boarding", direction: "long",  rvol: 1.92 },
+  { sym: "AVGO", price: 1620.4, change:  2.14, atr: 38.2, mmgState: "B2O-signal", campaign: "Boarding", direction: "long",  rvol: 1.74 },
+  { sym: "TSLA", price: 248.91, change:  2.07, atr: 7.83, mmgState: "Expansion",  campaign: "Boarding", direction: "long",  rvol: 1.68 },
+  { sym: "AAPL", price: 184.52, change:  0.84, atr: 2.38, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.40 },
+  { sym: "META", price: 580.12, change:  1.32, atr: 11.4, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.55 },
+  { sym: "AMZN", price: 195.34, change:  0.62, atr: 3.21, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.28 },
+  { sym: "MSFT", price: 420.18, change:  0.41, atr: 5.84, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.12 },
+  { sym: "GOOGL",price: 175.62, change:  0.28, atr: 3.04, mmgState: "Compression", campaign: "Boarding", direction: "long",  rvol: 0.92 },
+  { sym: "AMD",  price: 165.83, change: -2.41, atr: 5.97, mmgState: "S2O-signal", campaign: "Rolling",  direction: "short", rvol: 1.81 },
+  { sym: "NFLX", price: 705.21, change: -1.84, atr: 13.8, mmgState: "S2O-signal", campaign: "Boarding", direction: "short", rvol: 1.62 },
+  { sym: "CRM",  price: 285.44, change: -1.12, atr: 6.21, mmgState: "Expansion",  campaign: "Boarding", direction: "short", rvol: 1.48 },
+  { sym: "ORCL", price: 152.18, change:  0.52, atr: 2.84, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 1.08 },
+  { sym: "JPM",  price: 220.45, change:  0.31, atr: 3.12, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 0.94 },
+  { sym: "V",    price: 285.62, change:  0.18, atr: 3.41, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.81 },
+  { sym: "MA",   price: 470.34, change:  0.22, atr: 5.62, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.78 },
+  { sym: "WMT",  price:  88.12, change: -0.42, atr: 1.34, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 0.88 },
+  { sym: "COST", price: 880.45, change: -0.81, atr: 12.4, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 1.02 },
+  { sym: "UNH",  price: 510.18, change: -1.32, atr: 8.92, mmgState: "GetOff",     campaign: "Station",  direction: "long",  rvol: 1.45 },
+  { sym: "JNJ",  price: 152.34, change:  0.12, atr: 1.82, mmgState: "SAR",        campaign: "Rolling",  direction: "long",  rvol: 0.92 },
+  { sym: "PG",   price: 168.52, change:  0.08, atr: 1.94, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.72 },
+  { sym: "XOM",  price: 115.24, change:  1.42, atr: 2.18, mmgState: "Volume",     campaign: "Rolling",  direction: "long",  rvol: 1.62 },
+  { sym: "ABBV", price: 198.42, change: -0.32, atr: 3.04, mmgState: "Midline",    campaign: "Rolling",  direction: "long",  rvol: 0.98 },
+  { sym: "HD",   price: 388.62, change: -0.62, atr: 5.41, mmgState: "Caution",    campaign: "Departed", direction: "long",  rvol: 0.85 },
+  { sym: "KO",   price:  67.42, change:  0.18, atr: 0.84, mmgState: "Compression", campaign: "Boarding", direction: "neutral", rvol: 0.68 },
+  { sym: "SPY",  price: 612.45, change:  0.31, atr: 3.94, mmgState: "Expansion",  campaign: "Rolling",  direction: "long",  rvol: 1.22 },
+];
+const initialPositions = {
+  NVDA: { side: "long",  entryPrice: 128.50, size: 100, addFired: false, tpFired: false, entryTime: Date.now() - 23 * 60 * 1000 },
+  AMD:  { side: "short", entryPrice: 168.00, size: 100, addFired: true,  tpFired: false, entryTime: Date.now() - 47 * 60 * 1000 },
+  AAPL: { side: "long",  entryPrice: 182.00, size: 150, addFired: true,  tpFired: true,  entryTime: Date.now() - 132 * 60 * 1000 },
+};
+const MACRO_DATA = {
+  SPY:  { label: "SPY",  value: "612.45", change: 0.31,  type: "price" },
+  VIX:  { label: "VIX",  value: "14.20",  change: -2.14, type: "price" },
+  GC:   { label: "GOLD", value: "2,410",  change: 0.42,  type: "price" },
+  SI:   { label: "SILV", value: "32.50",  change: 0.68,  type: "price" },
+  CL:   { label: "OIL",  value: "78.40",  change: 1.21,  type: "price" },
+  DXY:  { label: "DXY",  value: "105.8",  change: -0.18, type: "price" },
+  T2:   { label: "2Y",   value: "4.18%",  change: -0.02, type: "yield" },
+  T5:   { label: "5Y",   value: "4.05%",  change: -0.03, type: "yield" },
+  T15:  { label: "15Y*", value: "4.38%",  change: -0.01, type: "yield" },
+  T20:  { label: "20Y",  value: "4.45%",  change:  0.00, type: "yield" },
+  MORT: { label: "MORT", value: "6.85%",  change: -0.04, type: "yield" },
+  FED:  { label: "FED",  value: "HAWK",   tone: "short", type: "fed" },
+  CONS: { label: "CONS", value: "71.4",   change: 1.20,  type: "macro" },
+  CPI:  { label: "CPI",  value: "2.4%",   change: -0.1,  type: "macro" },
+  PPI:  { label: "PPI",  value: "2.1%",   change:  0.1,  type: "macro" },
+  NFP:  { label: "NFP",  value: "+185K",  change: null,  type: "macro" },
+};
+const MACRO_ORDER = ["SPY", "VIX", "GC", "SI", "CL", "DXY", "T2", "T5", "T15", "T20", "MORT", "FED", "CONS", "CPI", "PPI", "NFP"];
+const RISK_QUESTIONS = [
+  { id: "experience", question: "How long have you been actively trading?",
+    options: ["Less than a year", "1 to 3 years", "3 to 7 years", "More than 7 years"] },
+  { id: "exposure", question: "Compared to your other savings, this trading account is:",
+    options: ["A small slice (under 5%)", "A meaningful chunk (5-15%)", "A big part (15-30%)", "Most of my savings (30%+)"] },
+  { id: "reaction", question: "If this account lost 20% in a single week, you would:",
+    options: ["Stop and reassess everything", "Trade smaller until comfortable", "Stick with my plan", "Press harder to recover faster"] },
+  { id: "maxLoss", question: "The biggest loss you would accept before quitting this strategy:",
+    options: ["5% (very tight)", "10%", "20%", "30% or more"] },
+  { id: "positions", question: "How many open positions do you want at once?",
+    options: ["Just one", "Two or three", "Four or five", "Six or more"] },
+  { id: "perTradeRisk", question: "How much are you willing to risk on a single trade?",
+    options: ["0.25% of account", "0.5%", "1.0%", "2.0%"] },
+  { id: "dailyStop", question: "You have lost money today. You stop trading when:",
+    options: ["Down 1.5%", "Down 3%", "Down 5%", "I keep going if setups are strong"] },
+  { id: "horizon", question: "You usually want to hold a trade for:",
+    options: ["Minutes (scalping)", "Hours, closed same day", "Days to a week", "Weeks or longer"] },
+];
+const RISK_TIERS = {
+  conservative: { name: "Conservative",     icon: "🛡️", risk: 0.25, rrMin: 1.5, maxPos: 1, dailyStop: -1.5, description: "Capital preservation first. One position at a time." },
+  moderate:     { name: "Moderate",         icon: "⚖️", risk: 0.50, rrMin: 2.0, maxPos: 3, dailyStop: -3.0, description: "Balanced growth. Small portfolio." },
+  aggressive:   { name: "Aggressive",       icon: "🎯", risk: 1.00, rrMin: 2.5, maxPos: 5, dailyStop: -5.0, description: "Higher conviction sizing. Multiple positions." },
+  vAggressive:  { name: "Very Aggressive",  icon: "⚡", risk: 2.00, rrMin: 3.0, maxPos: 7, dailyStop: -7.0, description: "Maximum exposure. Big swings expected." },
+};
+function scoreRiskAnswers(answers) {
+  const vals = Object.values(answers);
+  if (vals.length === 0) return { score: 0, tier: "conservative" };
+  const total = vals.reduce((a, b) => a + b, 0);
+  const avg = total / vals.length;
+  let tier;
+  if (avg < 0.75) tier = "conservative";
+  else if (avg < 1.5) tier = "moderate";
+  else if (avg < 2.25) tier = "aggressive";
+  else tier = "vAggressive";
+  return { score: avg, tier };
+}
+const STORAGE = {
+  RISK: "mts-v19-risk-profile",
+  KEY: "mts-v19-polygon-key",
+  ACCT: "mts-v19-paper-account",
+  SESS: "mts-v19-sessions",
+  LEDGER: "mts-v22c2-paper-ledger",
+  EXEC_STATE: "mts-v22c2-exec-state",
+  SHOW_DIAG: "mts-v23-show-diagnostics",
+  TREND_CACHE: "mts-v25-trend-cache",
+  CC_CACHE: "mts-v25-cc-cache",
+  // V30 aliases used by MTSApp
+  POLYGON_KEY:  "mts-v19-polygon-key",
+  RISK_PROFILE: "mts-v30-risk-profile",
+  SESSIONS:     "mts-v19-sessions",
+  WATCHLIST:    "mts-v30-watchlist",
+};
+// ============================================================================
+// v.30 — Options Class Manager Storage + Constants
+// ============================================================================
+const STORAGE_OPTIONS = {
+  LEDGER:  "mts-v30-options-ledger",
+  TARGETS: "mts-v30-options-targets",
+};
+const OPTIONS_CLASSES = [
+  { key: "CC",  name: "Covered Calls",      short: "CC",  desc: "Sell calls vs. long stock",     tone: "tp"    },
+  { key: "CSP", name: "Cash-Secured Puts",  short: "CSP", desc: "Sell puts w/ cash collateral",  tone: "add"   },
+  { key: "CS",  name: "Credit Spreads",     short: "CS",  desc: "Bull put / bear call spreads",  tone: "close" },
+  { key: "IC",  name: "Iron Condors",       short: "IC",  desc: "Sell both sides · theta play",  tone: "long"  },
+  { key: "LO",  name: "Long Options",       short: "LO",  desc: "Directional debit plays",       tone: "short" },
+];
+const DEFAULT_OPTIONS_TARGETS = {
+  CC:  { weekly: 500,  monthly: 2000 },
+  CSP: { weekly: 300,  monthly: 1200 },
+  CS:  { weekly: 400,  monthly: 1600 },
+  IC:  { weekly: 600,  monthly: 2400 },
+  LO:  { weekly: 200,  monthly: 800  },
+};
+function computeOptionsStats(ledger, classKey) {
+  const now = Date.now();
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+  const positions = classKey ? ledger.filter(p => p.optClass === classKey) : ledger;
+  const open = positions.filter(p => p.status === "open");
+  const closed = positions.filter(p => p.status === "closed");
+  const weekPnL = closed.filter(p => p.closeDate && (now - p.closeDate) < WEEK_MS).reduce((s, p) => s + (p.realizedPnL || 0), 0);
+  const monthPnL = closed.filter(p => p.closeDate && (now - p.closeDate) < MONTH_MS).reduce((s, p) => s + (p.realizedPnL || 0), 0);
+  const winners = closed.filter(p => (p.realizedPnL || 0) > 0).length;
+  const losers = closed.length - winners;
+  const winRate = closed.length > 0 ? winners / closed.length : 0;
+  return { open, closed, weekPnL, monthPnL, unrealized: 0, winners, losers, winRate };
+}
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const target = new Date(dateStr + "T16:00:00-04:00").getTime();
+  return Math.ceil((target - Date.now()) / 86400000);
+}
+function expiryLabel(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return "—";
+  if (d < 0) return "expired";
+  if (d === 0) return "exp TODAY";
+  if (d === 1) return "exp 1d";
+  return "exp " + d + "d";
+}
+function expiryColor(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return C.dim;
+  if (d <= 1) return C.short;
+  if (d <= 5) return C.close;
+  return C.muted;
+}
+function loadJSON(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function saveJSON(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+// ---- All the indicator math from V25 (unchanged) ----
+function _last(a) { return a[a.length - 1]; }
+function _slice(a, n) { return a.slice(Math.max(0, a.length - n)); }
+function sma(values, period) {
+  if (!values || values.length < period) return null;
+  const w = _slice(values, period);
+  return w.reduce((a, b) => a + b, 0) / period;
+}
+function popStdev(values, period) {
+  if (!values || values.length < period) return null;
+  const w = _slice(values, period);
+  const mean = w.reduce((a, b) => a + b, 0) / period;
+  const sq = w.reduce((acc, v) => acc + (v - mean) * (v - mean), 0);
+  return Math.sqrt(sq / period);
+}
+function emaSeries(values, period) {
+  if (!values || values.length < period) return [];
+  const out = [];
+  const seed = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  out.push(seed);
+  const k = 2 / (period + 1);
+  let v = seed;
+  for (let i = period; i < values.length; i++) {
+    v = values[i] * k + v * (1 - k);
+    out.push(v);
+  }
+  return out;
+}
+function ema(values, period) { const s = emaSeries(values, period); return s.length ? _last(s) : null; }
+function wilderRMA(values, period) {
+  if (!values || values.length < period) return null;
+  let rma = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < values.length; i++) rma = (rma * (period - 1) + values[i]) / period;
+  return rma;
+}
+function rsi(closes, period = 14) {
+  if (!closes || closes.length < period + 1) return null;
+  const gains = [], losses = [];
+  for (let i = 1; i < closes.length; i++) { const d = closes[i] - closes[i-1]; gains.push(d > 0 ? d : 0); losses.push(d < 0 ? -d : 0); }
+  const ag = wilderRMA(gains, period), al = wilderRMA(losses, period);
+  if (ag === null || al === null) return null;
+  if (al === 0) return 100;
+  return 100 - 100 / (1 + ag / al);
+}
+function roc(closes, period) {
+  if (!closes || closes.length < period + 1) return null;
+  return (_last(closes) - closes[closes.length - 1 - period]) / closes[closes.length - 1 - period] * 100;
+}
+function macd(closes, fast = 12, slow = 26, signal = 9) {
+  if (!closes || closes.length < slow + signal) return null;
+  const fastS = emaSeries(closes, fast), slowS = emaSeries(closes, slow);
+  if (!slowS.length) return null;
+  const offset = slow - fast, macdLine = [];
+  for (let i = 0; i < slowS.length; i++) macdLine.push(fastS[i + offset] - slowS[i]);
+  if (macdLine.length < signal) return null;
+  const sigS = emaSeries(macdLine, signal);
+  if (!sigS.length) return null;
+  const m = _last(macdLine), s = _last(sigS);
+  return { macd: m, signal: s, hist: m - s };
+}
+function bollingerBands(closes, period = 20, mult = 2) {
+  const basis = sma(closes, period), sd = popStdev(closes, period);
+  if (basis === null || sd === null) return null;
+  const upper = basis + mult * sd, lower = basis - mult * sd;
+  return { basis, upper, lower, width: (upper - lower) / basis };
+}
+function parabolicSAR(bars, step = 0.02, maxAF = 0.20) {
+  if (!bars || bars.length < 2) return null;
+  let isUp = bars[1].c >= bars[0].c, af = step, ep = isUp ? bars[0].h : bars[0].l, sar = isUp ? bars[0].l : bars[0].h;
+  for (let i = 1; i < bars.length; i++) {
+    const b = bars[i]; const prevSar = sar;
+    sar = prevSar + af * (ep - prevSar);
+    if (isUp) {
+      sar = Math.min(sar, bars[i-1].l, i >= 2 ? bars[i-2].l : bars[i-1].l);
+      if (b.l < sar) { isUp = false; sar = ep; ep = b.l; af = step; }
+      else { if (b.h > ep) { ep = b.h; af = Math.min(af + step, maxAF); } }
+    } else {
+      sar = Math.max(sar, bars[i-1].h, i >= 2 ? bars[i-2].h : bars[i-1].h);
+      if (b.h > sar) { isUp = true; sar = ep; ep = b.h; af = step; }
+      else { if (b.l < ep) { ep = b.l; af = Math.min(af + step, maxAF); } }
+    }
+  }
+  return sar;
+}
+function atrWilder(bars, period = 14) {
+  if (!bars || bars.length < period + 1) return null;
+  const trs = [];
+  for (let i = 1; i < bars.length; i++) { const b = bars[i], p = bars[i-1]; trs.push(Math.max(b.h - b.l, Math.abs(b.h - p.c), Math.abs(b.l - p.c))); }
+  return wilderRMA(trs, period);
+}
+function sessionVWAP(bars) {
+  if (!bars || !bars.length) return null;
+  const latest = _last(bars);
+  const latestDay = new Date(latest.t).toLocaleDateString("en-US", { timeZone: "America/New_York" });
+  let pv = 0, vv = 0;
+  for (const b of bars) {
+    const day = new Date(b.t).toLocaleDateString("en-US", { timeZone: "America/New_York" });
+    if (day === latestDay) { const tp = (b.h + b.l + b.c) / 3; pv += tp * b.v; vv += b.v; }
+  }
+  return vv > 0 ? pv / vv : null;
+}
+function computeIndicators(bars) {
+  if (!bars || bars.length < 70) return null;
+  const closes = bars.map(b => b.c), vols = bars.map(b => b.v);
+  const bb = bollingerBands(closes, 20, 2);
+  if (!bb) return null;
+  const widthSeries = [];
+  for (let i = 20; i <= closes.length; i++) { const bbi = bollingerBands(closes.slice(0, i), 20, 2); if (bbi) widthSeries.push(bbi.width); }
+  const bbWidthAvg = sma(widthSeries, 50);
+  const mac = macd(closes, 12, 26, 9);
+  const last = _last(bars);
+  const volAvg = sma(vols, 20);
+  return {
+    timestamp: last.t, open: last.o, high: last.h, low: last.l, close: last.c, volume: last.v,
+    ema15: ema(closes, 21), vwap: sessionVWAP(bars), bbBasis: bb.basis, bbUpper: bb.upper, bbLower: bb.lower,
+    bbWidth: bb.width, bbWidthAvg: bbWidthAvg, sar: parabolicSAR(bars), atr14: atrWilder(bars, 14),
+    rsi14: rsi(closes, 14), roc9: roc(closes, 10), macdHist: mac ? mac.hist : null,
+    rvol: volAvg ? last.v / volAvg : null, barsLoaded: bars.length,
+  };
+}
+function signalKey(ticker, sig) { return ticker + ":" + sig.time + ":" + sig.type; }
+function todayETISO() {
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
+  return fmt.format(new Date());
+}
+function activeSessionForToday(sessions) {
+  const today = todayETISO();
+  for (const s of sessions) { if (s.status === "cancelled") continue; if (s.startDate <= today && today <= s.endDate) return s; }
+  return null;
+}
+function nextBarOpen(bars, signalBarTimestamp) {
+  for (let i = 0; i < bars.length - 1; i++) { if (bars[i].t === signalBarTimestamp) return bars[i+1].o; }
+  return NaN;
+}
+function findOpenPosition(ledger, ticker) {
+  for (let i = ledger.length - 1; i >= 0; i--) { const e = ledger[i]; if (e.ticker === ticker && e.status === "open") return { idx: i, pos: e }; }
+  return null;
+}
+function realizedPnLToday(ledger) {
+  const today = todayETISO(); let sum = 0;
+  for (const e of ledger) {
+    if (e.status !== "closed" || !e.closedAt) continue;
+    const closedDay = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(e.closedAt));
+    if (closedDay === today) sum += e.realizedPnL || 0;
+  }
+  return sum;
+}
+function processEngineSignals({ ticker, engine, bars, atr, ledger, execState, account, riskProfile, sessions, currentPrices, trendGate }) {
+  if (!engine || !engine.signalHistory || engine.signalHistory.length === 0) return { newLedger: ledger, newExecState: execState, newAccount: account, fills: [] };
+  const tier = RISK_TIERS[riskProfile.tier];
+  const RISK_PCT = tier.risk / 100, DAILY_STOP_PCT = tier.dailyStop / 100, MAX_POS = tier.maxPos;
+  const ATR_STOP_MULT = 1.5, RE_ENTRY_COOLDOWN_MS = 4 * 15 * 60 * 1000;
+  let newLedger = ledger.slice(), newExecState = Object.assign({}, execState), newAccount = Object.assign({}, account), fills = [];
+  const countOpen = (lg) => lg.filter(t => t.status === "open").length;
+  const computeUnrealized = (lg) => {
+    let u = 0;
+    for (const t of lg) { if (t.status !== "open") continue; const px = currentPrices && currentPrices[t.ticker]; if (!px) continue; u += t.dir === 1 ? (px - t.entryPrice) * t.currentShares : (t.entryPrice - px) * t.currentShares; }
+    return u;
+  };
+  const today = todayETISO();
+  if (!newExecState._daily) newExecState._daily = {};
+  if (newExecState._daily.date !== today) newExecState._daily = { date: today, startEquity: newAccount.balance + computeUnrealized(newLedger) };
+  const currentEquity = newAccount.balance + computeUnrealized(newLedger);
+  const equityDrawdownPct = (currentEquity - newExecState._daily.startEquity) / newExecState._daily.startEquity;
+  const dailyHalted = equityDrawdownPct <= DAILY_STOP_PCT;
+  const computeTotalNotional = (lg) => { let n = 0; for (const t of lg) { if (t.status !== "open") continue; const px = currentPrices && currentPrices[t.ticker] ? currentPrices[t.ticker] : t.entryPrice; n += px * t.currentShares; } return n; };
+  const MAX_TOTAL_NOTIONAL = currentEquity * 1.5;
+  const activeSession = activeSessionForToday(sessions);
+  const tickerState = newExecState[ticker] || { lastExecutedKey: null, lastExitTime: null };
+  for (const sig of engine.signalHistory) {
+    const key = signalKey(ticker, sig);
+    const lastKey = tickerState.lastExecutedKey;
+    if (lastKey) { if (key === lastKey) { tickerState._foundLast = true; continue; } if (!tickerState._foundLast) continue; }
+    const fillPrice = nextBarOpen(bars, sig.time);
+    if (isNaN(fillPrice)) break;
+    const open = findOpenPosition(newLedger, ticker);
+    const sigType = sig.type;
+    if (sigType === "B2O" || sigType === "S2O") {
+      if (!activeSession || dailyHalted || open || countOpen(newLedger) >= MAX_POS) { tickerState.lastExecutedKey = key; continue; }
+      if (tickerState.lastExitTime && (sig.time - tickerState.lastExitTime) < RE_ENTRY_COOLDOWN_MS) { tickerState.lastExecutedKey = key; continue; }
+      if (trendGate && trendGate.state !== "unknown") {
+        if (sigType === "B2O" && trendGate.state !== "bullish") { tickerState.lastExecutedKey = key; continue; }
+        if (sigType === "S2O" && trendGate.state !== "bearish") { tickerState.lastExecutedKey = key; continue; }
+      }
+      const stopDist = ATR_STOP_MULT * atr, riskDollars = currentEquity * RISK_PCT;
+      let shares = stopDist > 0 ? Math.floor(riskDollars / stopDist) : 0;
+      shares = Math.min(shares, Math.floor((currentEquity / MAX_POS * 1.5) / fillPrice));
+      const proposedNotional = shares * fillPrice, currentTotal = computeTotalNotional(newLedger);
+      if (currentTotal + proposedNotional > MAX_TOTAL_NOTIONAL) shares = Math.floor(Math.max(0, MAX_TOTAL_NOTIONAL - currentTotal) / fillPrice);
+      if (shares < 1) { tickerState.lastExecutedKey = key; continue; }
+      const dir = sigType === "B2O" ? 1 : -1;
+      const trade = { id: "trade_" + Date.now() + "_" + Math.random().toString(36).slice(2,7), ticker, dir, status: "open", entryType: sigType, entryPrice: fillPrice, entryShares: shares, currentShares: shares, entryTime: sig.time, sessionId: activeSession.id, stopPrice: dir === 1 ? fillPrice - ATR_STOP_MULT * atr : fillPrice + ATR_STOP_MULT * atr, atrAtEntry: atr, adds: [], tps: [], realizedPnL: 0, closedAt: null, exitType: null, exitPrice: null };
+      newLedger.push(trade); fills.push({ ticker, type: sigType, shares, price: fillPrice, time: sig.time });
+    } else if (sigType === "ADD" && open && open.pos.dir === sig.dir) {
+      const addShares = Math.floor(open.pos.entryShares * 0.50);
+      if (addShares < 1) { tickerState.lastExecutedKey = key; continue; }
+      const totalShares = open.pos.currentShares + addShares, newAvg = (open.pos.entryPrice * open.pos.currentShares + fillPrice * addShares) / totalShares;
+      open.pos.adds.push({ price: fillPrice, shares: addShares, time: sig.time }); open.pos.currentShares = totalShares; open.pos.entryPrice = newAvg; newLedger[open.idx] = open.pos;
+      fills.push({ ticker, type: "ADD", shares: addShares, price: fillPrice, time: sig.time });
+    } else if (sigType === "TP" && open && open.pos.dir === sig.dir) {
+      const closeShares = Math.floor(open.pos.currentShares * 0.50);
+      if (closeShares < 1) { tickerState.lastExecutedKey = key; continue; }
+      const pnl = open.pos.dir === 1 ? (fillPrice - open.pos.entryPrice) * closeShares : (open.pos.entryPrice - fillPrice) * closeShares;
+      open.pos.tps.push({ price: fillPrice, shares: closeShares, time: sig.time, pnl }); open.pos.currentShares -= closeShares; open.pos.realizedPnL += pnl; newAccount.balance += pnl; newLedger[open.idx] = open.pos;
+      fills.push({ ticker, type: "TP", shares: closeShares, price: fillPrice, pnl, time: sig.time });
+    } else if ((sigType === "B2C" || sigType === "S2C") && open) {
+      const closeShares = open.pos.currentShares;
+      const pnl = open.pos.dir === 1 ? (fillPrice - open.pos.entryPrice) * closeShares : (open.pos.entryPrice - fillPrice) * closeShares;
+      open.pos.realizedPnL += pnl; open.pos.status = "closed"; open.pos.closedAt = sig.time; open.pos.exitType = sigType; open.pos.exitPrice = fillPrice; open.pos.currentShares = 0; newAccount.balance += pnl; newLedger[open.idx] = open.pos;
+      tickerState.lastExitTime = sig.time; fills.push({ ticker, type: sigType, shares: closeShares, price: fillPrice, pnl, time: sig.time });
+    }
+    tickerState.lastExecutedKey = key;
+  }
+  delete tickerState._foundLast; newExecState[ticker] = tickerState;
+  return { newLedger, newExecState, newAccount, fills };
+}
+function computeEquity(account, ledger, livePrices) {
+  let unreal = 0;
+  for (const e of ledger) { if (e.status !== "open") continue; const px = livePrices[e.ticker]; if (!px) continue; unreal += e.dir === 1 ? (px - e.entryPrice) * e.currentShares : (e.entryPrice - px) * e.currentShares; }
+  return account.balance + unreal;
+}
+function computeAccountStats(paperAccount, ledger, livePrices) {
+  const start = paperAccount.startingBalance || 100000; livePrices = livePrices || {};
+  let unrealized = 0, openNotional = 0; const openPositions = [];
+  for (const t of ledger) {
+    if (t.status !== "open") continue;
+    const px = livePrices[t.ticker] || t.entryPrice;
+    const pnl = t.dir === 1 ? (px - t.entryPrice) * t.currentShares : (t.entryPrice - px) * t.currentShares;
+    const pnlPct = t.dir === 1 ? ((px - t.entryPrice) / t.entryPrice) * 100 : ((t.entryPrice - px) / t.entryPrice) * 100;
+    unrealized += pnl; openNotional += px * t.currentShares;
+    openPositions.push({ sym: t.ticker, side: t.dir === 1 ? "long" : "short", shares: t.currentShares, entryPrice: t.entryPrice, currentPrice: px, pnl: { dollars: pnl, pct: pnlPct }, entryTime: t.entryTime });
+  }
+  const equity = paperAccount.balance + unrealized;
+  const closed = ledger.filter(t => t.status === "closed");
+  const totalRealized = closed.reduce((s, t) => s + (t.realizedPnL || 0), 0);
+  const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+  const isToday = (ts) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date(ts)) === todayKey;
+  const todayClosed = closed.filter(t => t.closedAt && isToday(t.closedAt));
+  const dayPnL = todayClosed.reduce((s, t) => s + (t.realizedPnL || 0), 0) + unrealized;
+  const winners = closed.filter(t => (t.realizedPnL || 0) > 0).length;
+  const winRate = closed.length > 0 ? winners / closed.length : 0;
+  let totalR = 0, rCount = 0;
+  for (const t of closed) { if (t.stopPrice && t.entryPrice && t.entryShares) { const risk = Math.abs(t.entryPrice - t.stopPrice) * t.entryShares; if (risk > 0) { totalR += (t.realizedPnL || 0) / risk; rCount++; } } }
+  const avgR = rCount > 0 ? totalR / rCount : 0;
+  let running = start, peak = start, maxDD = 0;
+  for (const t of closed.slice().sort((a,b) => (a.closedAt||0) - (b.closedAt||0))) { running += t.realizedPnL || 0; if (running > peak) peak = running; const dd = ((running - peak) / peak) * 100; if (dd < maxDD) maxDD = dd; }
+  const now = Date.now(), WEEK_MS = 7*24*60*60*1000, MONTH_MS = 30*24*60*60*1000;
+  const weekPnL = closed.filter(t => t.closedAt && (now - t.closedAt) < WEEK_MS).reduce((s,t) => s + (t.realizedPnL||0), 0);
+  const monthPnL = closed.filter(t => t.closedAt && (now - t.closedAt) < MONTH_MS).reduce((s,t) => s + (t.realizedPnL||0), 0);
+  return { name: "Khanh", role: "Trader", accountId: "Paper", equity, buyingPower: paperAccount.balance, dayPnL, dayPnLPct: (dayPnL / start) * 100, tradesToday: todayClosed.length + openPositions.filter(p => isToday(p.entryTime)).length, winRate, avgR, maxDD, weekPnL, weekPnLPct: (weekPnL / start) * 100, monthPnL, monthPnLPct: (monthPnL / start) * 100, unrealized, openNotional, openPositions, totalRealized };
+}
+async function fetchTreasuryYields(apiKey) {
+  const url = `https://api.massive.com/fed/v1/treasury-yields?limit=1&sort=date.desc&apiKey=${apiKey}`;
+  const resp = await fetch(url); if (!resp.ok) return null;
+  const j = await resp.json(); if (!j.results || j.results.length === 0) return null;
+  const latest = j.results[0];
+  return { T2: latest.yield_2_year, T5: latest.yield_5_year, T10: latest.yield_10_year, T15: null, T20: latest.yield_20_year, T30: latest.yield_30_year, date: latest.date };
+}
+async function fetchMassiveBars(ticker, multiplier, timespan, fromYMD, toYMD, apiKey) {
+  const url = `https://api.massive.com/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${fromYMD}/${toYMD}?adjusted=true&sort=asc&limit=5000&apiKey=${apiKey}`;
+  const resp = await fetch(url); if (!resp.ok) throw new Error(`Massive HTTP ${resp.status}`);
+  const j = await resp.json();
+  if (j.status && j.status !== "OK" && j.status !== "DELAYED") throw new Error(`Massive status: ${j.status}`);
+  return (j.results || []).map(r => ({ o: r.o, h: r.h, l: r.l, c: r.c, v: r.v, t: r.t, vw: r.vw }));
+}
+function ymdDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+async function fetchHourlyBars(ticker, apiKey) { return await fetchMassiveBars(ticker, 1, "hour", ymdDaysAgo(15), ymdDaysAgo(0), apiKey); }
+async function fetchDailyBars(ticker, apiKey) { return await fetchMassiveBars(ticker, 1, "day", ymdDaysAgo(365), ymdDaysAgo(0), apiKey); }
+function computeTrendGate(hourlyBars, dailyBars) {
+  if (!hourlyBars || hourlyBars.length < 22) return { state: "unknown", reason: "no 1H data" };
+  if (!dailyBars || dailyBars.length < 201) return { state: "unknown", reason: "no daily data" };
+  const closes1h = hourlyBars.map(b => b.c); const k1 = 2 / (21 + 1); let ema21 = closes1h.slice(0,21).reduce((s,c) => s+c,0)/21;
+  for (let i = 21; i < closes1h.length; i++) ema21 = closes1h[i] * k1 + ema21 * (1 - k1);
+  const last1H = closes1h[closes1h.length - 1], hBullish = last1H > ema21;
+  const closesD = dailyBars.map(b => b.c), sma200 = closesD.slice(-200).reduce((s,c) => s+c,0)/200, lastD = closesD[closesD.length-1], dBullish = lastD > sma200;
+  let state = hBullish && dBullish ? "bullish" : !hBullish && !dBullish ? "bearish" : "neutral";
+  return { state, hBullish, dBullish, ema21h: ema21, sma200d: sma200, last1H, lastD };
+}
+async function fetchOptionsChainSnapshot(underlying, apiKey) {
+  const url = `https://api.massive.com/v3/snapshot/options/${underlying}?limit=250&apiKey=${apiKey}`;
+  try { const resp = await fetch(url); if (!resp.ok) return null; const j = await resp.json(); return j.results || []; } catch { return null; }
+}
+function findDelta25Call(chain, targetDaysOut = 7) {
+  if (!chain || chain.length === 0) return null;
+  const todayMs = Date.now();
+  const calls = chain.filter(o => o.details && o.details.contract_type === "call" && o.greeks && typeof o.greeks.delta === "number" && o.day && typeof o.day.close === "number");
+  if (calls.length === 0) return null;
+  const byExp = {};
+  for (const c of calls) { const e = c.details.expiration_date; if (!byExp[e]) byExp[e] = []; byExp[e].push(c); }
+  let bestExp = null, bestDiff = Infinity;
+  for (const e of Object.keys(byExp)) { const days = (new Date(e + "T16:00:00-04:00").getTime() - todayMs) / 86400000; if (days < 1) continue; const diff = Math.abs(days - targetDaysOut); if (diff < bestDiff) { bestDiff = diff; bestExp = e; } }
+  if (!bestExp) return null;
+  let best = null, bestDeltaDiff = Infinity;
+  for (const c of byExp[bestExp]) { const dDiff = Math.abs(c.greeks.delta - 0.25); if (dDiff < bestDeltaDiff) { bestDeltaDiff = dDiff; best = c; } }
+  if (!best) return null;
+  return { expiration: bestExp, strike: best.details.strike_price, delta: best.greeks.delta, premium: best.day.close, impliedVol: best.implied_volatility, daysOut: Math.round((new Date(bestExp + "T16:00:00-04:00").getTime() - todayMs) / 86400000) };
+}
+function _emaSeries21(closes, period) {
+  const n = closes.length, out = new Array(n).fill(NaN);
+  if (n < period) return out;
+  const seed = closes.slice(0, period).reduce((a,b) => a+b, 0) / period;
+  out[period-1] = seed; const k = 2 / (period + 1); let v = seed;
+  for (let i = period; i < n; i++) { v = closes[i] * k + v * (1-k); out[i] = v; }
+  return out;
+}
+function _vwapSeriesSessionET(bars) {
+  const n = bars.length, out = new Array(n).fill(NaN); let pv = 0, vv = 0, lastDay = null;
+  for (let i = 0; i < n; i++) {
+    const day = new Date(bars[i].t).toLocaleDateString("en-US", { timeZone: "America/New_York" });
+    if (day !== lastDay) { pv = 0; vv = 0; lastDay = day; }
+    const tp = (bars[i].h + bars[i].l + bars[i].c) / 3; pv += tp * bars[i].v; vv += bars[i].v;
+    if (vv > 0) out[i] = pv / vv;
+  }
+  return out;
+}
+function _bbBasisSeries(closes, len) {
+  const n = closes.length, out = new Array(n).fill(NaN);
+  for (let i = len-1; i < n; i++) { let s = 0; for (let j = i-len+1; j <= i; j++) s += closes[j]; out[i] = s / len; }
+  return out;
+}
+function _sarSeries(bars, step, maxAF) {
+  if (!bars || bars.length < 2) return [];
+  const n = bars.length, sarOut = new Array(n).fill(NaN);
+  let isUp = bars[1].c >= bars[0].c, af = step, ep = isUp ? bars[0].h : bars[0].l, sar = isUp ? bars[0].l : bars[0].h;
+  sarOut[0] = sar;
+  for (let i = 1; i < n; i++) {
+    const b = bars[i]; sar = sar + af * (ep - sar);
+    if (isUp) { sar = Math.min(sar, bars[i-1].l, i >= 2 ? bars[i-2].l : bars[i-1].l); if (b.l < sar) { isUp = false; sar = ep; ep = b.l; af = step; } else { if (b.h > ep) { ep = b.h; af = Math.min(af+step,maxAF); } } }
+    else { sar = Math.max(sar, bars[i-1].h, i >= 2 ? bars[i-2].h : bars[i-1].h); if (b.h > sar) { isUp = true; sar = ep; ep = b.h; af = step; } else { if (b.l < ep) { ep = b.l; af = Math.min(af+step,maxAF); } } }
+    sarOut[i] = sar;
+  }
+  return sarOut;
+}
+function _rsiSeries(closes, period) {
+  const n = closes.length, out = new Array(n).fill(NaN);
+  if (n < period+1) return out;
+  const gains = [], losses = [];
+  for (let i = 1; i < n; i++) { const d = closes[i]-closes[i-1]; gains.push(d>0?d:0); losses.push(d<0?-d:0); }
+  let avgG = gains.slice(0,period).reduce((a,b)=>a+b,0)/period, avgL = losses.slice(0,period).reduce((a,b)=>a+b,0)/period;
+  out[period] = avgL === 0 ? 100 : 100 - 100/(1+(avgG/avgL));
+  for (let i = period; i < gains.length; i++) { avgG = (avgG*(period-1)+gains[i])/period; avgL = (avgL*(period-1)+losses[i])/period; out[i+1] = avgL === 0 ? 100 : 100-100/(1+(avgG/avgL)); }
+  return out;
+}
+function _rocSeries(closes, period) {
+  const n = closes.length, out = new Array(n).fill(NaN);
+  for (let i = period; i < n; i++) { if (closes[i-period] !== 0) out[i] = ((closes[i]-closes[i-period])/closes[i-period])*100; }
+  return out;
+}
+function _macdHistSeries(closes, fast, slow, signal) {
+  const n = closes.length, out = new Array(n).fill(NaN);
+  if (n < slow+signal) return out;
+  const fastS = _emaSeries21(closes,fast), slowS = _emaSeries21(closes,slow), macdLine = new Array(n).fill(NaN);
+  for (let i = 0; i < n; i++) { if (!isNaN(fastS[i]) && !isNaN(slowS[i])) macdLine[i] = fastS[i]-slowS[i]; }
+  let firstValid = -1; for (let i = 0; i < n; i++) { if (!isNaN(macdLine[i])) { firstValid = i; break; } }
+  if (firstValid < 0 || firstValid+signal > n) return out;
+  let sum = 0; for (let i = firstValid; i < firstValid+signal; i++) sum += macdLine[i];
+  let sig = sum/signal; const sigSer = new Array(n).fill(NaN); sigSer[firstValid+signal-1] = sig; const k = 2/(signal+1);
+  for (let i = firstValid+signal; i < n; i++) { sig = macdLine[i]*k+sig*(1-k); sigSer[i] = sig; }
+  for (let i = 0; i < n; i++) { if (!isNaN(macdLine[i]) && !isNaN(sigSer[i])) out[i] = macdLine[i]-sigSer[i]; }
+  return out;
+}
+function _atrWilderSeries(bars, period) {
+  const n = bars.length, out = new Array(n).fill(NaN);
+  if (n < period+1) return out;
+  const trs = new Array(n).fill(NaN);
+  for (let i = 1; i < n; i++) trs[i] = Math.max(bars[i].h-bars[i].l, Math.abs(bars[i].h-bars[i-1].c), Math.abs(bars[i].l-bars[i-1].c));
+  let atr = 0; for (let i = 1; i <= period; i++) atr += trs[i]; atr /= period; out[period] = atr;
+  for (let i = period+1; i < n; i++) { atr = (atr*(period-1)+trs[i])/period; out[i] = atr; }
+  return out;
+}
+function computeBBCycle(bars, opts) {
+  opts = opts || {}; const bbLen = opts.bbLen||20, bbMult = opts.bbMult||2.0, bbWidthLen = opts.bbWidthLen||20, bbExpansionRateMin = opts.bbExpansionRateMin||5.0, bbExpansionHoldBars = opts.bbExpansionHoldBars||8;
+  if (!bars || bars.length < bbLen+bbWidthLen+5) return null;
+  const closes = bars.map(b=>b.c), n = closes.length, bbBasisArr = new Array(n).fill(NaN), bbWidthArr = new Array(n).fill(NaN);
+  for (let i = bbLen-1; i < n; i++) { let sum=0; for(let j=i-bbLen+1;j<=i;j++) sum+=closes[j]; const basis=sum/bbLen; let sq=0; for(let j=i-bbLen+1;j<=i;j++) sq+=(closes[j]-basis)*(closes[j]-basis); const sd=Math.sqrt(sq/bbLen), upper=basis+bbMult*sd, lower=basis-bbMult*sd; bbBasisArr[i]=basis; bbWidthArr[i]=basis!==0?(upper-lower)/basis:NaN; }
+  const bbWidthAvgArr = new Array(n).fill(NaN);
+  for (let i=bbLen-1+bbWidthLen-1;i<n;i++) { let sum=0,ok=true; for(let j=i-bbWidthLen+1;j<=i;j++) { if(isNaN(bbWidthArr[j])){ok=false;break;} sum+=bbWidthArr[j]; } if(ok) bbWidthAvgArr[i]=sum/bbWidthLen; }
+  const bbTrueExpansionArr=new Array(n).fill(false), bbSqueezingArr=new Array(n).fill(false), bbExpansionRatePctArr=new Array(n).fill(0);
+  for (let i=0;i<n;i++) {
+    let compressionRecent=false;
+    if(i>=bbWidthLen-1){let minW=Infinity,minA=Infinity,hasW=false,hasA=false;for(let j=i-bbWidthLen+1;j<=i;j++){if(!isNaN(bbWidthArr[j])){hasW=true;if(bbWidthArr[j]<minW)minW=bbWidthArr[j];}if(!isNaN(bbWidthAvgArr[j])){hasA=true;if(bbWidthAvgArr[j]<minA)minA=bbWidthAvgArr[j];}}compressionRecent=hasW&&hasA&&minW<minA;}
+    let rising3=false; if(i>=2&&!isNaN(bbWidthArr[i])&&!isNaN(bbWidthArr[i-1])&&!isNaN(bbWidthArr[i-2])) rising3=bbWidthArr[i]>bbWidthArr[i-1]&&bbWidthArr[i-1]>bbWidthArr[i-2];
+    if(i>=bbWidthLen&&!isNaN(bbWidthArr[i-bbWidthLen])&&bbWidthArr[i-bbWidthLen]>0) bbExpansionRatePctArr[i]=((bbWidthArr[i]-bbWidthArr[i-bbWidthLen])/bbWidthArr[i-bbWidthLen])*100;
+    bbTrueExpansionArr[i]=compressionRecent&&!isNaN(bbWidthAvgArr[i])&&bbWidthArr[i]>bbWidthAvgArr[i]&&rising3&&bbExpansionRatePctArr[i]>=bbExpansionRateMin;
+    if(i>=1&&!isNaN(bbWidthArr[i])&&!isNaN(bbWidthAvgArr[i])&&!isNaN(bbWidthArr[i-1])) bbSqueezingArr[i]=bbWidthArr[i]<bbWidthAvgArr[i]&&bbWidthArr[i]<bbWidthArr[i-1];
+  }
+  const last=n-1; let barsSinceBBExpansion=null; for(let i=last;i>=0;i--){if(bbTrueExpansionArr[i]){barsSinceBBExpansion=last-i;break;}}
+  const bbOpeningStart=bbTrueExpansionArr[last]||(barsSinceBBExpansion!==null&&barsSinceBBExpansion<=3);
+  const bbExpansionAlive=bbTrueExpansionArr[last]||(barsSinceBBExpansion!==null&&barsSinceBBExpansion<=bbExpansionHoldBars&&!isNaN(bbWidthAvgArr[last])&&bbWidthArr[last]>=bbWidthAvgArr[last]);
+  return { bbBasis:bbBasisArr[last],bbWidth:bbWidthArr[last],bbWidthAvg:bbWidthAvgArr[last],bbSqueezing:bbSqueezingArr[last]?1:0,bbTrueExpansion:bbTrueExpansionArr[last]?1:0,bbOpeningStart:bbOpeningStart?1:0,bbExpansionAlive:bbExpansionAlive?1:0,barsSinceBBExpansion,bbExpansionRatePct:bbExpansionRatePctArr[last] };
+}
+function computeMMGGates(bars, bbCycle, opts) {
+  opts=opts||{}; const emaLen=opts.emaLen||21,rsiLen=opts.rsiLen||14,momLen=opts.momLen||10,macdFast=opts.macdFast||12,macdSlow=opts.macdSlow||26,macdSignal=opts.macdSignal||9,sarStart=opts.sarStart||0.02,sarMax=opts.sarMax||0.20,atrLen=opts.atrLen||14,tangledATR=opts.tangledATR||0.18,nearMidATR=opts.nearMidATR||0.18;
+  if(!bars||bars.length<Math.max(emaLen,macdSlow+macdSignal)+5) return null;
+  const n=bars.length,last=n-1,closes=bars.map(b=>b.c);
+  const emaSer=_emaSeries21(closes,emaLen),vwapSer=_vwapSeriesSessionET(bars),bbBasisSer=_bbBasisSeries(closes,20),sarSer=_sarSeries(bars,sarStart,sarMax),rsiSer=_rsiSeries(closes,rsiLen),rocSer=_rocSeries(closes,momLen),macdHistSer=_macdHistSeries(closes,macdFast,macdSlow,macdSignal),atrSer=_atrWilderSeries(bars,atrLen);
+  const close=closes[last],closePrev=closes[last-1],ema=emaSer[last],emaPrev=emaSer[last-1],vwap=vwapSer[last],bbBasis=bbBasisSer[last],bbBasisPrev=bbBasisSer[last-1],sar=sarSer[last],sarPrev=sarSer[last-1],atr=atrSer[last],rsi=rsiSer[last],roc=rocSer[last],macdH=macdHistSer[last],macdHPrev=macdHistSer[last-1];
+  const closeAboveEMA=close>ema,closeAboveVWAP=close>vwap,closeAboveBB=close>bbBasis,closeBelowEMA=close<ema,closeBelowVWAP=close<vwap,closeBelowBB=close<bbBasis;
+  const sarBull=close>sar,sarBear=close<sar,sarBullPrev=closePrev>sarPrev,sarBearPrev=closePrev<sarPrev,sarFlipBull=sarBull&&!sarBullPrev,sarFlipBear=sarBear&&!sarBearPrev;
+  const momBull=rsi>50&&roc>0&&macdH>0,momBear=rsi<50&&roc<0&&macdH<0,momBullStrong=rsi>60&&roc>0&&macdH>macdHPrev,momBearStrong=rsi<40&&roc<0&&macdH<macdHPrev;
+  let momentumScore=0; momentumScore+=momBull?0.35:momBear?-0.35:0; momentumScore+=momBullStrong?0.25:momBearStrong?-0.25:0; momentumScore=Math.max(-1,Math.min(1,momentumScore));
+  const crossUpEMA=close>ema&&closePrev<=emaPrev,crossDnEMA=close<ema&&closePrev>=emaPrev,crossUpBB=close>bbBasis&&closePrev<=bbBasisPrev,crossDnBB=close<bbBasis&&closePrev>=bbBasisPrev;
+  const longTurn=sarFlipBull||(crossUpEMA&&close>bbBasis)||(crossUpBB&&close>ema),shortTurn=sarFlipBear||(crossDnEMA&&close<bbBasis)||(crossDnBB&&close<ema);
+  const emaVwapTangled=Math.abs(ema-vwap)<=atr*tangledATR,priceNearMid=Math.abs(close-bbBasis)<=atr*nearMidATR;
+  const bbSqueezing=bbCycle&&bbCycle.bbSqueezing===1,bbOpeningStart=bbCycle&&bbCycle.bbOpeningStart===1,bbTrueExpansion=bbCycle&&bbCycle.bbTrueExpansion===1;
+  const manipulationPhase=bbSqueezing&&emaVwapTangled&&priceNearMid;
+  const longEntryTrigger=!manipulationPhase&&!bbSqueezing&&bbOpeningStart&&closeAboveEMA&&closeAboveVWAP&&closeAboveBB&&sarBull&&momentumScore>0&&(longTurn||(bbTrueExpansion&&close>closePrev));
+  const shortEntryTrigger=!manipulationPhase&&!bbSqueezing&&bbOpeningStart&&closeBelowEMA&&closeBelowVWAP&&closeBelowBB&&sarBear&&momentumScore<0&&(shortTurn||(bbTrueExpansion&&close<closePrev));
+  return { ema,vwap,bbBasis,sar,atr,rsi,roc,macdHist:macdH,long_closeAboveEMA:closeAboveEMA?1:0,long_closeAboveVWAP:closeAboveVWAP?1:0,long_closeAboveBB:closeAboveBB?1:0,long_sarBull:sarBull?1:0,long_longTurn:longTurn?1:0,long_liqBreakUp:0,short_closeBelowEMA:closeBelowEMA?1:0,short_closeBelowVWAP:closeBelowVWAP?1:0,short_closeBelowBB:closeBelowBB?1:0,short_sarBear:sarBear?1:0,short_shortTurn:shortTurn?1:0,short_liqBreakDn:0,momentumScore,emaVwapTangled:emaVwapTangled?1:0,priceNearMid:priceNearMid?1:0,manipulationPhase:manipulationPhase?1:0,longEntryTrigger:longEntryTrigger?1:0,shortEntryTrigger:shortEntryTrigger?1:0 };
+}
+function computeMMGEngineState(bars, opts) {
+  opts=opts||{}; const emaLen=opts.emaLen||21,bbLen=opts.bbLen||20,bbMult=opts.bbMult||2.0,bbWidthLen=opts.bbWidthLen||20,bbExpansionRateMin=opts.bbExpansionRateMin||5.0,rsiLen=opts.rsiLen||14,momLen=opts.momLen||10,macdFast=opts.macdFast||12,macdSlow=opts.macdSlow||26,macdSignal=opts.macdSignal||9,sarStart=opts.sarStart||0.02,sarMax=opts.sarMax||0.20,atrLen=opts.atrLen||14,liqPivotLen=opts.liqPivotLen||5,tangledATR=opts.tangledATR||0.18,nearMidATR=opts.nearMidATR||0.18,minBarsInTrade=opts.minBarsInTrade||3,dynMinBars=opts.dynMinBars||5,dynCooldownBars=opts.dynCooldownBars||4,addWindowCenter=opts.addWindowCenter||0.50,addWindowHalfWidth=opts.addWindowHalfWidth||0.05,tpWindowCenter=opts.tpWindowCenter||0.75,tpWindowHalfWidth=opts.tpWindowHalfWidth||0.05;
+  if(!bars||bars.length<Math.max(emaLen,macdSlow+macdSignal,bbLen+bbWidthLen)+20) return null;
+  const n=bars.length,closes=bars.map(b=>b.c),highs=bars.map(b=>b.h),lows=bars.map(b=>b.l),opens=bars.map(b=>b.o);
+  const emaSer=_emaSeries21(closes,emaLen),vwapSer=_vwapSeriesSessionET(bars),bbBasisSer=_bbBasisSeries(closes,bbLen),sarSer=_sarSeries(bars,sarStart,sarMax),rsiSer=_rsiSeries(closes,rsiLen),rocSer=_rocSeries(closes,momLen),macdHistSer=_macdHistSeries(closes,macdFast,macdSlow,macdSignal),atrSer=_atrWilderSeries(bars,atrLen);
+  const bbWidthSer=new Array(n).fill(NaN);
+  for(let i=bbLen-1;i<n;i++){const basis=bbBasisSer[i];if(isNaN(basis)||basis===0)continue;let sq=0;for(let j=i-bbLen+1;j<=i;j++)sq+=(closes[j]-basis)*(closes[j]-basis);bbWidthSer[i]=(2*bbMult*Math.sqrt(sq/bbLen))/basis;}
+  const bbWidthAvgSer=new Array(n).fill(NaN);
+  for(let i=bbLen+bbWidthLen-2;i<n;i++){let sum=0,ok=true;for(let j=i-bbWidthLen+1;j<=i;j++){if(isNaN(bbWidthSer[j])){ok=false;break;}sum+=bbWidthSer[j];}if(ok)bbWidthAvgSer[i]=sum/bbWidthLen;}
+  const bbSqueezingSer=new Array(n).fill(false),bbTrueExpSer=new Array(n).fill(false);
+  for(let i=0;i<n;i++){if(i>=1&&!isNaN(bbWidthSer[i])&&!isNaN(bbWidthAvgSer[i])&&!isNaN(bbWidthSer[i-1]))bbSqueezingSer[i]=bbWidthSer[i]<bbWidthAvgSer[i]&&bbWidthSer[i]<bbWidthSer[i-1];let cr=false;if(i>=bbWidthLen-1){let mW=Infinity,mA=Infinity,hW=false,hA=false;for(let j=i-bbWidthLen+1;j<=i;j++){if(!isNaN(bbWidthSer[j])){hW=true;if(bbWidthSer[j]<mW)mW=bbWidthSer[j];}if(!isNaN(bbWidthAvgSer[j])){hA=true;if(bbWidthAvgSer[j]<mA)mA=bbWidthAvgSer[j];}}cr=hW&&hA&&mW<mA;}let r3=false;if(i>=2&&!isNaN(bbWidthSer[i])&&!isNaN(bbWidthSer[i-1])&&!isNaN(bbWidthSer[i-2]))r3=bbWidthSer[i]>bbWidthSer[i-1]&&bbWidthSer[i-1]>bbWidthSer[i-2];let ep=0;if(i>=bbWidthLen&&!isNaN(bbWidthSer[i-bbWidthLen])&&bbWidthSer[i-bbWidthLen]>0)ep=((bbWidthSer[i]-bbWidthSer[i-bbWidthLen])/bbWidthSer[i-bbWidthLen])*100;bbTrueExpSer[i]=cr&&!isNaN(bbWidthAvgSer[i])&&bbWidthSer[i]>bbWidthAvgSer[i]&&r3&&ep>=bbExpansionRateMin;}
+  const bbOpeningStartSer=new Array(n).fill(false);let bsTrueExp=null;
+  for(let i=0;i<n;i++){if(bbTrueExpSer[i])bsTrueExp=0;else if(bsTrueExp!==null)bsTrueExp++;bbOpeningStartSer[i]=bbTrueExpSer[i]||(bsTrueExp!==null&&bsTrueExp<=3);}
+  const liqHighSer=new Array(n).fill(NaN),liqLowSer=new Array(n).fill(NaN);let curLH=NaN,curLL=NaN;
+  for(let i=0;i<n;i++){if(i>=2*liqPivotLen){const center=i-liqPivotLen;let isH=true,isL=true;for(let j=i-2*liqPivotLen;j<=i;j++){if(j===center)continue;if(highs[j]>=highs[center])isH=false;if(lows[j]<=lows[center])isL=false;}if(isH)curLH=highs[center];if(isL)curLL=lows[center];}liqHighSer[i]=curLH;liqLowSer[i]=curLL;}
+  const closeAbvEMA=new Array(n).fill(false),closeBlwEMA=new Array(n).fill(false),closeAbvVWAP=new Array(n).fill(false),closeBlwVWAP=new Array(n).fill(false),closeAbvBB=new Array(n).fill(false),closeBlwBB=new Array(n).fill(false),sarBullSer=new Array(n).fill(false),sarBearSer=new Array(n).fill(false),sarFlipBullSer=new Array(n).fill(false),sarFlipBearSer=new Array(n).fill(false),momScoreSer=new Array(n).fill(0),longTurnSer=new Array(n).fill(false),shortTurnSer=new Array(n).fill(false),liqBreakUpSer=new Array(n).fill(false),liqBreakDnSer=new Array(n).fill(false),manipPhaseSer=new Array(n).fill(false),longEntrySer=new Array(n).fill(false),shortEntrySer=new Array(n).fill(false),largeBullSer=new Array(n).fill(false),largeBearSer=new Array(n).fill(false),closeBlwEMA2=new Array(n).fill(false),closeAbvEMA2=new Array(n).fill(false),closeBlwVWAP2=new Array(n).fill(false),closeAbvVWAP2=new Array(n).fill(false),closeBlwBB2=new Array(n).fill(false),closeAbvBB2=new Array(n).fill(false);
+  for(let i=0;i<n;i++){const c=closes[i],h=highs[i],l=lows[i],o=opens[i],ema=emaSer[i],vwap=vwapSer[i],bb=bbBasisSer[i],sar=sarSer[i],atr=atrSer[i],rsi=rsiSer[i],roc=rocSer[i],mh=macdHistSer[i];if(isNaN(ema)||isNaN(vwap)||isNaN(bb)||isNaN(sar)||isNaN(atr))continue;closeAbvEMA[i]=c>ema;closeBlwEMA[i]=c<ema;closeAbvVWAP[i]=c>vwap;closeBlwVWAP[i]=c<vwap;closeAbvBB[i]=c>bb;closeBlwBB[i]=c<bb;sarBullSer[i]=c>sar;sarBearSer[i]=c<sar;if(i>0&&!isNaN(sarSer[i-1])){const pb=closes[i-1]>sarSer[i-1];sarFlipBullSer[i]=sarBullSer[i]&&!pb;sarFlipBearSer[i]=sarBearSer[i]&&pb;}if(!isNaN(rsi)&&!isNaN(roc)&&!isNaN(mh)){const mhP=i>0?macdHistSer[i-1]:NaN;const mb=rsi>50&&roc>0&&mh>0,mbe=rsi<50&&roc<0&&mh<0,mbs=rsi>60&&roc>0&&!isNaN(mhP)&&mh>mhP,mbes=rsi<40&&roc<0&&!isNaN(mhP)&&mh<mhP;let s=0;s+=mb?0.35:mbe?-0.35:0;s+=mbs?0.25:mbes?-0.25:0;momScoreSer[i]=Math.max(-1,Math.min(1,s));}if(i>0){const cp=closes[i-1];closeBlwEMA2[i]=c<ema&&cp<emaSer[i-1];closeAbvEMA2[i]=c>ema&&cp>emaSer[i-1];closeBlwVWAP2[i]=c<vwap&&cp<vwapSer[i-1];closeAbvVWAP2[i]=c>vwap&&cp>vwapSer[i-1];closeBlwBB2[i]=c<bb&&cp<bbBasisSer[i-1];closeAbvBB2[i]=c>bb&&cp>bbBasisSer[i-1];const xUE=c>ema&&cp<=emaSer[i-1],xDE=c<ema&&cp>=emaSer[i-1],xUB=c>bb&&cp<=bbBasisSer[i-1],xDB=c<bb&&cp>=bbBasisSer[i-1];longTurnSer[i]=sarFlipBullSer[i]||(xUE&&c>bb)||(xUB&&c>ema);shortTurnSer[i]=sarFlipBearSer[i]||(xDE&&c<bb)||(xDB&&c<ema);const lh=liqHighSer[i],ll=liqLowSer[i];if(!isNaN(lh))liqBreakUpSer[i]=c>lh&&closes[i-1]<=lh;if(!isNaN(ll))liqBreakDnSer[i]=c<ll&&closes[i-1]>=ll;}const tangled=Math.abs(ema-vwap)<=atr*tangledATR,nearMid=Math.abs(c-bb)<=atr*nearMidATR;manipPhaseSer[i]=bbSqueezingSer[i]&&tangled&&nearMid;const cr=h-l,cb=Math.abs(c-o);largeBullSer[i]=cr>0&&c>o&&cb>=atr*0.70&&c>=h-cr*0.35;largeBearSer[i]=cr>0&&c<o&&cb>=atr*0.70&&c<=l+cr*0.35;const cp=i>0?closes[i-1]:c;longEntrySer[i]=!manipPhaseSer[i]&&!bbSqueezingSer[i]&&bbOpeningStartSer[i]&&closeAbvEMA[i]&&closeAbvVWAP[i]&&closeAbvBB[i]&&sarBullSer[i]&&momScoreSer[i]>0&&(longTurnSer[i]||liqBreakUpSer[i]||(bbTrueExpSer[i]&&c>cp));shortEntrySer[i]=!manipPhaseSer[i]&&!bbSqueezingSer[i]&&bbOpeningStartSer[i]&&closeBlwEMA[i]&&closeBlwVWAP[i]&&closeBlwBB[i]&&sarBearSer[i]&&momScoreSer[i]<0&&(shortTurnSer[i]||liqBreakDnSer[i]||(bbTrueExpSer[i]&&c<cp));}
+  let activeTrainDir=0,entryBar=null,entryPrice=null,lastCampaignExitBar=null,addFired=false,tpFired=false,lastAddBar=null,lastTPBar=null,lastSignal="None";const signalHistory=[];
+  for(let i=0;i<n;i++){const c=closes[i],ema=emaSer[i],vwap=vwapSer[i],bb=bbBasisSer[i],sarBull=sarBullSer[i],sarBear=sarBearSer[i];if(isNaN(ema)||isNaN(vwap)||isNaN(bb))continue;const canExit=entryBar!==null&&(i-entryBar)>=Math.max(minBarsInTrade,dynMinBars),cooldownOK=lastCampaignExitBar===null||(i-lastCampaignExitBar)>=dynCooldownBars,addCooldownOK=lastAddBar===null||(i-lastAddBar)>=dynCooldownBars,tpCooldownOK=lastTPBar===null||(i-lastTPBar)>=dynCooldownBars;const lsBroken=closeBlwEMA2[i]&&closeBlwVWAP2[i]&&closeBlwBB2[i]&&sarBear,ssBroken=closeAbvEMA2[i]&&closeAbvVWAP2[i]&&closeAbvBB2[i]&&sarBull,lPanic=largeBearSer[i]&&c<ema&&c<bb&&c<vwap,sPanic=largeBullSer[i]&&c>ema&&c>bb&&c>vwap;const lExit=activeTrainDir===1&&canExit&&(lsBroken||lPanic),sExit=activeTrainDir===-1&&canExit&&(ssBroken||sPanic);const lh=liqHighSer[i],ll=liqLowSer[i],cTgt=activeTrainDir===1?lh:activeTrainDir===-1?ll:NaN;let cp2=NaN;if(activeTrainDir===1&&entryPrice!==null&&!isNaN(cTgt)&&cTgt>entryPrice)cp2=Math.max(0,Math.min(1.5,(c-entryPrice)/(cTgt-entryPrice)));else if(activeTrainDir===-1&&entryPrice!==null&&!isNaN(cTgt)&&cTgt<entryPrice)cp2=Math.max(0,Math.min(1.5,(entryPrice-c)/(entryPrice-cTgt)));const addLo=addWindowCenter-addWindowHalfWidth,addHi=addWindowCenter+addWindowHalfWidth,tpLo=tpWindowCenter-tpWindowHalfWidth,tpHi=tpWindowCenter+tpWindowHalfWidth,addInW=!isNaN(cp2)&&cp2>=addLo&&cp2<=addHi,tpInW=!isNaN(cp2)&&cp2>=tpLo&&cp2<=tpHi;const lH=activeTrainDir===1&&c>bb&&c>ema&&c>vwap&&sarBull,sH=activeTrainDir===-1&&c<bb&&c<ema&&c<vwap&&sarBear;const lAdd=lH&&!addFired&&addCooldownOK&&momScoreSer[i]>=0&&addInW,sAdd=sH&&!addFired&&addCooldownOK&&momScoreSer[i]<=0&&addInW,lTP=activeTrainDir===1&&!tpFired&&tpCooldownOK&&tpInW,sTP=activeTrainDir===-1&&!tpFired&&tpCooldownOK&&tpInW;
+  if(activeTrainDir===0){if(cooldownOK&&longEntrySer[i]){activeTrainDir=1;entryBar=i;entryPrice=c;addFired=false;tpFired=false;lastAddBar=null;lastTPBar=null;lastSignal="B2O";signalHistory.push({bar:i,time:bars[i].t,type:"B2O",price:c,dir:1});}else if(cooldownOK&&shortEntrySer[i]){activeTrainDir=-1;entryBar=i;entryPrice=c;addFired=false;tpFired=false;lastAddBar=null;lastTPBar=null;lastSignal="S2O";signalHistory.push({bar:i,time:bars[i].t,type:"S2O",price:c,dir:-1});}}else if(activeTrainDir===1){if(lExit){lastSignal="S2C";signalHistory.push({bar:i,time:bars[i].t,type:"S2C",price:c,dir:0});activeTrainDir=0;lastCampaignExitBar=i;entryBar=null;entryPrice=null;addFired=false;tpFired=false;}else if(lTP){lastSignal="TP";tpFired=true;lastTPBar=i;signalHistory.push({bar:i,time:bars[i].t,type:"TP",price:c,dir:1});}else if(lAdd){lastSignal="ADD";addFired=true;lastAddBar=i;signalHistory.push({bar:i,time:bars[i].t,type:"ADD",price:c,dir:1});}}else if(activeTrainDir===-1){if(sExit){lastSignal="B2C";signalHistory.push({bar:i,time:bars[i].t,type:"B2C",price:c,dir:0});activeTrainDir=0;lastCampaignExitBar=i;entryBar=null;entryPrice=null;addFired=false;tpFired=false;}else if(sTP){lastSignal="TP";tpFired=true;lastTPBar=i;signalHistory.push({bar:i,time:bars[i].t,type:"TP",price:c,dir:-1});}else if(sAdd){lastSignal="ADD";addFired=true;lastAddBar=i;signalHistory.push({bar:i,time:bars[i].t,type:"ADD",price:c,dir:-1});}}}
+  const last=n-1,barsSinceLast=lastCampaignExitBar!==null?last-lastCampaignExitBar:null,cdOK=lastCampaignExitBar===null||(last-lastCampaignExitBar)>=dynCooldownBars,lhL=liqHighSer[last],llL=liqLowSer[last],cTgtL=activeTrainDir===1?lhL:activeTrainDir===-1?llL:NaN;let cpL=NaN;if(activeTrainDir===1&&entryPrice!==null&&!isNaN(cTgtL)&&cTgtL>entryPrice)cpL=Math.max(0,Math.min(1.5,(closes[last]-entryPrice)/(cTgtL-entryPrice)));else if(activeTrainDir===-1&&entryPrice!==null&&!isNaN(cTgtL)&&cTgtL<entryPrice)cpL=Math.max(0,Math.min(1.5,(entryPrice-closes[last])/(entryPrice-cTgtL)));
+  return {liqHigh:isNaN(lhL)?null:lhL,liqLow:isNaN(llL)?null:llL,liqBreakUp:liqBreakUpSer[last]?1:0,liqBreakDn:liqBreakDnSer[last]?1:0,largeBullCandle:largeBullSer[last]?1:0,largeBearCandle:largeBearSer[last]?1:0,activeTrainDir,cooldownOK:cdOK?1:0,barsSinceLastExit:barsSinceLast,entryBar,entryPrice,addFired:addFired?1:0,tpFired:tpFired?1:0,campaignTarget:isNaN(cTgtL)?null:cTgtL,campaignProgress:isNaN(cpL)?null:cpL,lastSignal,signalCount:signalHistory.length,signalHistory:signalHistory.slice(-20)};
+}
+const HEARTBEAT_LIVE = { SPY:{sym:"SPY",label:"SPY",type:"price"},VIX:{sym:"VXX",label:"VIX",type:"price"},GC:{sym:"GLD",label:"GOLD",type:"price"},SI:{sym:"SLV",label:"SILV",type:"price"},CL:{sym:"USO",label:"OIL",type:"price"},DXY:{sym:"UUP",label:"DXY",type:"price"} };
+const OPTIONABLE_LIQUID = ["AAPL","MSFT","GOOGL","GOOG","AMZN","NVDA","META","TSLA","AVGO","ORCL","AMD","NFLX","CRM","ADBE","NOW","INTC","MU","INTU","IBM","CSCO","JPM","BAC","GS","WFC","MS","C","SCHW","V","MA","AXP","BX","BLK","XOM","CVX","COP","OXY","SLB","MPC","PSX","UNH","LLY","JNJ","ABBV","MRK","PFE","BMY","TMO","ABT","DHR","GILD","WMT","COST","HD","DIS","MCD","SBUX","NKE","TGT","LOW","TJX","BA","CAT","DE","GE","LMT","RTX","HON","UPS","FDX","T","VZ","CMCSA","WBD","COIN","MSTR","SMCI","CRWD","PLTR","PANW","SHOP","RBLX","UBER","ABNB","SNOW","NET","SPY","QQQ","IWM","DIA","XLF","XLE","XLK","XLV","GLD","SLV","USO","TLT","HYG","EEM"];
+const SP500 = ["AAPL","MSFT","NVDA","AMZN","GOOGL","GOOG","META","TSLA","AVGO","LLY","JPM","V","UNH","XOM","MA","COST","HD","PG","JNJ","ABBV","BAC","NFLX","KO","CRM","MRK","CVX","ORCL","WMT","AMD","TMO","PEP","ADBE","ACN","CSCO","ABT","MCD","WFC","DIS","DHR","IBM","CAT","TXN","VZ","INTU","GS","CMCSA","NOW","QCOM","UBER","RTX","T","HON","AMGN","BKNG","LOW","AXP","BLK","NKE","PFE","MS","ETN","C","BSX","PLD","SCHW","COP","ADP","DE","BX","GILD","SYK","TJX","SPY","QQQ","IWM","COIN","SMCI","MSTR","NET","CRWD","PLTR"];
+async function fetchSnapshot(tickers, apiKey) {
+  const url = `https://api.massive.com/v2/snapshot/locale/us/markets/stocks/tickers?tickers=${tickers.join(",")}&apiKey=${apiKey}`;
+  const resp = await fetch(url); if (!resp.ok) throw new Error(`Snapshot HTTP ${resp.status}`);
+  const j = await resp.json(); if (j.status && j.status !== "OK" && j.status !== "DELAYED") throw new Error(`Snapshot status: ${j.status}`);
+  return j.tickers || [];
+}
+async function fetchGroupedDaily(dateYMD, apiKey) {
+  const url = `https://api.massive.com/v2/aggs/grouped/locale/us/market/stocks/${dateYMD}?adjusted=true&apiKey=${apiKey}`;
+  const resp = await fetch(url); if (!resp.ok) throw new Error(`Grouped HTTP ${resp.status}`);
+  const j = await resp.json(); if (j.status && j.status !== "OK" && j.status !== "DELAYED") throw new Error(`Grouped status: ${j.status}`);
+  return j.results || [];
+}
+async function buildAvgVolume20d(tickers, apiKey) {
+  const days = []; for (let i = 1; i <= 30; i++) days.push(ymdDaysAgo(i));
+  const tickerSet = new Set(tickers), volMap = {}; let pulled = 0;
+  for (const day of days) { try { const results = await fetchGroupedDaily(day, apiKey); for (const r of results) { if (tickerSet.has(r.T)) { if (!volMap[r.T]) volMap[r.T] = []; volMap[r.T].push(r.v); } } pulled++; if (pulled >= 22) break; } catch { } await new Promise(r => setTimeout(r, 50)); }
+  const avg = {}; for (const sym of Object.keys(volMap)) { const vols = volMap[sym].slice(0, 20); if (vols.length >= 5) avg[sym] = vols.reduce((a,b) => a+b, 0) / vols.length; }
+  return { avg, builtAt: Date.now(), tickersFound: Object.keys(avg).length };
+}
+const STORAGE_AVGVOL = "mts-v21-avgvol-cache";
+const LIBRARY_ARTICLES = [
+  { id: "mmg-state-machine", title: "MMG State Machine", category: "Indicator", summary: "The sequence: Compression → Expansion → Midline → SAR → Volume → B2O/S2O", body: [{ type: "h2", text: "Overview" },{ type: "p", text: "MMG (Market Momentum Guide) is a strict sequential state machine. Each state must trigger before the next becomes valid." },{ type: "h2", text: "The six base states" },{ type: "list", items: ["Compression — price coils, volatility contracts.","Expansion — range breaks, directional move begins.","Midline — price reaches the regression midline.","SAR — stop-and-reverse level engages.","Volume — volume confirms or rejects the move.","B2O / S2O signal — entry trigger fires."]},{ type: "h2", text: "Degradation states" },{ type: "list", items: ["Caution — trend integrity weakening.","GetOff — momentum broken; exit signal is high-conviction."]}]},
+  { id: "eight-actions", title: "The 8 Actions", category: "Execution", summary: "B2O · S2O · ADD1 · ADD2 · TP1 · TP2 · S2C · B2C", body: [{ type: "h2", text: "Entries" },{ type: "list", items: ["B2O — Buy to Open. Initiate long.","S2O — Sell to Open. Initiate short."]},{ type: "h2", text: "Management" },{ type: "list", items: ["ADD1 — first scale-in.","ADD2 — second scale-in.","TP1 — first partial profit.","TP2 — second partial."]},{ type: "h2", text: "Full exits" },{ type: "list", items: ["S2C — Sell to Close.","B2C — Buy to Close."]}]},
+  { id: "campaign-states", title: "Campaign States", category: "Framework", summary: "Boarding → Rolling → Departed → Station", body: [{ type: "h2", text: "The train metaphor" },{ type: "p", text: "Every trade is a train ride. The campaign state tells you where you are in the journey." },{ type: "list", items: ["Boarding — signal fresh, RVOL building.","Rolling — trend established.","Departed — past peak velocity.","Station — reached next station."]}]},
+  { id: "position-sizing", title: "Position Sizing & ATR", category: "Risk", summary: "Why MTS sizes positions off Average True Range", body: [{ type: "p", text: "ATR is your volatility unit. Sizing trades based on ATR keeps risk per trade constant." },{ type: "h2", text: "MTS conventions" },{ type: "list", items: ["Stop distance = 1 × ATR from entry","First target = 1.7 × ATR","TP1 typically at 1R","TP2 typically at 1.7R"]}]},
+  { id: "options-overview", title: "Options Class Manager", category: "v.30", summary: "5 classes: CC · CSP · CS · IC · LO", body: [{ type: "h2", text: "The 5 Classes" },{ type: "list", items: ["CC — Covered Calls: sell calls against long stock for weekly income.","CSP — Cash-Secured Puts: sell puts with cash collateral; premium is profit if stock stays above strike.","CS — Credit Spreads: bull put spread (bullish) or bear call spread (bearish). Defined risk.","IC — Iron Condors: sell both a put spread and call spread. Pure theta play inside a range.","LO — Long Options: directional debit plays (calls or puts) for leveraged moves."]},{ type: "h2", text: "Production Targets" },{ type: "p", text: "Each class has a weekly and monthly income target. Track actual vs. target on the Options tab." },{ type: "h2", text: "Position Lifecycle" },{ type: "list", items: ["Open: log premium received (credit) or paid (debit), contracts, expiry.","Manage: monitor expiry countdown and mark-to-market.","Close: enter exit premium to calculate realized P&L, or expire worthless (full premium kept)."]}]},
+  { id: "glossary", title: "Glossary", category: "Reference", summary: "Key terms", body: [{ type: "h2", text: "Order codes" },{ type: "list", items: ["B2O — Buy to Open","S2O — Sell to Open","S2C — Sell to Close","B2C — Buy to Close","ADD — scale-in","TP — take profit"]},{ type: "h2", text: "Options terms" },{ type: "list", items: ["CC — Covered Call","CSP — Cash-Secured Put","CS — Credit Spread","IC — Iron Condor","LO — Long Option","Delta — option's price sensitivity to underlying move","IV — Implied Volatility"]},{ type: "h2", text: "Metrics" },{ type: "list", items: ["ATR — Average True Range","RVOL — Relative Volume (>1.5x strong)","R — risk-multiple","R:R — risk-to-reward ratio"]}]},
+];
+function calcPnL(position, currentPrice) { if(!position||position.side==="flat") return {pct:0,dollars:0}; const sign=position.side==="long"?1:-1,diff=(currentPrice-position.entryPrice)*sign; return {pct:(diff/position.entryPrice)*100,dollars:diff*position.size}; }
+function generateMockTicker(sym) { const price=Math.round((20+Math.random()*480)*100)/100; return {sym,price,change:Math.round((Math.random()-0.5)*6*100)/100,atr:Math.round(price*0.02*100)/100,mmgState:MMG_STATES[Math.floor(Math.random()*MMG_STATES.length)],campaign:CAMPAIGN_STATES[Math.floor(Math.random()*CAMPAIGN_STATES.length)],direction:["long","short","neutral"][Math.floor(Math.random()*3)],rvol:Math.round((0.7+Math.random()*1.5)*100)/100,custom:true}; }
+function computeScores({ mmgState, campaign, direction, rvol, position, atrDistance, atr, currentPrice }) {
+  const rvolMult=Math.min(rvol/1.5,1.0),stopMult=Math.max(0,1-atrDistance),side=(position&&position.side)||"flat";
+  const b2o=side!=="flat"?null:Math.min(95,Math.round((mmgState==="B2O-signal"?82:mmgState==="Expansion"&&direction==="long"?64:mmgState==="Midline"&&direction==="long"?48:mmgState==="Compression"?28:14)*rvolMult*(campaign==="Boarding"?1.18:campaign==="Rolling"?1.05:0.85)*stopMult));
+  const s2o=side!=="flat"?null:Math.min(95,Math.round((mmgState==="S2O-signal"?82:mmgState==="Expansion"&&direction==="short"?64:mmgState==="Midline"&&direction==="short"?48:mmgState==="Compression"?28:14)*rvolMult*(campaign==="Boarding"?1.18:campaign==="Rolling"?1.05:0.85)*stopMult));
+  let campaignProgress=null;
+  if(side==="long"&&position&&position.entryPrice&&atr){const target=position.entryPrice+1.7*atr;campaignProgress=(currentPrice-position.entryPrice)/(target-position.entryPrice);}
+  else if(side==="short"&&position&&position.entryPrice&&atr){const target=position.entryPrice-1.7*atr;campaignProgress=(position.entryPrice-currentPrice)/(position.entryPrice-target);}
+  const addInWindow=campaignProgress!==null&&campaignProgress>=0.45&&campaignProgress<=0.55,tpInWindow=campaignProgress!==null&&campaignProgress>=0.70&&campaignProgress<=0.80;
+  const inLong=side==="long",inShort=side==="short",directionMatch=(inLong&&direction==="long")||(inShort&&direction==="short"),reconfirm=(inLong&&mmgState==="B2O-signal")||(inShort&&mmgState==="S2O-signal");
+  let add=null;
+  if(side!=="flat"&&!position.addFired&&addInWindow){const base=directionMatch?(reconfirm?82:mmgState==="Expansion"?72:mmgState==="Midline"?58:40):25;const cMult=campaign==="Rolling"?1.12:campaign==="Boarding"?1.0:0.7;add=Math.min(95,Math.round(base*rvolMult*cMult));}
+  let tp=null;
+  if(side!=="flat"&&!position.tpFired&&tpInWindow){const base=mmgState==="GetOff"?92:mmgState==="Caution"?84:campaign==="Station"?82:campaign==="Departed"?72:68;tp=Math.min(95,base);}
+  const baseExit=mmgState==="GetOff"?90:mmgState==="Caution"?68:campaign==="Station"?58:campaign==="Departed"?26:16;
+  const s2c=inLong?Math.min(95,baseExit):null,b2c=inShort?Math.min(95,baseExit):null;
+  return {b2o,s2o,add,tp,s2c,b2c,campaignProgress};
+}
+function topAction(scores) { const entries=Object.entries(scores).filter(([k,v])=>k!=="campaignProgress"&&v!=null); if(!entries.length) return {code:"—",score:0,tone:"neutral"}; entries.sort((a,b)=>b[1]-a[1]); const [code,score]=entries[0]; const map={b2o:"long",s2o:"short",add:"add",tp:"tp",s2c:"close",b2c:"close"}; return {code:code.toUpperCase(),score,tone:map[code]}; }
+function addLockReason(position,campaignProgress){if(!position||position.side==="flat")return "no position";if(position.addFired)return "already added";if(campaignProgress==null)return "no target set";const pct=Math.round(campaignProgress*100);if(campaignProgress<0.45)return "wait · "+pct+"% to station";if(campaignProgress>0.55)return "window missed ("+pct+"%)";return "weak setup";}
+function tpLockReason(position,campaignProgress){if(!position||position.side==="flat")return "no position";if(position.tpFired)return "already taken";if(campaignProgress==null)return "no target set";const pct=Math.round(campaignProgress*100);if(campaignProgress<0.70)return "wait · "+pct+"% to station";if(campaignProgress>0.80)return "window missed ("+pct+"%)";return "weak setup";}
+function toneColor(tone){return tone==="long"?C.long:tone==="short"?C.short:tone==="close"?C.close:tone==="add"?C.add:tone==="tp"?C.tp:C.neutral;}
+function toneSoft(tone){return tone==="long"?"var(--long-soft)":tone==="short"?"var(--short-soft)":tone==="close"?"var(--close-soft)":tone==="add"?"var(--add-soft)":tone==="tp"?"var(--tp-soft)":C.track;}
+function formatTime(ms){const mins=Math.floor((Date.now()-ms)/60000);if(mins<60)return mins+"m";const hrs=Math.floor(mins/60);return hrs+"h"+mins%60+"m";}
+// ── V30 OPTIONS CLASS MANAGER COMPONENTS ────────────────────────────────────
+function AddOptionsPositionModal({ optClass, onAdd, onClose }) {
+  const cls = OPTIONS_CLASSES.find(c => c.key === optClass) || OPTIONS_CLASSES[0];
+  const isDebit = optClass === "LO";
+  const needsCollateral = optClass === "CSP" || optClass === "IC";
+  const needsMaxLoss = optClass === "CS" || optClass === "IC";
+  const [form, setForm] = React.useState({ ticker:"", description:"", premium:"", contracts:"1", expiryDate:"", maxLoss:"", collateral:"", notes:"" });
+  const set = (k,v) => setForm(f => ({...f,[k]:v}));
+  const premium = parseFloat(form.premium)||0, contracts = parseInt(form.contracts)||1;
+  const maxProfit = isDebit ? null : premium * contracts * 100;
+  const valid = form.ticker.trim() && form.premium && form.expiryDate && contracts > 0;
+  function handleAdd() {
+    if (!valid) return;
+    const now = Date.now();
+    const pos = {
+      id: "opt_" + now + "_" + Math.floor(Math.random()*10000),
+      optClass, ticker: form.ticker.trim().toUpperCase(),
+      description: form.description.trim(),
+      status: "open",
+      premium: parseFloat(form.premium) * (isDebit ? -1 : 1),
+      contracts, expiryDate: form.expiryDate,
+      maxProfit: isDebit ? null : maxProfit,
+      maxLoss: needsMaxLoss && form.maxLoss ? parseFloat(form.maxLoss) * -1 : null,
+      collateral: needsCollateral && form.collateral ? parseFloat(form.collateral) : null,
+      entryDate: now, closeDate: null, exitPremium: null,
+      realizedPnL: 0, unrealizedPnL: 0, notes: form.notes.trim(),
+    };
+    onAdd(pos);
+  }
+  const inp = "w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
+  const lbl = "block text-xs text-[var(--muted)] mb-1";
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4">
+      <div className="w-full max-w-md bg-[var(--surface-1)] rounded-2xl overflow-hidden" style={{maxHeight:"90vh"}}>
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <div>
+            <div className="text-xs font-mono px-2 py-0.5 rounded mb-1" style={{background:toneColor(cls.tone)+"22",color:toneColor(cls.tone)}}>{cls.short}</div>
+            <div className="font-semibold text-sm">Add {cls.name}</div>
+          </div>
+          <button onClick={onClose} className="text-[var(--muted)] hover:text-white text-xl leading-none">×</button>
+        </div>
+        <div className="overflow-y-auto p-4 space-y-3" style={{maxHeight:"calc(90vh - 130px)"}}>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className={lbl}>Ticker *</label><input className={inp} placeholder="AAPL" value={form.ticker} onChange={e=>set("ticker",e.target.value.toUpperCase())} /></div>
+            <div><label className={lbl}>Contracts *</label><input className={inp} type="number" min="1" value={form.contracts} onChange={e=>set("contracts",e.target.value)} /></div>
+          </div>
+          <div><label className={lbl}>Description</label><input className={inp} placeholder={cls.desc} value={form.description} onChange={e=>set("description",e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className={lbl}>{isDebit?"Premium Paid *":"Premium Received *"}</label><input className={inp} type="number" step="0.01" min="0" placeholder="2.50" value={form.premium} onChange={e=>set("premium",e.target.value)} /></div>
+            <div><label className={lbl}>Expiry Date *</label><input className={inp} type="date" value={form.expiryDate} onChange={e=>set("expiryDate",e.target.value)} /></div>
+          </div>
+          {needsMaxLoss && <div><label className={lbl}>Max Loss (spread width × contracts × 100)</label><input className={inp} type="number" step="1" min="0" placeholder="500" value={form.maxLoss} onChange={e=>set("maxLoss",e.target.value)} /></div>}
+          {needsCollateral && <div><label className={lbl}>Collateral Required</label><input className={inp} type="number" step="1" min="0" placeholder="10000" value={form.collateral} onChange={e=>set("collateral",e.target.value)} /></div>}
+          <div><label className={lbl}>Notes</label><textarea className={inp+" resize-none"} rows={2} value={form.notes} onChange={e=>set("notes",e.target.value)} /></div>
+          {!isDebit && premium > 0 && contracts > 0 && (
+            <div className="rounded-lg p-3 text-sm" style={{background:"var(--long-soft)"}}>
+              <div className="text-xs text-[var(--muted)] mb-1">Max Profit Preview</div>
+              <div className="font-mono font-bold" style={{color:C.long}}>${maxProfit.toFixed(0)} ({contracts} × {premium.toFixed(2)} × 100)</div>
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t border-[var(--border)] flex gap-3">
+          <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--muted)]">Cancel</button>
+          <button onClick={handleAdd} disabled={!valid} className="flex-1 py-2 rounded-xl text-sm font-semibold text-white transition-opacity" style={{background:toneColor(cls.tone),opacity:valid?1:0.4}}>Add Position</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function CloseOptionsPositionModal({ position, onClose, onConfirm }) {
+  if (!position) return null;
+  const cls = OPTIONS_CLASSES.find(c => c.key === position.optClass) || OPTIONS_CLASSES[0];
+  const isDebit = position.optClass === "LO";
+  const isCredit = !isDebit;
+  const [exitPremium, setExitPremium] = React.useState("");
+  const [expireWorthless, setExpireWorthless] = React.useState(false);
+  const entry = Math.abs(position.premium);
+  const exit = expireWorthless ? 0 : (parseFloat(exitPremium)||null);
+  let pnl = null;
+  if (expireWorthless) { pnl = isCredit ? entry * position.contracts * 100 : -entry * position.contracts * 100; }
+  else if (exit !== null) { pnl = isCredit ? (entry - exit) * position.contracts * 100 : (exit - entry) * position.contracts * 100; }
+  const inp = "w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:outline-none";
+  const daysLeft = daysUntil(position.expiryDate);
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4">
+      <div className="w-full max-w-md bg-[var(--surface-1)] rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <div className="font-semibold text-sm">Close Position</div>
+          <button onClick={onClose} className="text-[var(--muted)] hover:text-white text-xl leading-none">×</button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="rounded-lg p-3 text-sm border border-[var(--border)]">
+            <div className="flex justify-between mb-1">
+              <span className="font-semibold">{position.ticker}</span>
+              <span className="text-xs px-2 py-0.5 rounded" style={{background:toneColor(cls.tone)+"22",color:toneColor(cls.tone)}}>{cls.short}</span>
+            </div>
+            <div className="text-xs text-[var(--muted)]">{position.description||"—"}</div>
+            <div className="flex gap-4 mt-2 text-xs">
+              <span>Entry: <span className="font-mono">${Math.abs(position.premium).toFixed(2)}</span></span>
+              <span>{daysLeft !== null ? expiryLabel(position.expiryDate) : "no expiry"}</span>
+              <span>{position.contracts} contracts</span>
+            </div>
+          </div>
+          {isCredit && (
+            <button onClick={() => setExpireWorthless(e => !e)} className="w-full py-2 rounded-xl text-sm border transition-colors" style={{borderColor:expireWorthless?C.long:"var(--border)",background:expireWorthless?"var(--long-soft)":"transparent",color:expireWorthless?C.long:"var(--muted)"}}>
+              ✓ Expire Worthless (keep full premium)
+            </button>
+          )}
+          {!expireWorthless && (
+            <div>
+              <label className="block text-xs text-[var(--muted)] mb-1">{isCredit?"Exit Premium (buy-back price)":"Exit Premium (sell price)"}</label>
+              <input className={inp} type="number" step="0.01" min="0" placeholder="0.05" value={exitPremium} onChange={e=>setExitPremium(e.target.value)} />
+            </div>
+          )}
+          {pnl !== null && (
+            <div className="rounded-lg p-3" style={{background:pnl>=0?"var(--long-soft)":"var(--short-soft)"}}>
+              <div className="text-xs text-[var(--muted)] mb-1">Realized P&amp;L</div>
+              <div className="text-xl font-mono font-bold" style={{color:pnl>=0?C.long:C.short}}>{pnl>=0?"+":""}{pnl.toFixed(0)}</div>
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t border-[var(--border)] flex gap-3">
+          <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--muted)]">Cancel</button>
+          <button onClick={() => onConfirm(position.id, expireWorthless ? 0 : parseFloat(exitPremium)||0, pnl||0)} disabled={pnl===null} className="flex-1 py-2 rounded-xl text-sm font-semibold text-white" style={{background:pnl!==null?(pnl>=0?C.long:C.close):C.muted,opacity:pnl!==null?1:0.4}}>Confirm Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function EditTargetsModal({ targets, onSave, onClose }) {
+  const [form, setForm] = React.useState(() => JSON.parse(JSON.stringify(targets)));
+  const set = (cls,k,v) => setForm(f => ({...f,[cls]:{...f[cls],[k]:parseInt(v)||0}}));
+  const inp = "w-20 bg-[var(--surface-2)] border border-[var(--border)] rounded px-2 py-1 text-sm font-mono text-right focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="w-full max-w-sm bg-[var(--surface-1)] rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <div className="font-semibold text-sm flex items-center gap-2"><Target size={14} />Weekly · Monthly Targets</div>
+          <button onClick={onClose} className="text-[var(--muted)] hover:text-white text-xl leading-none">×</button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="grid grid-cols-3 text-xs text-[var(--muted)] mb-2 px-1">
+            <span>Class</span><span className="text-right">Weekly $</span><span className="text-right">Monthly $</span>
+          </div>
+          {OPTIONS_CLASSES.map(cls => (
+            <div key={cls.key} className="grid grid-cols-3 items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{background:toneColor(cls.tone)+"22",color:toneColor(cls.tone)}}>{cls.short}</span>
+              </div>
+              <div className="flex justify-end"><input className={inp} value={form[cls.key]?.weekly||0} onChange={e=>set(cls.key,"weekly",e.target.value)} /></div>
+              <div className="flex justify-end"><input className={inp} value={form[cls.key]?.monthly||0} onChange={e=>set(cls.key,"monthly",e.target.value)} /></div>
+            </div>
+          ))}
+        </div>
+        <div className="p-4 border-t border-[var(--border)] flex gap-3">
+          <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--muted)]">Cancel</button>
+          <button onClick={()=>onSave(form)} className="flex-1 py-2 rounded-xl text-sm font-semibold text-white" style={{background:C.accent}}>Save Targets</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function OptionsClassCard({ cls, ledger, targets, onAdd, onClose, onDelete }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const stats = computeOptionsStats(ledger, cls.key);
+  const tgt = targets[cls.key] || { weekly: 0, monthly: 0 };
+  const weekPct = tgt.weekly > 0 ? Math.min(100, (stats.weekPnL / tgt.weekly) * 100) : 0;
+  const monthPct = tgt.monthly > 0 ? Math.min(100, (stats.monthPnL / tgt.monthly) * 100) : 0;
+  const color = toneColor(cls.tone);
+  const open = stats.open || [];
+  function ProgressBar({ pct, value, target, period }) {
+    const over = pct >= 100;
+    return (
+      <div className="mb-1">
+        <div className="flex justify-between text-xs mb-1">
+          <span className="text-[var(--muted)]">{period}</span>
+          <span className="font-mono" style={{color:over?C.long:value>0?C.tp:C.muted}}>${value.toFixed(0)} / ${target.toLocaleString()}</span>
+        </div>
+        <div className="h-1.5 rounded-full" style={{background:"var(--track)"}}>
+          <div className="h-1.5 rounded-full transition-all" style={{width:Math.max(0,Math.min(100,pct))+"%",background:over?C.long:pct>60?C.tp:color}} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-2xl overflow-hidden border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold px-2 py-1 rounded-lg" style={{background:color+"22",color}}>{cls.short}</span>
+            <div>
+              <div className="font-semibold text-sm">{cls.name}</div>
+              <div className="text-xs text-[var(--muted)]">{cls.desc}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-right">
+              <div className="text-xs text-[var(--muted)]">open</div>
+              <div className="font-mono font-bold" style={{color}}>{open.length}</div>
+            </div>
+            <button onClick={() => setExpanded(e => !e)} className="text-[var(--muted)] hover:text-white p-1 rounded">
+              <ChevronDown size={16} style={{transform:expanded?"rotate(180deg)":"none",transition:"transform 0.2s"}} />
+            </button>
+          </div>
+        </div>
+        <ProgressBar pct={weekPct} value={stats.weekPnL} target={tgt.weekly} period="This Week" />
+        <ProgressBar pct={monthPct} value={stats.monthPnL} target={tgt.monthly} period="This Month" />
+        <div className="flex justify-between text-xs mt-2">
+          <span className="text-[var(--muted)]">Win rate: <span className="font-mono" style={{color:stats.winRate>0.5?C.long:C.muted}}>{stats.closed.length>0?(stats.winRate*100).toFixed(0)+"%":"—"}</span></span>
+          <span className="text-[var(--muted)]">{stats.closed.length} closed</span>
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-[var(--border)]">
+          {open.length === 0 ? (
+            <div className="p-4 text-center text-xs text-[var(--muted)]">No open positions</div>
+          ) : open.map(pos => {
+            const d = daysUntil(pos.expiryDate);
+            const isDebit = pos.optClass === "LO";
+            const pnlDisplay = isDebit ? null : pos.maxProfit;
+            return (
+              <div key={pos.id} className="px-4 py-3 border-b border-[var(--border)] last:border-0">
+                <div className="flex items-start justify-between mb-1">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">{pos.ticker}</span>
+                      <span className="text-xs font-mono">{pos.contracts}c</span>
+                      <span className="text-xs font-mono" style={{color:C.long}}>${Math.abs(pos.premium).toFixed(2)}</span>
+                    </div>
+                    {pos.description && <div className="text-xs text-[var(--muted)] mt-0.5">{pos.description}</div>}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => onClose(pos)} className="text-xs px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-white">Close</button>
+                    <button onClick={() => onDelete(pos.id)} className="text-xs px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--short)]">✕</button>
+                  </div>
+                </div>
+                <div className="flex gap-3 text-xs">
+                  <span style={{color:expiryColor(pos.expiryDate)}}>{expiryLabel(pos.expiryDate)}</span>
+                  {pnlDisplay != null && <span className="text-[var(--muted)]">max <span className="font-mono" style={{color:C.long}}>${pnlDisplay.toFixed(0)}</span></span>}
+                  {pos.collateral && <span className="text-[var(--muted)]">col <span className="font-mono">${pos.collateral.toLocaleString()}</span></span>}
+                </div>
+              </div>
+            );
+          })}
+          <div className="p-3">
+            <button onClick={() => onAdd(cls.key)} className="w-full py-2 rounded-xl text-xs font-semibold border border-dashed border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">+ Add {cls.short} Position</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+function OptionsTab({ ledger, targets, setOverlay, setAddingOptClass, setClosingOptPos }) {
+  const totalStats = computeOptionsStats(ledger, null);
+  const combinedWeekTarget = Object.values(targets).reduce((s,t) => s+(t.weekly||0), 0);
+  const combinedMonthTarget = Object.values(targets).reduce((s,t) => s+(t.monthly||0), 0);
+  const totalOpen = (totalStats.open||[]).length;
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-bold text-base">Options Class Manager</div>
+          <div className="text-xs text-[var(--muted)]">{totalOpen} open · {totalStats.closed.length} closed</div>
+        </div>
+        <button onClick={() => setOverlay("targets")} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-white">
+          <Target size={12} />Targets
+        </button>
+      </div>
+      <div className="rounded-2xl p-4 border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+        <div className="text-xs text-[var(--muted)] mb-3 font-semibold">Total Production</div>
+        <div className="grid grid-cols-2 gap-4">
+          {[["This Week", totalStats.weekPnL, combinedWeekTarget],["This Month", totalStats.monthPnL, combinedMonthTarget]].map(([label,val,tgt]) => (
+            <div key={label}>
+              <div className="text-xs text-[var(--muted)] mb-1">{label}</div>
+              <div className="font-mono text-lg font-bold" style={{color:val>=tgt&&tgt>0?C.long:val>0?C.tp:C.muted}}>${val.toFixed(0)}</div>
+              <div className="text-xs text-[var(--muted)]">of ${tgt.toLocaleString()}</div>
+              <div className="h-1 rounded-full mt-1.5" style={{background:"var(--track)"}}>
+                <div className="h-1 rounded-full" style={{width:tgt>0?Math.min(100,(val/tgt*100))+"%":"0%",background:val>=tgt&&tgt>0?C.long:C.tp}} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-4 mt-3 pt-3 border-t border-[var(--border)] text-xs">
+          <span className="text-[var(--muted)]">Win rate: <span className="font-mono" style={{color:totalStats.winRate>0.5?C.long:C.muted}}>{totalStats.closed.length>0?(totalStats.winRate*100).toFixed(0)+"%":"—"}</span></span>
+          <span className="text-[var(--muted)]">W/L: <span style={{color:C.long}}>{totalStats.winners}</span> / <span style={{color:C.short}}>{totalStats.losers}</span></span>
+        </div>
+      </div>
+      {OPTIONS_CLASSES.map(cls => (
+        <OptionsClassCard key={cls.key} cls={cls} ledger={ledger} targets={targets}
+          onAdd={key => { setAddingOptClass(key); setOverlay("add"); }}
+          onClose={pos => { setClosingOptPos(pos); setOverlay("close"); }}
+          onDelete={id => {/* handled in MTSApp */setClosingOptPos({id,_delete:true}); setOverlay("delete");}}
+        />
+      ))}
+    </div>
+  );
+}
+// ── V25 UI COMPONENTS ───────────────────────────────────────────────────────
+function MarketHeartbeat({ livePricesMap }) {
+  const symbols = Object.values(HEARTBEAT_LIVE);
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+      {symbols.map(s => {
+        const data = livePricesMap[s.sym];
+        const price = data?.price ?? null;
+        const chg = data?.change ?? null;
+        const pct = data?.changePct ?? null;
+        return (
+          <div key={s.sym} className="flex-shrink-0 text-center min-w-[52px]">
+            <div className="text-xs text-[var(--muted)]">{s.label}</div>
+            <div className="text-xs font-mono font-semibold">{price != null ? price.toFixed(2) : "—"}</div>
+            {chg != null && <div className="text-xs font-mono" style={{color:chg>=0?C.long:C.short}}>{chg>=0?"+":""}{pct != null ? pct.toFixed(2)+"%" : chg.toFixed(2)}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function Ring({ pct, size, stroke, color, children }) {
+  size = size||48; stroke = stroke||4; color = color||C.accent;
+  const r = (size-stroke)/2, circ = 2*Math.PI*r, dash = Math.min(1,Math.max(0,pct||0))*circ;
+  return (
+    <div className="relative flex items-center justify-center" style={{width:size,height:size}}>
+      <svg width={size} height={size} style={{position:"absolute",top:0,left:0}}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--track)" strokeWidth={stroke}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`}/>
+      </svg>
+      <div style={{position:"relative",zIndex:1}}>{children}</div>
+    </div>
+  );
+}
+function ActionCell({ code, score, tone, locked, lockMsg }) {
+  const bg = toneColor(tone), soft = toneSoft(tone);
+  return (
+    <div className="rounded-xl p-2 text-center min-w-[68px]" style={{background:locked?C.track:soft}}>
+      <div className="text-xs font-mono font-bold mb-1" style={{color:locked?C.muted:bg}}>{code}</div>
+      {locked
+        ? <div className="text-xs text-[var(--muted)] leading-tight">{lockMsg||"locked"}</div>
+        : <Ring pct={score/100} size={36} stroke={3} color={bg}><span className="text-xs font-mono font-bold" style={{color:bg}}>{score}</span></Ring>
+      }
+    </div>
+  );
+}
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-[var(--surface-1)] rounded-2xl p-6 w-full max-w-xs text-center border border-[var(--border)]">
+        <p className="text-sm mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--muted)]">Cancel</button>
+          <button onClick={onConfirm} className="flex-1 py-2 rounded-xl text-sm font-semibold text-white" style={{background:C.close}}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function LiveDataStatus({ lastFetch, loading, error }) {
+  if (loading) return <div className="text-xs text-[var(--muted)] animate-pulse">fetching…</div>;
+  if (error) return <div className="text-xs" style={{color:C.short}} title={error}>data error</div>;
+  if (!lastFetch) return <div className="text-xs text-[var(--muted)]">no data</div>;
+  return <div className="text-xs text-[var(--muted)]">updated {formatTime(lastFetch)} ago</div>;
+}
+function ScannerStatus({ scanState, onScan }) {
+  const states = { idle:"Scan", scanning:"Scanning…", done:"Re-scan" };
+  return (
+    <button onClick={onScan} disabled={scanState==="scanning"} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-semibold transition-opacity" style={{background:C.accent,opacity:scanState==="scanning"?0.6:1}}>
+      {scanState==="scanning" ? <><Loader size={10} className="animate-spin"/>{states[scanState]}</> : <><Zap size={10}/>{states[scanState]}</>}
+    </button>
+  );
+}
+function RiskAssessmentWizard({ onComplete }) {
+  const [step, setStep] = React.useState(0);
+  const [answerMap, setAnswerMap] = React.useState({});
+  const q = RISK_QUESTIONS[step];
+  function answer(idx) {
+    const next = { ...answerMap, [q.id]: idx };
+    if (step + 1 < RISK_QUESTIONS.length) { setAnswerMap(next); setStep(step + 1); }
+    else {
+      const { score, tier: tierKey } = scoreRiskAnswers(next);
+      const tier = RISK_TIERS[tierKey] || RISK_TIERS.conservative;
+      const tierColors = { conservative: C.muted, moderate: C.tp, aggressive: C.long, vAggressive: C.short };
+      onComplete({ tierKey, tierName: tier.name, color: tierColors[tierKey] || C.accent, score, tier: tierKey, risk: tier.risk, maxPos: tier.maxPos, dailyStop: tier.dailyStop, answeredAt: Date.now() });
+    }
+  }
+  const pct = step / RISK_QUESTIONS.length;
+  return (
+    <div className="flex-1 flex flex-col p-4">
+      <div className="mb-6">
+        <div className="flex justify-between text-xs text-[var(--muted)] mb-2"><span>Question {step+1} of {RISK_QUESTIONS.length}</span><span>{Math.round(pct*100)}%</span></div>
+        <div className="h-1 rounded-full" style={{background:"var(--track)"}}><div className="h-1 rounded-full transition-all" style={{width:pct*100+"%",background:C.accent}}/></div>
+      </div>
+      <div className="mb-8"><p className="text-base font-semibold leading-snug">{q.question}</p></div>
+      <div className="space-y-3">
+        {q.options.map((opt, i) => (
+          <button key={i} onClick={() => answer(i)} className="w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors hover:border-[var(--accent)] hover:bg-[var(--surface-2)]" style={{background:"var(--surface-1)",borderColor:"var(--border)"}}>
+            {typeof opt === "string" ? opt : opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+function RiskProfileCard({ riskProfile, onRetake }) {
+  if (!riskProfile) return (
+    <div className="p-4 rounded-2xl border border-dashed border-[var(--border)] text-center">
+      <p className="text-xs text-[var(--muted)] mb-3">No risk profile set</p>
+      <button onClick={onRetake} className="text-xs px-4 py-2 rounded-xl font-semibold text-white" style={{background:C.accent}}>Take Assessment</button>
+    </div>
+  );
+  const tierKey = riskProfile.tierKey || riskProfile.tier || "conservative";
+  const tier = RISK_TIERS[tierKey] || RISK_TIERS.conservative;
+  const tierColors = { conservative: C.muted, moderate: C.tp, aggressive: C.long, vAggressive: C.short };
+  const tierColor = riskProfile.color || tierColors[tierKey] || C.accent;
+  return (
+    <div className="p-4 rounded-2xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm" style={{background:tierColor+"22",color:tierColor}}>{tier.icon||tierKey[0].toUpperCase()}</div>
+          <div>
+            <div className="font-semibold text-sm">{tier.name}</div>
+            <div className="text-xs text-[var(--muted)]">{tier.description}</div>
+          </div>
+        </div>
+        <button onClick={onRetake} className="text-xs text-[var(--muted)] underline">Retake</button>
+      </div>
+      <div className="text-xs text-[var(--muted)]">Risk/trade: {tier.risk}% · Max positions: {tier.maxPos} · Daily stop: {tier.dailyStop}%</div>
+    </div>
+  );
+}
+function PolygonKeyField({ polygonKey, onSave }) {
+  const [val, setVal] = React.useState(polygonKey||"");
+  const [editing, setEditing] = React.useState(!polygonKey);
+  if (!editing) return (
+    <div className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)]">
+      <div>
+        <div className="text-xs text-[var(--muted)]">Massive API Key</div>
+        <div className="text-xs font-mono mt-0.5">{polygonKey.slice(0,8)}{"•".repeat(Math.max(0,polygonKey.length-8))}</div>
+      </div>
+      <button onClick={()=>setEditing(true)} className="text-xs text-[var(--muted)] underline">Edit</button>
+    </div>
+  );
+  return (
+    <div className="space-y-2">
+      <div className="text-xs text-[var(--muted)]">Massive API Key</div>
+      <input className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" placeholder="Paste API key…" value={val} onChange={e=>setVal(e.target.value)} />
+      <div className="flex gap-2">
+        {polygonKey && <button onClick={()=>setEditing(false)} className="flex-1 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted)]">Cancel</button>}
+        <button onClick={()=>{onSave(val.trim());setEditing(false);}} disabled={!val.trim()} className="flex-1 py-2 rounded-xl text-xs font-semibold text-white" style={{background:C.accent,opacity:val.trim()?1:0.4}}>Save Key</button>
+      </div>
+    </div>
+  );
+}
+function PaperAccountCard({ sessions }) {
+  const allTrades = sessions.flatMap(s => s.trades||[]);
+  const closed = allTrades.filter(t => t.exitPrice);
+  const totalPnL = closed.reduce((s,t) => s + (calcPnL({side:t.side,entryPrice:t.entryPrice,size:t.size||1},{}).dollars+(t.realizedPnL||0)), 0);
+  const winners = closed.filter(t => (t.realizedPnL||0) > 0).length;
+  const stats = [
+    { label:"Sessions", val: sessions.length },
+    { label:"Trades", val: allTrades.length },
+    { label:"Closed", val: closed.length },
+    { label:"Win Rate", val: closed.length > 0 ? (winners/closed.length*100).toFixed(0)+"%" : "—" },
+  ];
+  return (
+    <div className="p-4 rounded-2xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="font-semibold text-sm">Paper Account</div>
+        <div className="font-mono text-sm font-bold" style={{color:totalPnL>=0?C.long:C.short}}>{totalPnL>=0?"+":""}{totalPnL.toFixed(2)}</div>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {stats.map(s => (
+          <div key={s.label} className="text-center p-2 rounded-lg" style={{background:"var(--surface-2)"}}>
+            <div className="text-xs font-bold">{s.val}</div>
+            <div className="text-xs text-[var(--muted)]">{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function SessionCreateForm({ onCreate }) {
+  const [ticker, setTicker] = React.useState("");
+  const [capital, setCapital] = React.useState("10000");
+  const [notes, setNotes] = React.useState("");
+  const valid = ticker.trim() && parseFloat(capital) > 0;
+  function create() {
+    if (!valid) return;
+    onCreate({ ticker: ticker.trim().toUpperCase(), capital: parseFloat(capital), notes: notes.trim(), id: "sess_"+Date.now(), startedAt: Date.now(), trades: [], status: "active" });
+    setTicker(""); setNotes("");
+  }
+  const inp = "w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
+  return (
+    <div className="p-4 rounded-2xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+      <div className="text-sm font-semibold mb-3">New Paper Session</div>
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <div><input className={inp} placeholder="Ticker" value={ticker} onChange={e=>setTicker(e.target.value.toUpperCase())} /></div>
+          <div><input className={inp} type="number" placeholder="Capital" value={capital} onChange={e=>setCapital(e.target.value)} /></div>
+        </div>
+        <textarea className={inp+" resize-none"} rows={2} placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)} />
+        <button onClick={create} disabled={!valid} className="w-full py-2 rounded-xl text-sm font-semibold text-white transition-opacity" style={{background:C.accent,opacity:valid?1:0.4}}>Create Session</button>
+      </div>
+    </div>
+  );
+}
+function SessionListCard({ session, onAddTrade, onClose: onCloseSession, onDelete }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const [showTradeForm, setShowTradeForm] = React.useState(false);
+  const [tf, setTf] = React.useState({side:"long",size:"100",entryPrice:"",exitPrice:"",notes:""});
+  const trades = session.trades||[];
+  const closed = trades.filter(t => t.exitPrice);
+  const totalPnL = closed.reduce((s,t) => s+(t.realizedPnL||0), 0);
+  const setF = (k,v) => setTf(f=>({...f,[k]:v}));
+  function addTrade() {
+    const t = { id:"tr_"+Date.now(), side:tf.side, size:parseFloat(tf.size)||1, entryPrice:parseFloat(tf.entryPrice)||0, exitPrice:tf.exitPrice?parseFloat(tf.exitPrice):null, notes:tf.notes, addedAt:Date.now() };
+    if (t.exitPrice) t.realizedPnL = (t.exitPrice-t.entryPrice)*(t.side==="long"?1:-1)*t.size;
+    onAddTrade(session.id, t); setShowTradeForm(false);
+  }
+  const inp = "bg-[var(--surface-2)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:outline-none";
+  return (
+    <div className="rounded-2xl overflow-hidden border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+      <div className="flex items-center justify-between p-3 cursor-pointer" onClick={()=>setExpanded(e=>!e)}>
+        <div className="flex items-center gap-3">
+          <div className="font-semibold text-sm">{session.ticker}</div>
+          <div className="text-xs px-2 py-0.5 rounded" style={{background:session.status==="active"?"var(--long-soft)":"var(--surface-2)",color:session.status==="active"?C.long:C.muted}}>{session.status}</div>
+          <div className="text-xs text-[var(--muted)]">{trades.length} trades</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="font-mono text-sm" style={{color:totalPnL>=0?C.long:C.short}}>{totalPnL>=0?"+":""}{totalPnL.toFixed(0)}</div>
+          <ChevronDown size={14} style={{color:C.muted,transform:expanded?"rotate(180deg)":"none"}} />
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-[var(--border)]">
+          {trades.map(t => (
+            <div key={t.id} className="px-4 py-2 flex items-center justify-between border-b border-[var(--border)] last:border-0 text-xs">
+              <div className="flex items-center gap-3">
+                <span className="px-1.5 py-0.5 rounded font-mono" style={{background:t.side==="long"?"var(--long-soft)":"var(--short-soft)",color:t.side==="long"?C.long:C.short}}>{t.side.toUpperCase()}</span>
+                <span className="font-mono">{t.size} @ ${t.entryPrice?.toFixed(2)||"?"}</span>
+                {t.exitPrice && <span className="text-[var(--muted)]">→ ${t.exitPrice.toFixed(2)}</span>}
+              </div>
+              {t.realizedPnL != null && <span className="font-mono" style={{color:t.realizedPnL>=0?C.long:C.short}}>{t.realizedPnL>=0?"+":""}{t.realizedPnL.toFixed(0)}</span>}
+            </div>
+          ))}
+          {showTradeForm ? (
+            <div className="p-3 space-y-2">
+              <div className="grid grid-cols-4 gap-2">
+                <select className={inp+" col-span-1"} value={tf.side} onChange={e=>setF("side",e.target.value)}><option value="long">Long</option><option value="short">Short</option></select>
+                <input className={inp+" col-span-1"} placeholder="Size" value={tf.size} onChange={e=>setF("size",e.target.value)} />
+                <input className={inp+" col-span-1"} placeholder="Entry $" value={tf.entryPrice} onChange={e=>setF("entryPrice",e.target.value)} />
+                <input className={inp+" col-span-1"} placeholder="Exit $" value={tf.exitPrice} onChange={e=>setF("exitPrice",e.target.value)} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=>setShowTradeForm(false)} className="flex-1 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--muted)]">Cancel</button>
+                <button onClick={addTrade} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white" style={{background:C.accent}}>Add</button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 flex gap-2">
+              <button onClick={()=>setShowTradeForm(true)} className="flex-1 py-1.5 rounded-lg text-xs border border-dashed border-[var(--border)] text-[var(--muted)] hover:text-white">+ Trade</button>
+              {session.status==="active" && <button onClick={()=>onCloseSession(session.id)} className="py-1.5 px-3 rounded-lg text-xs border border-[var(--border)] text-[var(--muted)]">End</button>}
+              <button onClick={()=>onDelete(session.id)} className="py-1.5 px-3 rounded-lg text-xs border border-[var(--border)] text-[var(--muted)] hover:text-[var(--short)]">✕</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+function AccountSummary({ riskProfile, sessions, polygonKey, onSaveKey, onRetakeRisk, onReset }) {
+  const [confirmReset, setConfirmReset] = React.useState(false);
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4">
+      <div className="font-bold text-base">Account</div>
+      <RiskProfileCard riskProfile={riskProfile} onRetake={onRetakeRisk} />
+      <PaperAccountCard sessions={sessions} />
+      <div className="p-4 rounded-2xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+        <div className="text-sm font-semibold mb-3">API Settings</div>
+        <PolygonKeyField polygonKey={polygonKey} onSave={onSaveKey} />
+      </div>
+      <div className="p-4 rounded-2xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+        <div className="text-sm font-semibold mb-1">About</div>
+        <div className="text-xs text-[var(--muted)] mb-3">MTS v.30 — Options Class Manager</div>
+        <button onClick={()=>setConfirmReset(true)} className="text-xs text-[var(--muted)] underline">Reset all data</button>
+      </div>
+      {confirmReset && <ConfirmModal message="Delete all sessions, ledger data, and settings? This cannot be undone." onConfirm={()=>{onReset();setConfirmReset(false);}} onCancel={()=>setConfirmReset(false)} />}
+    </div>
+  );
+}
+function Library() {
+  const [selected, setSelected] = React.useState(null);
+  const categories = [...new Set(LIBRARY_ARTICLES.map(a => a.category))];
+  if (selected) {
+    const article = LIBRARY_ARTICLES.find(a => a.id === selected);
+    return (
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-28">
+        <button onClick={()=>setSelected(null)} className="flex items-center gap-1.5 text-xs text-[var(--muted)] mb-4"><ChevronDown size={12} style={{transform:"rotate(90deg)"}} />Back</button>
+        <div className="text-xs text-[var(--muted)] mb-1">{article.category}</div>
+        <h1 className="text-lg font-bold mb-2">{article.title}</h1>
+        <p className="text-xs text-[var(--muted)] mb-6">{article.summary}</p>
+        {article.body.map((block, i) => {
+          if (block.type === "h2") return <h2 key={i} className="text-sm font-semibold mt-4 mb-2">{block.text}</h2>;
+          if (block.type === "p") return <p key={i} className="text-sm text-[var(--fg)] mb-3 leading-relaxed">{block.text}</p>;
+          if (block.type === "list") return <ul key={i} className="space-y-1 mb-3">{block.items.map((it,j) => <li key={j} className="text-sm flex gap-2"><span style={{color:C.accent}}>·</span>{it}</li>)}</ul>;
+          return null;
+        })}
+      </div>
+    );
+  }
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4">
+      <div className="font-bold text-base">Library</div>
+      {categories.map(cat => (
+        <div key={cat}>
+          <div className="text-xs font-semibold text-[var(--muted)] mb-2 uppercase tracking-wider">{cat}</div>
+          <div className="space-y-2">
+            {LIBRARY_ARTICLES.filter(a => a.category === cat).map(a => (
+              <button key={a.id} onClick={()=>setSelected(a.id)} className="w-full text-left p-3 rounded-xl border border-[var(--border)] hover:border-[var(--accent)] transition-colors" style={{background:"var(--surface-1)"}}>
+                <div className="text-sm font-semibold">{a.title}</div>
+                <div className="text-xs text-[var(--muted)] mt-0.5">{a.summary}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function WatchlistView({ watchlist, livePricesMap, onRemove, onAdd }) {
+  const [newTicker, setNewTicker] = React.useState("");
+  function add() { const t=newTicker.trim().toUpperCase(); if(t&&!watchlist.includes(t)){onAdd(t);setNewTicker("");} }
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4">
+      <div className="font-bold text-base">Watchlist</div>
+      <div className="flex gap-2">
+        <input className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" placeholder="Add ticker…" value={newTicker} onChange={e=>setNewTicker(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&add()} />
+        <button onClick={add} className="px-4 py-2 rounded-xl text-sm font-semibold text-white" style={{background:C.accent}}>Add</button>
+      </div>
+      {watchlist.length === 0 && <div className="text-center py-8 text-sm text-[var(--muted)]">No tickers in watchlist</div>}
+      {watchlist.map(sym => {
+        const data = livePricesMap[sym];
+        const price = data?.price ?? null;
+        const chg = data?.change ?? null;
+        return (
+          <div key={sym} className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+            <div className="font-semibold text-sm">{sym}</div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="font-mono text-sm">{price != null ? "$"+price.toFixed(2) : "—"}</div>
+                {chg != null && <div className="text-xs font-mono" style={{color:chg>=0?C.long:C.short}}>{chg>=0?"+":""}{chg.toFixed(2)}</div>}
+              </div>
+              <button onClick={()=>onRemove(sym)} className="text-[var(--muted)] hover:text-[var(--short)] text-lg leading-none">×</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function Deck({ ticker, bars, engineState, bbCycle, gates, livePricesMap, riskProfile }) {
+  if (!ticker) return <div className="flex-1 flex items-center justify-center text-sm text-[var(--muted)]">Select a ticker from Active or Scanner</div>;
+  const lp = livePricesMap[ticker];
+  const currentPrice = lp?.price ?? (bars && bars.length > 0 ? bars[bars.length-1].c : null);
+  const atr = gates?.atr ?? null;
+  const signal = engineState?.lastSignal || "None";
+  const signalTone = signal==="B2O"?"long":signal==="S2O"?"short":signal==="ADD"?"add":signal==="TP"?"tp":signal==="S2C"||signal==="B2C"?"close":"neutral";
+  const dir = engineState?.activeTrainDir ?? 0;
+  const gates2 = gates || {};
+  const gateItems = dir === 1 ? [
+    {label:"Above EMA", ok:!!gates2.long_closeAboveEMA},
+    {label:"Above VWAP", ok:!!gates2.long_closeAboveVWAP},
+    {label:"Above BB Mid", ok:!!gates2.long_closeAboveBB},
+    {label:"SAR Bull", ok:!!gates2.long_sarBull},
+    {label:"Turn Signal", ok:!!gates2.long_longTurn||!!gates2.long_liqBreakUp},
+    {label:"Momentum", ok:(gates2.momentumScore||0)>0},
+  ] : dir === -1 ? [
+    {label:"Below EMA", ok:!!gates2.short_closeBelowEMA},
+    {label:"Below VWAP", ok:!!gates2.short_closeBelowVWAP},
+    {label:"Below BB Mid", ok:!!gates2.short_closeBelowBB},
+    {label:"SAR Bear", ok:!!gates2.short_sarBear},
+    {label:"Turn Signal", ok:!!gates2.short_shortTurn||!!gates2.short_liqBreakDn},
+    {label:"Momentum", ok:(gates2.momentumScore||0)<0},
+  ] : [];
+  const bbState = bbCycle ? (bbCycle.bbSqueezing?"Squeezing":bbCycle.bbOpeningStart?"Opening":bbCycle.bbExpansionAlive?"Expanding":"Neutral") : "—";
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-bold text-xl">{ticker}</div>
+          {currentPrice && <div className="text-2xl font-mono font-bold">${currentPrice.toFixed(2)}</div>}
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-[var(--muted)] mb-1">Signal</div>
+          <div className="text-lg font-mono font-bold px-3 py-1 rounded-xl" style={{background:toneColor(signalTone)+"22",color:toneColor(signalTone)}}>{signal}</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-3 rounded-xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+          <div className="text-xs text-[var(--muted)] mb-1">BB State</div>
+          <div className="font-semibold text-sm">{bbState}</div>
+          {bbCycle && <div className="text-xs text-[var(--muted)] mt-1">Width {bbCycle.bbWidth?.toFixed(3)||"—"} / Avg {bbCycle.bbWidthAvg?.toFixed(3)||"—"}</div>}
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+          <div className="text-xs text-[var(--muted)] mb-1">ATR</div>
+          <div className="font-semibold text-sm font-mono">{atr != null ? "$"+atr.toFixed(2) : "—"}</div>
+          {gates2.rsi != null && <div className="text-xs text-[var(--muted)] mt-1">RSI {gates2.rsi?.toFixed(1)}</div>}
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+          <div className="text-xs text-[var(--muted)] mb-1">EMA21</div>
+          <div className="font-mono text-sm">{gates2.ema != null ? "$"+gates2.ema.toFixed(2) : "—"}</div>
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+          <div className="text-xs text-[var(--muted)] mb-1">VWAP</div>
+          <div className="font-mono text-sm">{gates2.vwap != null ? "$"+gates2.vwap.toFixed(2) : "—"}</div>
+        </div>
+      </div>
+      {gateItems.length > 0 && (
+        <div className="p-4 rounded-2xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+          <div className="text-xs font-semibold text-[var(--muted)] mb-3">{dir===1?"Long":"Short"} Gate Conditions</div>
+          <div className="space-y-2">
+            {gateItems.map((g,i) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <span className="text-[var(--muted)]">{g.label}</span>
+                <span style={{color:g.ok?C.long:C.short}}>{g.ok?"✓":"✗"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {engineState?.signalHistory?.length > 0 && (
+        <div className="p-4 rounded-2xl border border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+          <div className="text-xs font-semibold text-[var(--muted)] mb-3">Signal History</div>
+          <div className="space-y-1">
+            {[...engineState.signalHistory].reverse().slice(0,8).map((s,i) => {
+              const tone=s.type==="B2O"?"long":s.type==="S2O"?"short":s.type==="ADD"?"add":s.type==="TP"?"tp":"close";
+              return (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="font-mono px-1.5 py-0.5 rounded" style={{background:toneColor(tone)+"22",color:toneColor(tone)}}>{s.type}</span>
+                  <span className="font-mono text-[var(--muted)]">${s.price?.toFixed(2)||"—"}</span>
+                  <span className="text-[var(--muted)]">{new Date(s.time).toLocaleTimeString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+function PaperLedger({ sessions, onCreateSession, onAddTrade, onCloseSession, onDeleteSession }) {
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4">
+      <div className="font-bold text-base">Paper Ledger</div>
+      <SessionCreateForm onCreate={onCreateSession} />
+      {sessions.length === 0 && <div className="text-center py-4 text-sm text-[var(--muted)]">No sessions yet</div>}
+      {sessions.map(s => (
+        <SessionListCard key={s.id} session={s} onAddTrade={onAddTrade} onClose={onCloseSession} onDelete={onDeleteSession} />
+      ))}
+    </div>
+  );
+}
+function Scanner({ tickers, livePricesMap, scanState, onScan, onSelectTicker, riskProfile }) {
+  const [sortBy, setSortBy] = React.useState("action");
+  const rows = tickers.map(sym => {
+    const data = livePricesMap[sym] || {};
+    const price = data.price ?? null;
+    const change = data.change ?? null;
+    const atr = data.atr ?? (price ? price * 0.02 : 1);
+    const mmgState = data.mmgState ?? "—";
+    const campaign = data.campaign ?? "—";
+    const direction = data.direction ?? "neutral";
+    const rvol = data.rvol ?? 1;
+    const atrDistance = 0.3;
+    const scores = computeScores({ mmgState, campaign, direction, rvol, position: null, atrDistance, atr, currentPrice: price });
+    const top = topAction(scores);
+    return { sym, price, change, mmgState, campaign, direction, rvol, top, scores };
+  });
+  const sorted = [...rows].sort((a,b) => {
+    if (sortBy==="action") return (b.top.score||0)-(a.top.score||0);
+    if (sortBy==="rvol") return (b.rvol||0)-(a.rvol||0);
+    if (sortBy==="ticker") return a.sym.localeCompare(b.sym);
+    return 0;
+  });
+  return (
+    <div className="flex-1 overflow-y-auto pb-28">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--border)] sticky top-0" style={{background:"var(--surface-0)"}}>
+        <div className="flex gap-2">
+          {["action","rvol","ticker"].map(s => (
+            <button key={s} onClick={()=>setSortBy(s)} className="text-xs px-2 py-1 rounded capitalize" style={{background:sortBy===s?"var(--surface-2)":"transparent",color:sortBy===s?"var(--fg)":C.muted}}>{s}</button>
+          ))}
+        </div>
+        <ScannerStatus scanState={scanState} onScan={onScan} />
+      </div>
+      {sorted.length === 0 && <div className="text-center py-12 text-sm text-[var(--muted)]">Press Scan to load universe</div>}
+      {sorted.map(row => (
+        <div key={row.sym} onClick={()=>onSelectTicker(row.sym)} className="px-4 py-3 flex items-center justify-between border-b border-[var(--border)] cursor-pointer hover:bg-[var(--surface-1)] transition-colors">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="font-semibold text-sm w-14 flex-shrink-0">{row.sym}</div>
+            <div className="min-w-0">
+              <div className="text-xs text-[var(--muted)]">{row.mmgState} · {row.campaign}</div>
+              <div className="text-xs" style={{color:row.direction==="long"?C.long:row.direction==="short"?C.short:C.muted}}>{row.direction}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="text-right">
+              <div className="font-mono text-sm">{row.price != null ? "$"+row.price.toFixed(2) : "—"}</div>
+              {row.change != null && <div className="text-xs font-mono" style={{color:row.change>=0?C.long:C.short}}>{row.change>=0?"+":""}{row.change.toFixed(2)}</div>}
+            </div>
+            <div className="text-center min-w-[54px]">
+              <div className="text-xs font-mono font-bold px-2 py-1 rounded-lg" style={{background:toneColor(row.top.tone)+"22",color:toneColor(row.top.tone)}}>{row.top.code}</div>
+              <div className="text-xs text-[var(--muted)]">{row.top.score||0}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function Active({ sessions, livePricesMap, onSelectTicker, onAddTrade }) {
+  const activeSessions = sessions.filter(s => s.status==="active");
+  if (activeSessions.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+        <BarChart2 size={32} style={{color:C.muted,marginBottom:12}} />
+        <div className="text-sm text-[var(--muted)]">No active sessions</div>
+        <div className="text-xs text-[var(--muted)] mt-1">Create a session in Paper Ledger</div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4">
+      <div className="font-bold text-base">Active Sessions</div>
+      {activeSessions.map(session => {
+        const data = livePricesMap[session.ticker] || {};
+        const currentPrice = data.price ?? null;
+        const atr = data.atr ?? null;
+        const mmgState = data.mmgState ?? "—";
+        const campaign = data.campaign ?? "—";
+        const direction = data.direction ?? "neutral";
+        const rvol = data.rvol ?? 1;
+        const lastTrade = [...(session.trades||[])].reverse().find(t => !t.exitPrice);
+        const position = lastTrade ? { side: lastTrade.side, entryPrice: lastTrade.entryPrice, size: lastTrade.size||1, addFired: false, tpFired: false } : null;
+        const scores = computeScores({ mmgState, campaign, direction, rvol, position, atrDistance: 0.3, atr: atr||1, currentPrice: currentPrice||0 });
+        const top = topAction(scores);
+        return (
+          <div key={session.id} className="rounded-2xl border border-[var(--border)] overflow-hidden" style={{background:"var(--surface-1)"}}>
+            <div className="flex items-center justify-between p-4 cursor-pointer" onClick={()=>onSelectTicker(session.ticker)}>
+              <div className="flex items-center gap-3">
+                <div className="font-bold text-lg">{session.ticker}</div>
+                <div className="text-xs px-2 py-0.5 rounded" style={{background:toneColor(top.tone)+"22",color:toneColor(top.tone)}}>{top.code}</div>
+              </div>
+              <div className="text-right">
+                <div className="font-mono text-lg">{currentPrice ? "$"+currentPrice.toFixed(2) : "—"}</div>
+                <div className="text-xs text-[var(--muted)]">RVOL {rvol.toFixed(1)}x</div>
+              </div>
+            </div>
+            <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-none">
+              <ActionCell code="B2O" score={scores.b2o||0} tone="long" locked={scores.b2o==null} lockMsg="in position" />
+              <ActionCell code="S2O" score={scores.s2o||0} tone="short" locked={scores.s2o==null} lockMsg="in position" />
+              <ActionCell code="ADD" score={scores.add||0} tone="add" locked={scores.add==null} lockMsg={addLockReason(position,scores.campaignProgress)} />
+              <ActionCell code="TP" score={scores.tp||0} tone="tp" locked={scores.tp==null} lockMsg={tpLockReason(position,scores.campaignProgress)} />
+              <ActionCell code="S2C" score={scores.s2c||0} tone="close" locked={scores.s2c==null} lockMsg="no long" />
+              <ActionCell code="B2C" score={scores.b2c||0} tone="close" locked={scores.b2c==null} lockMsg="no short" />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function LoginPage({ onStart }) {
+  const [key, setKey] = React.useState("");
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <div className="mb-8">
+        <div className="text-3xl font-black tracking-tight mb-2">MTS</div>
+        <div className="text-xs text-[var(--muted)]">v.30 · Options Class Manager</div>
+      </div>
+      <div className="w-full max-w-xs space-y-4">
+        <div>
+          <div className="text-xs text-[var(--muted)] mb-2">Massive API Key (optional)</div>
+          <input className="w-full bg-[var(--surface-1)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" placeholder="Leave blank to use mock data" value={key} onChange={e=>setKey(e.target.value)} />
+        </div>
+        <button onClick={()=>onStart(key.trim())} className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{background:C.accent}}>Launch MTS</button>
+      </div>
+    </div>
+  );
+}
+function BottomTabBar({ view, setView, activeCount }) {
+  const tabs = [
+    { key:"scan",    label:"Scan",    icon:<Zap size={18}/> },
+    { key:"active",  label:"Active",  icon:<Activity size={18}/>, badge:activeCount },
+    { key:"watch",   label:"Watch",   icon:<Eye size={18}/> },
+    { key:"options", label:"Options", icon:<BarChart2 size={18}/> },
+    { key:"library", label:"Library", icon:<BookOpen size={18}/> },
+    { key:"account", label:"Account", icon:<User size={18}/> },
+  ];
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border)]" style={{background:"var(--surface-1)"}}>
+      <div className="grid grid-cols-6 max-w-lg mx-auto">
+        {tabs.map(t => {
+          const active = view === t.key;
+          return (
+            <button key={t.key} onClick={()=>setView(t.key)} className="flex flex-col items-center justify-center py-2 relative" style={{color:active?C.accent:C.muted}}>
+              {t.badge > 0 && <div className="absolute top-1 right-2 w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold text-white" style={{background:C.long,fontSize:"9px"}}>{t.badge}</div>}
+              {t.icon}
+              <span className="text-xs mt-0.5" style={{fontSize:"10px"}}>{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+function MTSApp() {
+  // ── Core state ─────────────────────────────────────────────────────────────
+  const [launched, setLaunched] = React.useState(() => !!loadJSON(STORAGE.POLYGON_KEY, null) || loadJSON("mts-v30-launched", false));
+  const [view, setView] = React.useState("scan");
+  const [polygonKey, setPolygonKeyState] = React.useState(() => loadJSON(STORAGE.POLYGON_KEY, ""));
+  const [riskProfile, setRiskProfile] = React.useState(() => loadJSON(STORAGE.RISK_PROFILE, null));
+  const [takingRisk, setTakingRisk] = React.useState(false);
+  const [sessions, setSessions] = React.useState(() => loadJSON(STORAGE.SESSIONS, []));
+  const [watchlist, setWatchlist] = React.useState(() => loadJSON(STORAGE.WATCHLIST, ["SPY","QQQ","AAPL","NVDA","TSLA"]));
+  const [livePricesMap, setLivePricesMap] = React.useState({});
+  const [lastFetch, setLastFetch] = React.useState(null);
+  const [fetchLoading, setFetchLoading] = React.useState(false);
+  const [fetchError, setFetchError] = React.useState(null);
+  const [scanState, setScanState] = React.useState("idle");
+  const [scannedTickers, setScannedTickers] = React.useState([]);
+  const [selectedTicker, setSelectedTicker] = React.useState(null);
+  const [selectedBars, setSelectedBars] = React.useState(null);
+  const [selectedEngineState, setSelectedEngineState] = React.useState(null);
+  const [selectedBBCycle, setSelectedBBCycle] = React.useState(null);
+  const [selectedGates, setSelectedGates] = React.useState(null);
+  // ── V30 Options state ──────────────────────────────────────────────────────
+  const [optionsLedger, setOptionsLedger] = React.useState(() => loadJSON(STORAGE_OPTIONS.LEDGER, []));
+  const [optionsTargets, setOptionsTargets] = React.useState(() => loadJSON(STORAGE_OPTIONS.TARGETS, DEFAULT_OPTIONS_TARGETS));
+  const [optionsOverlay, setOptionsOverlay] = React.useState(null); // null | "add" | "close" | "targets" | "delete"
+  const [addingOptClass, setAddingOptClass] = React.useState(null);
+  const [closingOptPos, setClosingOptPos] = React.useState(null);
+  // ── Persistence ────────────────────────────────────────────────────────────
+  React.useEffect(() => { saveJSON(STORAGE.SESSIONS, sessions); }, [sessions]);
+  React.useEffect(() => { saveJSON(STORAGE.WATCHLIST, watchlist); }, [watchlist]);
+  React.useEffect(() => { if (riskProfile) saveJSON(STORAGE.RISK_PROFILE, riskProfile); }, [riskProfile]);
+  React.useEffect(() => { if (polygonKey) saveJSON(STORAGE.POLYGON_KEY, polygonKey); }, [polygonKey]);
+  React.useEffect(() => { saveJSON(STORAGE_OPTIONS.LEDGER, optionsLedger); }, [optionsLedger]);
+  React.useEffect(() => { saveJSON(STORAGE_OPTIONS.TARGETS, optionsTargets); }, [optionsTargets]);
+  // ── Options handlers ───────────────────────────────────────────────────────
+  function handleAddOptPosition(pos) {
+    setOptionsLedger(l => [...l, pos]);
+    setOptionsOverlay(null);
+    setAddingOptClass(null);
+  }
+  function handleCloseOptPosition(id, exitPremium, pnl) {
+    setOptionsLedger(l => l.map(p => p.id === id ? { ...p, status:"closed", exitPremium, realizedPnL: pnl, closeDate: Date.now() } : p));
+    setOptionsOverlay(null);
+    setClosingOptPos(null);
+  }
+  function handleDeleteOptPosition(id) {
+    setOptionsLedger(l => l.filter(p => p.id !== id));
+    setOptionsOverlay(null);
+    setClosingOptPos(null);
+  }
+  function handleSaveTargets(newTargets) {
+    setOptionsTargets(newTargets);
+    setOptionsOverlay(null);
+  }
+  // ── Paper ledger handlers ──────────────────────────────────────────────────
+  function createSession(s) { setSessions(prev => [s, ...prev]); }
+  function addTrade(sessionId, trade) {
+    setSessions(prev => prev.map(s => s.id===sessionId ? {...s, trades:[...s.trades||[], trade]} : s));
+  }
+  function closeSession(sessionId) {
+    setSessions(prev => prev.map(s => s.id===sessionId ? {...s,status:"closed"} : s));
+  }
+  function deleteSession(sessionId) {
+    setSessions(prev => prev.filter(s => s.id!==sessionId));
+  }
+  // ── Watchlist handlers ─────────────────────────────────────────────────────
+  function addWatch(sym) { setWatchlist(prev => [...new Set([...prev, sym])]); }
+  function removeWatch(sym) { setWatchlist(prev => prev.filter(s => s!==sym)); }
+  // ── Ticker selection / engine ──────────────────────────────────────────────
+  async function selectTicker(sym) {
+    setSelectedTicker(sym);
+    setView("scan");
+    if (!polygonKey) {
+      const mock = generateMockTicker(sym);
+      setLivePricesMap(m => ({...m,[sym]:mock}));
+      return;
+    }
+    try {
+      const bars = await fetchDailyBars(sym, polygonKey, 120);
+      if (bars && bars.length > 20) {
+        setSelectedBars(bars);
+        const bbC = computeBBCycle(bars);
+        const gts = computeMMGGates(bars, bbC);
+        const eng = computeMMGEngineState(bars);
+        setSelectedBBCycle(bbC);
+        setSelectedGates(gts);
+        setSelectedEngineState(eng);
+        if (eng) {
+          const lastSig = eng.lastSignal||"None";
+          const dir = eng.activeTrainDir;
+          setLivePricesMap(m => ({...m,[sym]:{...m[sym],mmgState:lastSig,direction:dir===1?"long":dir===-1?"short":"neutral",campaign:"Rolling",rvol:1.2}}));
+        }
+      }
+    } catch(e) { console.warn("selectTicker bars:", e); }
+  }
+  // ── Scan ───────────────────────────────────────────────────────────────────
+  async function runScan() {
+    setScanState("scanning");
+    const universe = [...new Set([...OPTIONABLE_LIQUID.slice(0,40), ...watchlist])];
+    if (!polygonKey) {
+      const mock = {}; universe.forEach(sym => { mock[sym] = generateMockTicker(sym); });
+      setLivePricesMap(m => ({...m,...mock}));
+      setScannedTickers(universe);
+      setScanState("done");
+      return;
+    }
+    try {
+      const snaps = await fetchSnapshot(universe, polygonKey);
+      const updates = {};
+      snaps.forEach(s => {
+        const sym = s.ticker;
+        updates[sym] = { sym, price: s.day?.c ?? s.lastTrade?.p ?? null, change: s.todaysChangePerc != null ? s.day?.c - s.prevDay?.c : null, changePct: s.todaysChangePerc ?? null, rvol: s.day?.v && s.prevDay?.v ? s.day.v / (s.prevDay.v||1) : 1, atr: s.day?.c ? s.day.c * 0.02 : 1, mmgState: "Scanning", campaign: "—", direction: "neutral" };
+      });
+      setLivePricesMap(m => ({...m,...updates}));
+      setScannedTickers(Object.keys(updates));
+    } catch(e) { setFetchError(e.message); }
+    setScanState("done");
+  }
+  // ── Heartbeat price refresh ────────────────────────────────────────────────
+  async function refreshHeartbeat() {
+    if (!polygonKey) return;
+    const syms = Object.values(HEARTBEAT_LIVE).map(s=>s.sym);
+    try {
+      const snaps = await fetchSnapshot(syms, polygonKey);
+      const updates = {};
+      snaps.forEach(s => { updates[s.ticker] = { price: s.day?.c ?? s.lastTrade?.p ?? null, change: s.todaysChangePerc != null ? s.day?.c - s.prevDay?.c : null, changePct: s.todaysChangePerc ?? null }; });
+      setLivePricesMap(m => ({...m,...updates}));
+      setLastFetch(Date.now());
+    } catch(e) {}
+  }
+  React.useEffect(() => { if (launched && polygonKey) { refreshHeartbeat(); const id = setInterval(refreshHeartbeat, 60000); return () => clearInterval(id); } }, [launched, polygonKey]);
+  // ── Reset ──────────────────────────────────────────────────────────────────
+  function handleReset() {
+    Object.values(STORAGE).forEach(k => localStorage.removeItem(k));
+    Object.values(STORAGE_OPTIONS).forEach(k => localStorage.removeItem(k));
+    localStorage.removeItem("mts-v30-launched");
+    window.location.reload();
+  }
+  // ── Risk ───────────────────────────────────────────────────────────────────
+  function handleRiskComplete(profile) { setRiskProfile(profile); setTakingRisk(false); }
+  // ── Launch ─────────────────────────────────────────────────────────────────
+  function handleStart(key) {
+    if (key) { setPolygonKeyState(key); saveJSON(STORAGE.POLYGON_KEY, key); }
+    saveJSON("mts-v30-launched", true);
+    setLaunched(true);
+    if (!riskProfile) setTakingRisk(true);
+  }
+  const activeSessions = sessions.filter(s => s.status==="active");
+  if (!launched) return <LoginPage onStart={handleStart} />;
+  if (takingRisk) return (
+    <div className="flex-1 flex flex-col">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--border)]">
+        <div className="font-semibold text-sm">Risk Assessment</div>
+        <button onClick={()=>setTakingRisk(false)} className="text-xs text-[var(--muted)]">Skip</button>
+      </div>
+      <RiskAssessmentWizard onComplete={handleRiskComplete} />
+    </div>
+  );
+  function renderView() {
+    if (view === "options") {
+      return <OptionsTab ledger={optionsLedger} targets={optionsTargets} setOverlay={setOptionsOverlay} setAddingOptClass={setAddingOptClass} setClosingOptPos={setClosingOptPos} />;
+    }
+    if (view === "account") return <AccountSummary riskProfile={riskProfile} sessions={sessions} polygonKey={polygonKey} onSaveKey={k=>{setPolygonKeyState(k);saveJSON(STORAGE.POLYGON_KEY,k);}} onRetakeRisk={()=>setTakingRisk(true)} onReset={handleReset} />;
+    if (view === "library") return <Library />;
+    if (view === "watch") return <WatchlistView watchlist={watchlist} livePricesMap={livePricesMap} onRemove={removeWatch} onAdd={addWatch} />;
+    if (view === "active") return <Active sessions={sessions} livePricesMap={livePricesMap} onSelectTicker={selectTicker} onAddTrade={addTrade} />;
+    if (view === "ledger") return <PaperLedger sessions={sessions} onCreateSession={createSession} onAddTrade={addTrade} onCloseSession={closeSession} onDeleteSession={deleteSession} />;
+    // scan + deck
+    if (selectedTicker && view === "scan") {
+      return (
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--border)]">
+            <button onClick={()=>setSelectedTicker(null)} className="flex items-center gap-1 text-xs text-[var(--muted)]"><ChevronDown size={12} style={{transform:"rotate(90deg)"}} />Back</button>
+            <div className="font-semibold text-sm">{selectedTicker}</div>
+            <div className="w-12" />
+          </div>
+          <Deck ticker={selectedTicker} bars={selectedBars} engineState={selectedEngineState} bbCycle={selectedBBCycle} gates={selectedGates} livePricesMap={livePricesMap} riskProfile={riskProfile} />
+        </div>
+      );
+    }
+    return (
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="px-4 py-2 border-b border-[var(--border)]">
+          <MarketHeartbeat livePricesMap={livePricesMap} />
+        </div>
+        <Scanner tickers={scannedTickers} livePricesMap={livePricesMap} scanState={scanState} onScan={runScan} onSelectTicker={selectTicker} riskProfile={riskProfile} />
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col h-screen">
+      {renderView()}
+      <BottomTabBar view={view} setView={v=>{setView(v);if(v!=="scan")setSelectedTicker(null);}} activeCount={activeSessions.length} />
+      {optionsOverlay === "add" && addingOptClass && (
+        <AddOptionsPositionModal optClass={addingOptClass} onAdd={handleAddOptPosition} onClose={()=>{setOptionsOverlay(null);setAddingOptClass(null);}} />
+      )}
+      {optionsOverlay === "close" && closingOptPos && !closingOptPos._delete && (
+        <CloseOptionsPositionModal position={closingOptPos} onClose={()=>{setOptionsOverlay(null);setClosingOptPos(null);}} onConfirm={handleCloseOptPosition} />
+      )}
+      {optionsOverlay === "delete" && closingOptPos && closingOptPos._delete && (
+        <ConfirmModal message={"Delete this position? This cannot be undone."} onConfirm={()=>handleDeleteOptPosition(closingOptPos.id)} onCancel={()=>{setOptionsOverlay(null);setClosingOptPos(null);}} />
+      )}
+      {optionsOverlay === "targets" && (
+        <EditTargetsModal targets={optionsTargets} onSave={handleSaveTargets} onClose={()=>setOptionsOverlay(null)} />
+      )}
+    </div>
+  );
+}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<MTSApp />);
+</script>
+</body>
+</html>
