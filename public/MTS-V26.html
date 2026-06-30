@@ -4742,7 +4742,7 @@ function MTSApp() {
 
   return (
     <div style={{ backgroundColor: C.bg, color: C.text }} className="min-h-screen font-sans">
-      {false && showMacro && <MarketHeartbeat account={accountStats} liveHeartbeat={liveMacroMap} />}/* v.fix: Heartbeat hidden — proxy data misleading */
+      {false && <MarketHeartbeat account={accountStats} liveHeartbeat={liveMacroMap} />}
       <div className={`max-w-md mx-auto px-3 py-3 ${showTabs ? "pb-20" : "pb-4"}`}>
         {view === "scanner" && <Scanner universe={universeForUI} positions={positions} onSelect={(sym) => handleSelect(sym, "scanner")} />}
         {view === "active" && <Active universe={enrichedUniverse} positions={positions} onSelect={(sym) => handleSelect(sym, "active")} />}
