@@ -576,17 +576,9 @@ function processEngineSignals({ ticker, engine, bars, atr, ledger, execState, ac
         console.log("[v.24] " + ticker + " " + sigType + " skip: re-entry cooldown");
         tickerState.lastExecutedKey = key; continue;
       }
-      // v.25 — Trend gate: longs only in bullish regime, shorts only in bearish
-      if (trendGate && trendGate.state !== "unknown") {
-        if (sigType === "B2O" && trendGate.state !== "bullish") {
-          console.log("[v.25] " + ticker + " B2O skip: trend gate " + trendGate.state + " (1H>" + (trendGate.hBullish?"up":"dn") + ", D>" + (trendGate.dBullish?"up":"dn") + ")");
-          tickerState.lastExecutedKey = key; continue;
-        }
-        if (sigType === "S2O" && trendGate.state !== "bearish") {
-          console.log("[v.25] " + ticker + " S2O skip: trend gate " + trendGate.state + " (1H>" + (trendGate.hBullish?"up":"dn") + ", D>" + (trendGate.dBullish?"up":"dn") + ")");
-          tickerState.lastExecutedKey = key; continue;
-        }
-      }
+      // v.fix — Trend gate REMOVED. MMG V9.9K-9.2 own logic (BB cycle, gates,
+      // momentum, sarBull, c>EMA21, c>VWAP, longTurn/shortTurn) does the filtering.
+      // trendGate still computed and cached for OCM use, but no longer blocks ECM entries.
 
       const stopDist = ATR_STOP_MULT * atr;
       const riskDollars = currentEquity * RISK_PCT;
