@@ -2554,7 +2554,7 @@ function MarketHeartbeat({ account, liveHeartbeat }) {
             <div>
               <span style={{ color: C.muted }} className="text-[10px] tracking-[0.1em]">P/L </span>
               <span style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-[13px] font-mono font-bold">
-                {account.dayPnL >= 0 ? "+" : ""}${account.dayPnL} ({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)
+                {account.dayPnL >= 0 ? "+" : ""}${account.dayPnL.toFixed(2)} ({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)
               </span>
             </div>
           </div>
@@ -2651,17 +2651,17 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       <div className="grid grid-cols-2 gap-2">
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">EQUITY</div>
-          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.equity.toLocaleString()}</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.equity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">BUYING POWER</div>
-          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.buyingPower.toLocaleString()}</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.buyingPower.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
       </div>
       <div style={{ backgroundColor: C.surface, borderColor: account.dayPnL >= 0 ? C.long : C.short }} className="border-2 rounded-xl p-2.5">
         <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">TODAY'S P/L</div>
         <div className="flex items-baseline gap-2 mt-0.5">
-          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-xl font-mono font-bold">{account.dayPnL >= 0 ? "+" : ""}${account.dayPnL}</div>
+          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-xl font-mono font-bold">{account.dayPnL >= 0 ? "+" : ""}${account.dayPnL.toFixed(2)}</div>
           <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-sm font-mono">({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)</div>
           <div style={{ color: C.dim }} className="text-[12px] font-mono ml-auto">{account.tradesToday} trades</div>
         </div>
@@ -2683,11 +2683,11 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       <div className="grid grid-cols-2 gap-2">
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">WEEK</div>
-          <div style={{ color: account.weekPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.weekPnL >= 0 ? "+" : ""}${account.weekPnL} ({account.weekPnLPct.toFixed(2)}%)</div>
+          <div style={{ color: account.weekPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.weekPnL >= 0 ? "+" : ""}${account.weekPnL.toFixed(2)} ({account.weekPnLPct.toFixed(2)}%)</div>
         </div>
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">MONTH</div>
-          <div style={{ color: account.monthPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.monthPnL >= 0 ? "+" : ""}${account.monthPnL} ({account.monthPnLPct.toFixed(2)}%)</div>
+          <div style={{ color: account.monthPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.monthPnL >= 0 ? "+" : ""}${account.monthPnL.toFixed(2)} ({account.monthPnLPct.toFixed(2)}%)</div>
         </div>
       </div>
       <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
