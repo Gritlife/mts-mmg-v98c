@@ -545,6 +545,13 @@ function processEngineSignals({ ticker, engine, bars, atr, ledger, execState, ac
   const activeSession = activeSessionForToday(sessions);
   const tickerState = newExecState[ticker] || { lastExecutedKey: null, lastExitTime: null };
 
+  // v.fix — if no lastExecutedKey, prime with the most recent signal so we don't replay history
+  if (!tickerState.lastExecutedKey && engine.signalHistory.length > 0) {
+    const last = engine.signalHistory[engine.signalHistory.length - 1];
+    tickerState.lastExecutedKey = signalKey(ticker, last);
+    newExecState[ticker] = tickerState;
+    return { newLedger, newExecState, newAccount, fills };
+  }
   for (const sig of engine.signalHistory) {
     const key = signalKey(ticker, sig);
     const lastKey = tickerState.lastExecutedKey;
@@ -2038,7 +2045,7 @@ function LoginPage({ onLogin }) {
 // ============================================================================
 // AccountSummary — with dark mode toggle
 // ============================================================================
-function AccountSummary({ account, positions, universe, darkMode, setDarkMode, onLogout, onSelect, riskProfile, onRetakeRisk, polygonKey, onSetPolygonKey, paperAccount, onResetAccount, sessions, onNewSession, onDeleteSession, liveData, scannerStatus, topRVOL, ledger, onResetLedger, showDiagnostics, onToggleDiagnostics, livePrices, coveredCalls, multiTickerEngine }) {
+function AccountSummary({ account, positions, universe, darkMode, setDarkMode, onLogout, onSelect, riskProfile, onRetakeRisk, polygonKey, onSetPolygonKey, paperAccount, onResetAccount, sessions, onNewSession, onDeleteSession, liveData, scannerStatus, topRVOL, ledger, onResetLedger, showDiagnostics, onToggleDiagnostics, livePrices, coveredCalls, multiTickerEngine , onHardReset }) {
   // v.24.3 — Open positions sourced from live account stats (ledger-derived)
   const openPositions = (account.openPositions || []).map(p => ({
     sym: p.sym, side: p.side, pnl: p.pnl,
@@ -2115,7 +2122,7 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       <RiskProfileCard profile={riskProfile} onRetake={onRetakeRisk} />
 
       {/* v.19 — Paper Account */}
-      <PaperAccountCard account={paperAccount} onReset={onResetAccount} />
+      <PaperAccountCard account={paperAccount} onReset={onResetAccount} onHardReset={onHardReset} />
       <PaperLedger ledger={ledger} onReset={onResetLedger} livePrices={livePrices} coveredCalls={coveredCalls} multiTickerEngine={multiTickerEngine} />
 
       {/* v.19 — Polygon Key */}
@@ -3246,7 +3253,7 @@ function PolygonKeyField({ value, onChange }) {
 // ============================================================================
 // v.19 — PaperAccountCard
 // ============================================================================
-function PaperAccountCard({ account, onReset }) {
+function PaperAccountCard({ account, onReset, onHardReset }) {
   const pnl = account.balance - account.startingBalance;
   const pnlPct = (pnl / account.startingBalance) * 100;
   return (
@@ -3264,6 +3271,10 @@ function PaperAccountCard({ account, onReset }) {
       </div>
       <div style={{ borderColor: C.border }} className="px-3 py-2 border-t">
         <button onClick={onReset} style={{ borderColor: C.border, color: C.text }} className="w-full py-1.5 rounded border text-[12px] font-mono uppercase tracking-wider">Reset to $100,000</button>
+        <button onClick={() => { if (confirm("HARD RESET: clear ALL data (paper account, ledger, sessions, caches, ORB cache) and reload the page? This cannot be undone.")) onHardReset(); }}
+          style={{ backgroundColor: C.short, color: "#fff" }} className="w-full py-1.5 rounded mt-1.5 font-bold text-[12px] uppercase tracking-wider">
+          Hard Reset (clear everything)
+        </button>
       </div>
     </div>
   );
@@ -3918,6 +3929,11 @@ function MTSApp() {
           polygonKey={polygonKey} onSetPolygonKey={updatePolygonKey}
           paperAccount={paperAccount} onResetAccount={resetPaperAccount}
           sessions={sessions} onNewSession={() => setOverlay("session-create")}
+          onHardReset={() => {
+            try { Object.keys(STORAGE).forEach(k => localStorage.removeItem(STORAGE[k])); } catch (e) {}
+            try { localStorage.removeItem("mts-v21-avgvol-cache"); } catch (e) {}
+            window.location.reload();
+          }}
           onDeleteSession={(id) => {
             const next = sessions.filter(s => s.id !== id);
             setSessions(next);
