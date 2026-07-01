@@ -843,6 +843,10 @@ function computeTrendGate(hourlyBars, dailyBars) {
 // ============================================================================
 function computeMMGEngineState(bars, opts) {
   opts = opts || {};
+  // v.25.1-dbg — K9.2 debug: emit per-bar gate values for the last 200 bars
+  const _dbg = opts.debug === true;
+  const _dbgTicker = opts.ticker || "?";
+  const _dbgLookback = 200;
   const emaLen = opts.emaLen || 21;
   const bbLen = opts.bbLen || 20, bbMult = opts.bbMult || 2.0;
   const bbWidthLen = opts.bbWidthLen || 20;
@@ -1137,6 +1141,41 @@ function computeMMGEngineState(bars, opts) {
         lastSignal = "ADD"; addFired = true; lastAddBar = i;
         signalHistory.push({ bar: i, time: bars[i].t, type: "ADD", price: c, dir: -1 });
       }
+    }
+    // v.25.1-dbg — per-bar debug emission (last 200 bars only, when opts.debug=true)
+    if (_dbg && i >= n - _dbgLookback) {
+      const etTime = new Date(bars[i].t).toLocaleString("en-US", { timeZone: "America/New_York", hour12: false });
+      const b01 = (v) => v ? 1 : 0;
+      const num = (v) => (v == null || isNaN(v)) ? "-" : v.toFixed(2);
+      const numP = (v) => (v == null || isNaN(v)) ? "-" : v.toFixed(3);
+      const cp = (activeTrainDir === 1 && entryPrice !== null && !isNaN(campaignTarget) && campaignTarget > entryPrice)
+        ? (c - entryPrice) / (campaignTarget - entryPrice)
+        : (activeTrainDir === -1 && entryPrice !== null && !isNaN(campaignTarget) && campaignTarget < entryPrice)
+          ? (entryPrice - c) / (entryPrice - campaignTarget)
+          : NaN;
+      console.log(
+        "[MMG9.2 " + _dbgTicker + " bar=" + i + " " + etTime + "] " +
+        "c=" + num(c) + " ema=" + num(ema) + " vwap=" + num(vwap) + " bb=" + num(bb) + " sar=" + num(sarSer[i]) + "\n" +
+        "  sarBull=" + b01(sarBull) + " sarBear=" + b01(sarBear) + " sarFlipBull=" + b01(sarFlipBullSer[i]) + " sarFlipBear=" + b01(sarFlipBearSer[i]) + "\n" +
+        "  closeAbvEMA2=" + b01(closeAbvEMA2[i]) + " closeBlwEMA2=" + b01(closeBlwEMA2[i]) +
+        " closeAbvVWAP2=" + b01(closeAbvVWAP2[i]) + " closeBlwVWAP2=" + b01(closeBlwVWAP2[i]) +
+        " closeAbvBB2=" + b01(closeAbvBB2[i]) + " closeBlwBB2=" + b01(closeBlwBB2[i]) + "\n" +
+        "  largeBull=" + b01(largeBullSer[i]) + " largeBear=" + b01(largeBearSer[i]) +
+        " momScore=" + numP(momScoreSer[i]) +
+        " bbSqueezing=" + b01(bbSqueezingSer[i]) + " bbTrueExp=" + b01(bbTrueExpSer[i]) +
+        " bbOpeningStart=" + b01(bbOpeningStartSer[i]) + " manipPhase=" + b01(manipPhaseSer[i]) + "\n" +
+        "  longTurn=" + b01(longTurnSer[i]) + " shortTurn=" + b01(shortTurnSer[i]) +
+        " liqBreakUp=" + b01(liqBreakUpSer[i]) + " liqBreakDn=" + b01(liqBreakDnSer[i]) +
+        " liqHigh=" + num(liqHighSer[i]) + " liqLow=" + num(liqLowSer[i]) + "\n" +
+        "  campaign: dir=" + activeTrainDir + " entryPrice=" + num(entryPrice) + " entryBar=" + (entryBar == null ? "-" : entryBar) +
+        " target=" + num(campaignTarget) + " progress=" + numP(cp) +
+        " canExit=" + b01(canExit) + " addFired=" + b01(addFired) + " tpFired=" + b01(tpFired) + "\n" +
+        "  gates: longStructBroken=" + b01(longStructureBroken) + " longPanicBreak=" + b01(longPanicBreak) +
+        " shortStructBroken=" + b01(shortStructureBroken) + " shortPanicBreak=" + b01(shortPanicBreak) + "\n" +
+        "  ==> longExit=" + b01(longExitPressure) + " shortExit=" + b01(shortExitPressure) +
+        " longEntry=" + b01(longEntrySer[i]) + " shortEntry=" + b01(shortEntrySer[i]) +
+        " lastSig=" + lastSignal
+      );
     }
   }
 
@@ -3407,7 +3446,7 @@ function MTSApp() {
         const ind = computeIndicators(bars);
         const bbCycle = computeBBCycle(bars);
         const gates = computeMMGGates(bars, bbCycle);
-        const engine = computeMMGEngineState(bars);
+        const engine = computeMMGEngineState(bars, { debug: showDiagnostics, ticker: sym });
         const status = ind ? "ok" : "warmup";
         setLiveData(prev => ({ ...prev, TSLA: { indicators: ind, bbCycle, gates, engine, bars, status, lastFetch: Date.now() } }));
         // v.22c.2 — execute new signals (v.24: currentPrices for equity/notional)
@@ -3657,7 +3696,7 @@ function MTSApp() {
           const bars = await fetchMassiveBars(sym, 15, "minute", from, to, polygonKey);
           if (cancelled || bars.length < 100) return null;
           const ind = computeIndicators(bars);
-          const engine = computeMMGEngineState(bars);
+          const engine = computeMMGEngineState(bars, { debug: showDiagnostics, ticker: "TSLA" });
           let trendGate = null;
           try {
             const cache = trendCacheRef.current[sym];
@@ -3739,7 +3778,7 @@ function MTSApp() {
           const bars = await fetchMassiveBars(sym, 15, "minute", from, to, polygonKey);
           if (cancelled || bars.length < 100) return null;
           const ind = computeIndicators(bars);
-          const engine = computeMMGEngineState(bars);
+          const engine = computeMMGEngineState(bars, { debug: showDiagnostics, ticker: sym });
           return { sym, ind, engine, bars };
         }));
         for (const r of results) {
