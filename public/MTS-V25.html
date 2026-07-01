@@ -2442,7 +2442,7 @@ function Scanner({ universe, positions, onSelect }) {
   const chips = [{ key: "all", label: "All" }, { key: "long", label: "Long" }, { key: "short", label: "Short" }, { key: "high", label: "≥60" }, { key: "open", label: "Open" }];
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-baseline gap-2"><div style={{ color: C.muted }} className="text-xs font-mono">{sorted.length}/{universe.length} tickers</div></div>
+      <div className="flex items-baseline gap-2"><div style={{ color: C.muted }} className="text-xs font-mono">{sorted.length}/{universe.length} tickers</div>{universe.length === 0 && <div style={{ color: C.muted }} className="text-[11px] font-mono ml-1">— waiting for live scanner…</div>}</div>
       <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
         {chips.map(c => (
           <button key={c.key} onClick={() => setFilter(c.key)}
@@ -3853,26 +3853,66 @@ function MTSApp() {
   // Build the Scanner's universe from top-20 RVOL, enriching with mock MMG fields
   // until v.22 ports the engine. Heartbeat tickers get the same treatment for the
   // <Deck/> path. Falls back to existing enrichedUniverse if no live scanner data.
+  // v.25.1 — live scanner with real MMG engine enrichment (no more demo data)
   const liveScanner = useMemo(() => {
     if (!topRVOL || topRVOL.length === 0) return null;
-    return topRVOL.map(r => ({
-      sym: r.sym,
-      name: r.sym,
-      sector: "—",
-      price: r.price,
-      change: r.change,
-      changePct: r.changePct,
-      volume: r.volume,
-      avgVol: r.avgVol,
-      rvol: r.rvol,
-      atr: 0,
-      atrDistance: 0,
-      mmgState: "Departed",      // placeholder until v.22 engine ports
-      campaign: "—",
-      direction: "Neutral",
-      _liveRow: true,
-    }));
-  }, [topRVOL]);
+    return topRVOL.map(r => {
+      const sym = r.sym;
+      const mte = (sym === "TSLA")
+        ? (liveData && liveData.TSLA ? liveData.TSLA : {})
+        : (multiTickerEngine && multiTickerEngine[sym] ? multiTickerEngine[sym] : {});
+      const eng = mte.engine || {};
+      const ind = mte.indicators || {};
+      const dir = eng.activeTrainDir;
+      const direction = dir === 1 ? "long" : dir === -1 ? "short" : "neutral";
+      let mmgState = "Midline";
+      let campaign = "Boarding";
+      if (eng.lastSignal === "B2O")      { mmgState = "B2O-signal"; campaign = "Boarding"; }
+      else if (eng.lastSignal === "S2O") { mmgState = "S2O-signal"; campaign = "Boarding"; }
+      else if (eng.lastSignal === "ADD") { mmgState = "Expansion";  campaign = "Rolling"; }
+      else if (eng.lastSignal === "TP")  { mmgState = "GetOff";     campaign = "Departed"; }
+      else if (eng.lastSignal === "S2C" || eng.lastSignal === "B2C") { mmgState = "Caution"; campaign = "Station"; }
+      return {
+        sym,
+        name: sym,
+        sector: "—",
+        price: r.price,
+        change: r.change,
+        changePct: r.changePct,
+        volume: r.volume,
+        avgVol: r.avgVol,
+        rvol: r.rvol,
+        atr: ind.atr14 || 0,
+        atrDistance: 0.25,
+        mmgState,
+        campaign,
+        direction,
+        lastSignal: eng.lastSignal || "None",
+        activeTrainDir: dir || 0,
+        entryPrice: eng.entryPrice,
+        campaignProgress: eng.campaignProgress,
+        _liveRow: true,
+      };
+    });
+  }, [topRVOL, multiTickerEngine, liveData]);
+
+  // v.25.1 — real paper positions from ledger (drives LONG/SHORT badge on Scanner rows)
+  const paperPositions = useMemo(() => {
+    const m = {};
+    for (const t of (ledger || [])) {
+      if (t.status === "open") {
+        m[t.ticker] = {
+          side: t.dir === 1 ? "long" : "short",
+          entryPrice: t.entryPrice,
+          size: t.currentShares,
+          addFired: (t.adds || []).length > 0,
+          tpFired: (t.tps || []).length > 0,
+          entryTime: t.entryTime,
+        };
+      }
+    }
+    return m;
+  }, [ledger]);
 
   // Final universe presented to Scanner/Active/etc: top-20 RVOL if available, else mock.
   const universeForUI = liveScanner || enrichedUniverse;
@@ -3900,7 +3940,7 @@ function MTSApp() {
     <div style={{ backgroundColor: C.bg, color: C.text }} className="min-h-screen font-sans">
       {false && showMacro && <MarketHeartbeat account={accountStats} liveHeartbeat={liveMacroMap} />}
       <div className={`max-w-md mx-auto px-3 py-3 ${showTabs ? "pb-20" : "pb-4"}`}>
-        {view === "scanner" && <Scanner universe={universeForUI} positions={positions} onSelect={(sym) => handleSelect(sym, "scanner")} />}
+        {view === "scanner" && <Scanner universe={liveScanner || []} positions={paperPositions} onSelect={(sym) => handleSelect(sym, "scanner")} />}
         {view === "active" && <Active universe={enrichedUniverse} positions={positions} onSelect={(sym) => handleSelect(sym, "active")} />}
         {view === "watchlist" && <WatchlistView watchlists={watchlists} setWatchlists={setWatchlists} universe={enrichedUniverse} addCustomTicker={addCustomTicker} positions={positions} onSelect={(sym) => handleSelect(sym, "watchlist")} />}
         {view === "library" && <Library articles={LIBRARY_ARTICLES} onSelect={handleSelectArticle} />}
@@ -3926,7 +3966,7 @@ function MTSApp() {
           livePrices={livePricesMap}
           multiTickerEngine={multiTickerEngine}
         />}
-        {view === "deck" && <Deck ticker={selected} universe={enrichedUniverse} positions={positions} setPositions={setPositions} fills={fills} setFills={setFills} onBack={() => setView(returnTo)} />}
+        {view === "deck" && <Deck ticker={selected} universe={(liveScanner || []).some(t => t.sym === selected) ? liveScanner : enrichedUniverse} positions={{...positions, ...paperPositions}} setPositions={setPositions} fills={fills} setFills={setFills} onBack={() => setView(returnTo)} />}
       </div>
       {showTabs && <BottomTabBar view={view} setView={setView} activeCount={activeCount} />}
       {overlay === "risk-assessment" && (
