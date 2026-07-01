@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>MTS v.26 — OCM (Options Class Manager) + ECM</title>
+  <title>MTS v.25 — Trend Gate + Optionable Universe + Covered Calls</title>
   <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
@@ -199,15 +199,6 @@ const STORAGE = {
   LEDGER: "mts-v22c2-paper-ledger",       // array of executed trades
   EXEC_STATE: "mts-v22c2-exec-state",     // per-ticker: lastExecutedSignalKey, dailyPnL, dailyHaltedDate
   SHOW_DIAG: "mts-v23-show-diagnostics",  // boolean — Account dev panels visibility
-  TREND_CACHE: "mts-v25-trend-cache",     // per-ticker { state, lastFetch }
-  CC_CACHE: "mts-v25-cc-cache",            // per-ticker covered-call candidate snapshot
-  // v.26 — OCM persistence
-  OCM_LEDGER: "mts-v26-ocm-ledger",
-  OCM_EXEC: "mts-v26-ocm-exec-state",
-  OCM_ACCT: "mts-v26-ocm-account",
-  ECM_ACCT: "mts-v26-ecm-account",
-  ORB_CACHE: "mts-v26-orb-cache",          // { date, perTicker: { sym: { high, low, lockedAt } } }
-  OCM_CHAIN_AT_EVENT: "mts-v26-ocm-event-snapshots",  // small event-driven chain snapshots
 };
 function loadJSON(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
@@ -489,254 +480,6 @@ function realizedPnLToday(ledger) {
  * v.24: Hardened with global maxPos, equity-based daily stop, per-ticker cooldown,
  * total notional cap, and tighter signal quality requirements.
  */
-// ============================================================================
-// v.26 — OCM EXECUTION ENGINE
-// Process OCM signals: entry (break-pullback-rejection), in-trade management, exits
-// ============================================================================
-function processOCMSignals({
-  ticker, bars5m, bars1h, barsD, orb, chain, ledger, execState, account, riskProfile,
-  ecmLedger, currentMinCST,
-}) {
-  if (!bars5m || bars5m.length < 30 || !orb || !chain) {
-    return { newLedger: ledger, newExecState: execState, newAccount: account, fills: [] };
-  }
-  const tier = RISK_TIERS[riskProfile.tier];
-  const RISK_PCT = tier.risk / 100;
-  const MAX_OCM_POS = 10;
-  const MAX_PER_TICKER_PER_DAY = 2;
-  const COOLDOWN_MIN = 30;
-
-  let newLedger = ledger.slice();
-  let newExecState = Object.assign({}, execState);
-  let newAccount = Object.assign({}, account);
-  const fills = [];
-  const today = todayCST();
-  const ind = computeOCMIndicators(bars5m);
-  if (!ind) return { newLedger, newExecState, newAccount, fills };
-
-  const tState = newExecState[ticker] || { todayEntries: 0, todayDate: today, lastExitMinCST: -999, lastBreakIdx: -1 };
-  if (tState.todayDate !== today) {
-    Object.assign(tState, { todayEntries: 0, todayDate: today, lastExitMinCST: -999, lastBreakIdx: -1 });
-  }
-
-  // Find ANY open OCM position on this ticker
-  const openIdx = newLedger.findIndex(t => t.manager === "OCM" && t.ticker === ticker && t.status === "open");
-  const openPos = openIdx >= 0 ? newLedger[openIdx] : null;
-
-  // === IN-TRADE MANAGEMENT (if position open) ===
-  if (openPos) {
-    const result = manageOCMPosition({ pos: openPos, ind, orb, bars5m, chain, currentMinCST });
-    if (result.action !== "hold") {
-      const exitContract = chain.find(c => c.contractTicker === openPos.contractTicker);
-      const exitPremium = exitContract ? exitContract.bid : openPos.premium;  // sell at bid
-      const contractsToClose = result.action === "close" ? openPos.currentContracts : Math.floor(openPos.currentContracts * result.fraction);
-      if (contractsToClose >= 1) {
-        const pnl = (exitPremium - openPos.entryPremium) * contractsToClose * 100;
-        openPos.realizedPnL += pnl;
-        openPos.currentContracts -= contractsToClose;
-        newAccount.balance += pnl;
-        const fill = { ticker, type: result.label, contracts: contractsToClose, premium: exitPremium, pnl, time: bars5m[bars5m.length-1].t, manager: "OCM" };
-        fills.push(fill);
-        if (openPos.currentContracts <= 0) {
-          openPos.status = "closed";
-          openPos.closedAt = bars5m[bars5m.length-1].t;
-          openPos.exitType = result.label;
-          openPos.exitPremium = exitPremium;
-          tState.lastExitMinCST = currentMinCST;
-          console.log("[v.26 OCM] " + ticker + " CLOSE " + result.label + " contracts=" + contractsToClose + " pnl=" + pnl.toFixed(2));
-        } else {
-          // partial: track high-water for trailing stop on remaining
-          if (!openPos.highWaterPremium || exitPremium > openPos.highWaterPremium) openPos.highWaterPremium = exitPremium;
-          if (result.label === "PROFIT_LOCK_50") openPos.profitLockTaken = true;
-          console.log("[v.26 OCM] " + ticker + " PARTIAL " + result.label + " contracts=" + contractsToClose + " pnl=" + pnl.toFixed(2) + " rem=" + openPos.currentContracts);
-        }
-        newLedger[openIdx] = openPos;
-      }
-    } else {
-      // Track high-water for trailing stop
-      const cur = chain.find(c => c.contractTicker === openPos.contractTicker);
-      if (cur && cur.bid && (!openPos.highWaterPremium || cur.bid > openPos.highWaterPremium)) {
-        openPos.highWaterPremium = cur.bid;
-        newLedger[openIdx] = openPos;
-      }
-    }
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-
-  // === ENTRY CHECK (no open position) ===
-  // Kill zone: inside ORB range, no entry
-  const curPx = ind.close;
-  if (curPx >= orb.low && curPx <= orb.high) {
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  // Regular hours only (8:45–14:55)
-  if (currentMinCST < CST_ORB_LOCK || currentMinCST >= CST_HARD_CLOSE) {
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  // Per-ticker daily limit + cooldown
-  if (tState.todayEntries >= MAX_PER_TICKER_PER_DAY) {
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  if (currentMinCST - tState.lastExitMinCST < COOLDOWN_MIN) {
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  // Global OCM cap
-  const totalOpen = newLedger.filter(t => t.manager === "OCM" && t.status === "open").length;
-  if (totalOpen >= MAX_OCM_POS) {
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-
-  // Try call setup, then put setup
-  const direction = curPx > orb.high ? "call" : "put";
-  // Hedge block vs ECM
-  const ecmConflict = ecmLedger.find(t =>
-    t.ticker === ticker && t.status === "open" &&
-    ((direction === "call" && t.dir === -1) || (direction === "put" && t.dir === 1))
-  );
-  if (ecmConflict) {
-    console.log("[v.26 OCM] " + ticker + " " + direction + " skip: ECM hedge conflict");
-    tState.lastExecutedKey = today + ":" + direction;
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  // Pattern detection
-  const pattern = detectORBPattern(bars5m, orb, direction);
-  if (!pattern || !pattern.armed) {
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  // HTF gate
-  const gate = computeOCMGate(bars5m, bars1h, barsD, ocmSmaPeriodFor(ticker), direction);
-  if (!gate.ok) {
-    console.log("[v.26 OCM] " + ticker + " " + direction + " skip: HTF gate (1H " + (gate.hBull?"up":"dn") + ", D " + (gate.dBull?"up":"dn") + ")");
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  // Contract selection
-  const contract = selectOCMContract(chain, direction, curPx, ticker);
-  if (!contract) {
-    console.log("[v.26 OCM] " + ticker + " " + direction + " skip: no qualifying contract");
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  // Sizing — risk per trade = ocm_capital × risk_pct, fill at ask
-  const riskDollars = newAccount.balance * RISK_PCT;
-  const contracts = Math.floor(riskDollars / (contract.ask * 100));
-  if (contracts < 1) {
-    console.log("[v.26 OCM] " + ticker + " " + direction + " skip: undersized (risk " + riskDollars.toFixed(0) + " ask " + contract.ask.toFixed(2) + ")");
-    newExecState[ticker] = tState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
-  // FILL: buy at ask
-  const cost = contract.ask * contracts * 100;
-  newAccount.balance -= cost;
-  const trade = {
-    id: "ocm_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
-    manager: "OCM",
-    ticker, dir: direction, status: "open",
-    contractTicker: contract.contractTicker,
-    expiration: contract.expiration,
-    strike: contract.strike,
-    type: contract.type,
-    entryType: "ORB_BPR",
-    entryPremium: contract.ask,
-    entryDelta: contract.delta,
-    entryGamma: contract.gamma,
-    entryTheta: contract.theta,
-    entryIV: contract.iv,
-    entryContracts: contracts,
-    currentContracts: contracts,
-    entryUnderlyingPx: curPx,
-    orbHighAtEntry: orb.high,
-    orbLowAtEntry: orb.low,
-    entryTime: bars5m[bars5m.length-1].t,
-    highWaterPremium: contract.ask,
-    profitLockTaken: false,
-    realizedPnL: 0,
-    closedAt: null, exitType: null, exitPremium: null,
-  };
-  newLedger.push(trade);
-  fills.push({ ticker, type: "ENTRY", contracts, premium: contract.ask, manager: "OCM" });
-  tState.todayEntries += 1;
-  console.log("[v.26 OCM] " + ticker + " ENTRY " + direction.toUpperCase() + " " + contracts + "x " + contract.contractTicker + " @" + contract.ask.toFixed(2) + " Δ" + contract.delta.toFixed(2) + " γ" + (contract.gamma||0).toFixed(3));
-  newExecState[ticker] = tState;
-  return { newLedger, newExecState, newAccount, fills };
-}
-
-// Decide what to do with an open OCM position. Returns { action: "hold" | "close" | "partial", label, fraction }
-function manageOCMPosition({ pos, ind, orb, bars5m, chain, currentMinCST }) {
-  const cur = chain && chain.find(c => c.contractTicker === pos.contractTicker);
-  const curPremium = cur ? cur.bid : pos.entryPremium;
-  const px = ind.close;
-  const isLong = pos.dir === "call";
-
-  // 1. EOD hard close at 2:55 PM CST
-  if (currentMinCST >= CST_HARD_CLOSE) return { action: "close", label: "EOD_HARD_CLOSE" };
-
-  // 2. ETF 11AM CST time stop
-  const isETF = OCM_ETF_SET.has(pos.ticker);
-  if (isETF && currentMinCST >= CST_ETF_TIME_STOP) {
-    if (curPremium > pos.entryPremium) {
-      // profitable: exit in green
-      return { action: "close", label: "ETF_TIME_STOP_GREEN" };
-    } else if (curPremium <= pos.entryPremium * 0.50) {
-      // already at -50%, close
-      return { action: "close", label: "ETF_TIME_STOP_RED" };
-    } else {
-      // close anyway at this hour
-      return { action: "close", label: "ETF_TIME_STOP" };
-    }
-  }
-
-  // 3. Premium hard stop: -50%
-  if (curPremium <= pos.entryPremium * 0.50) return { action: "close", label: "STOP_LOSS_50" };
-
-  // 4. Profit lock at +50% premium (once per trade)
-  if (!pos.profitLockTaken && curPremium >= pos.entryPremium * 1.50) {
-    return { action: "partial", label: "PROFIT_LOCK_50", fraction: 0.5 };
-  }
-
-  // 5. Internal trailing stop at 20% below high-water (after profit lock taken)
-  if (pos.profitLockTaken && pos.highWaterPremium && curPremium <= pos.highWaterPremium * 0.80) {
-    return { action: "close", label: "TRAIL_STOP_20" };
-  }
-
-  // 6. Tech violation: VWAP / EMA13 / BB midline flip against position
-  const vwapFlip = isLong ? px < ind.vwap : px > ind.vwap;
-  const emaFlip  = isLong ? px < ind.ema13 : px > ind.ema13;
-  const bbFlip   = isLong ? px < ind.bbMid : px > ind.bbMid;
-  // Only fire tech violation if at least 1 fires AND we're not already in profit-lock-armed state
-  // Hybrid with profit-lock: if profit-lock taken, any tech violation closes remainder
-  if (pos.profitLockTaken && (vwapFlip || emaFlip || bbFlip)) {
-    return { action: "close", label: "TECH_VIOLATION_POST_LOCK" };
-  }
-  // Pre-lock: require 2 of 3 tech flips
-  const techCount = (vwapFlip?1:0) + (emaFlip?1:0) + (bbFlip?1:0);
-  if (techCount >= 2) return { action: "close", label: "TECH_VIOLATION_2OF3" };
-
-  // 7. Reversal stack (≥3 of 6 against position)
-  const rev = computeReversalScore(ind, pos, orb);
-  if (rev.score >= 3) return { action: "close", label: "REV_STACK_" + rev.score };
-
-  // 8. Structural target: price approaches opposite ORB extreme
-  if (orb) {
-    const oppositeExtreme = isLong ? orb.low : orb.high;
-    const range = orb.high - orb.low;
-    const proximity = Math.abs(px - oppositeExtreme) / range;
-    if (proximity < 0.10 && !pos.profitLockTaken) {  // within 10% of opposite extreme
-      return { action: "partial", label: "STRUCTURAL_TARGET_50", fraction: 0.5 };
-    }
-  }
-
-  return { action: "hold", label: "HOLD" };
-}
-
 function processEngineSignals({ ticker, engine, bars, atr, ledger, execState, account, riskProfile, sessions, currentPrices, trendGate }) {
   if (!engine || !engine.signalHistory || engine.signalHistory.length === 0) {
     return { newLedger: ledger, newExecState: execState, newAccount: account, fills: [] };
@@ -800,13 +543,6 @@ function processEngineSignals({ ticker, engine, bars, atr, ledger, execState, ac
   const activeSession = activeSessionForToday(sessions);
   const tickerState = newExecState[ticker] || { lastExecutedKey: null, lastExitTime: null };
 
-  // v.fix — if no lastExecutedKey, prime with the most recent signal so we don't replay history
-  if (!tickerState.lastExecutedKey && engine.signalHistory.length > 0) {
-    const last = engine.signalHistory[engine.signalHistory.length - 1];
-    tickerState.lastExecutedKey = signalKey(ticker, last);
-    newExecState[ticker] = tickerState;
-    return { newLedger, newExecState, newAccount, fills };
-  }
   for (const sig of engine.signalHistory) {
     const key = signalKey(ticker, sig);
     const lastKey = tickerState.lastExecutedKey;
@@ -831,9 +567,17 @@ function processEngineSignals({ ticker, engine, bars, atr, ledger, execState, ac
         console.log("[v.24] " + ticker + " " + sigType + " skip: re-entry cooldown");
         tickerState.lastExecutedKey = key; continue;
       }
-      // v.fix — Trend gate REMOVED. MMG V9.9K-9.2 own logic (BB cycle, gates,
-      // momentum, sarBull, c>EMA21, c>VWAP, longTurn/shortTurn) does the filtering.
-      // trendGate still computed and cached for OCM use, but no longer blocks ECM entries.
+      // v.25 — Trend gate: longs only in bullish regime, shorts only in bearish
+      if (trendGate && trendGate.state !== "unknown") {
+        if (sigType === "B2O" && trendGate.state !== "bullish") {
+          console.log("[v.25] " + ticker + " B2O skip: trend gate " + trendGate.state + " (1H>" + (trendGate.hBullish?"up":"dn") + ", D>" + (trendGate.dBullish?"up":"dn") + ")");
+          tickerState.lastExecutedKey = key; continue;
+        }
+        if (sigType === "S2O" && trendGate.state !== "bearish") {
+          console.log("[v.25] " + ticker + " S2O skip: trend gate " + trendGate.state + " (1H>" + (trendGate.hBullish?"up":"dn") + ", D>" + (trendGate.dBullish?"up":"dn") + ")");
+          tickerState.lastExecutedKey = key; continue;
+        }
+      }
 
       const stopDist = ATR_STOP_MULT * atr;
       const riskDollars = currentEquity * RISK_PCT;
@@ -1052,27 +796,24 @@ async function fetchTreasuryYields(apiKey) {
 // ============================================================================
 async function fetchHourlyBars(ticker, apiKey) {
   const to = ymdDaysAgo(0);
-  const from = ymdDaysAgo(15);  // ~10 trading days of 1H bars
+  const from = ymdDaysAgo(15);
   return await fetchMassiveBars(ticker, 1, "hour", from, to, apiKey);
 }
 async function fetchDailyBars(ticker, apiKey) {
   const to = ymdDaysAgo(0);
-  const from = ymdDaysAgo(365);  // ~252 trading days for SMA200
+  const from = ymdDaysAgo(365);
   return await fetchMassiveBars(ticker, 1, "day", from, to, apiKey);
 }
 
 function computeTrendGate(hourlyBars, dailyBars) {
   if (!hourlyBars || hourlyBars.length < 22) return { state: "unknown", reason: "no 1H data" };
   if (!dailyBars || dailyBars.length < 201) return { state: "unknown", reason: "no daily data" };
-  // 1H: price > EMA21
   const closes1h = hourlyBars.map(b => b.c);
-  // simple EMA21
   const k1 = 2 / (21 + 1);
   let ema21 = closes1h.slice(0, 21).reduce((s, c) => s + c, 0) / 21;
   for (let i = 21; i < closes1h.length; i++) ema21 = closes1h[i] * k1 + ema21 * (1 - k1);
   const last1H = closes1h[closes1h.length - 1];
   const hBullish = last1H > ema21;
-  // Daily: price > SMA200
   const closesD = dailyBars.map(b => b.c);
   const sma200 = closesD.slice(-200).reduce((s, c) => s + c, 0) / 200;
   const lastD = closesD[closesD.length - 1];
@@ -1082,317 +823,6 @@ function computeTrendGate(hourlyBars, dailyBars) {
   else if (!hBullish && !dBullish) state = "bearish";
   else state = "neutral";
   return { state, hBullish, dBullish, ema21h: ema21, sma200d: sma200, last1H, lastD };
-}
-
-// ============================================================================
-// v.26 — OCM Helpers: ORB, kill zone, multi-timeframe gate, contract selection
-// ============================================================================
-
-// Today's date in CST (America/Chicago) for ORB session keying
-function todayCST() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(new Date());
-}
-
-// Current minute-of-day in CST (0-1439). Used for kill zone + EOD logic.
-function nowMinuteCST() {
-  const d = new Date();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hour12: false,
-  }).formatToParts(d);
-  let h = 0, m = 0;
-  for (const p of parts) { if (p.type === "hour") h = parseInt(p.value, 10); if (p.type === "minute") m = parseInt(p.value, 10); }
-  if (h === 24) h = 0;
-  return h * 60 + m;
-}
-const CST_MARKET_OPEN = 8 * 60 + 30;   // 8:30 AM CST
-const CST_ORB_LOCK    = 8 * 60 + 45;   // 8:45 AM CST (ORB locked here)
-const CST_ETF_TIME_STOP = 11 * 60;     // 11:00 AM CST (ETF 0DTE rule)
-const CST_HARD_CLOSE  = 14 * 60 + 55;  // 2:55 PM CST (auto-close all OCM)
-const CST_MARKET_CLOSE = 15 * 60;       // 3:00 PM CST (regular hours end)
-
-// Compute ORB high/low from 5m bars: first 3 bars (15min) of CST session day
-function computeORBFromBars(bars, sessionDateCST) {
-  if (!bars || bars.length === 0) return null;
-  const todayBars = [];
-  for (let i = bars.length - 1; i >= 0 && todayBars.length < 5; i--) {
-    const bDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(new Date(bars[i].t));
-    if (bDate === sessionDateCST) {
-      // Check if this bar's CST minute is in the ORB window (8:30-8:45)
-      const d = new Date(bars[i].t);
-      const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
-      let bh = 0, bm = 0;
-      for (const p of parts) { if (p.type === "hour") bh = parseInt(p.value, 10); if (p.type === "minute") bm = parseInt(p.value, 10); }
-      if (bh === 24) bh = 0;
-      const minOfDay = bh * 60 + bm;
-      if (minOfDay >= CST_MARKET_OPEN && minOfDay < CST_ORB_LOCK) {
-        todayBars.push(bars[i]);
-      }
-    }
-  }
-  if (todayBars.length < 3) return null;  // need 3 × 5m bars
-  let hi = -Infinity, lo = Infinity;
-  for (const b of todayBars) { if (b.h > hi) hi = b.h; if (b.l < lo) lo = b.l; }
-  return { high: hi, low: lo, barsUsed: todayBars.length, sessionDateCST };
-}
-
-// Fetch 5m bars for OCM tickers
-async function fetchOCM5mBars(ticker, apiKey) {
-  const to = ymdDaysAgo(0);
-  const from = ymdDaysAgo(5);
-  return await fetchMassiveBars(ticker, 5, "minute", from, to, apiKey);
-}
-
-// Detect ORB break/pullback/rejection pattern on 5m bars
-// State machine: looking → broken → pullback → rejected → entry_armed
-function detectORBPattern(bars5m, orb, direction /* "call" or "put" */) {
-  if (!bars5m || bars5m.length < 4 || !orb) return null;
-  const buffer = 0.002;  // 0.2% buffer for pullback proximity
-  const N = bars5m.length;
-  // Find most recent break + pullback + rejection
-  // Walk backwards: find latest pullback rejection candidate, then verify break came before it
-  // Simpler: scan forward looking for the pattern in last 24 bars (2 hours)
-  const lookback = Math.min(24, N);
-  let breakIdx = -1;
-  for (let i = N - lookback; i < N; i++) {
-    if (direction === "call" && bars5m[i].c > orb.high) { breakIdx = i; break; }
-    if (direction === "put"  && bars5m[i].c < orb.low)  { breakIdx = i; break; }
-  }
-  if (breakIdx < 0 || breakIdx >= N - 2) return null;  // need bars after break for pullback
-  // Look for pullback after break
-  for (let j = breakIdx + 1; j < N; j++) {
-    const b = bars5m[j];
-    if (direction === "call") {
-      // Pullback: bar touches ORB high zone
-      const touched = b.l <= orb.high * (1 + buffer) && b.l >= orb.high * (1 - buffer);
-      if (!touched) continue;
-      // Rejection on this or next bar: close back above ORB high
-      for (let k = j; k < Math.min(N, j + 3); k++) {
-        if (bars5m[k].c > orb.high) {
-          // Check the trigger bar is recent (within last 3 bars)
-          if (k >= N - 3) {
-            return { armed: true, breakIdx, pullbackIdx: j, triggerIdx: k, ageBars: N - 1 - k };
-          }
-        }
-      }
-    } else {  // put
-      const touched = b.h >= orb.low * (1 - buffer) && b.h <= orb.low * (1 + buffer);
-      if (!touched) continue;
-      for (let k = j; k < Math.min(N, j + 3); k++) {
-        if (bars5m[k].c < orb.low) {
-          if (k >= N - 3) {
-            return { armed: true, breakIdx, pullbackIdx: j, triggerIdx: k, ageBars: N - 1 - k };
-          }
-        }
-      }
-    }
-  }
-  return null;
-}
-
-// Multi-timeframe gate for OCM: 5m exec (already at trigger), 15m validation, 1H confirmation, Daily HTF
-function computeOCMGate(bars5m, bars1h, barsD, smaPeriod, direction) {
-  if (!bars5m || bars5m.length < 22) return { ok: false, reason: "no 5m" };
-  if (!bars1h || bars1h.length < 22) return { ok: false, reason: "no 1H" };
-  if (!barsD || barsD.length < smaPeriod + 1) return { ok: false, reason: "no daily" };
-
-  // 1H EMA13 confirmation
-  const closes1h = bars1h.map(b => b.c);
-  const k = 2 / 14;
-  let ema13_1h = closes1h.slice(0, 13).reduce((s, c) => s + c, 0) / 13;
-  for (let i = 13; i < closes1h.length; i++) ema13_1h = closes1h[i] * k + ema13_1h * (1 - k);
-  const last1H = closes1h[closes1h.length - 1];
-  const hBull = last1H > ema13_1h;
-
-  // Daily SMA tier
-  const closesD = barsD.map(b => b.c);
-  const smaD = closesD.slice(-smaPeriod).reduce((s, c) => s + c, 0) / smaPeriod;
-  const lastD = closesD[closesD.length - 1];
-  const dBull = lastD > smaD;
-
-  // 15m validation: derive 15m bars from 5m (3:1 aggregation, last 7 bars)
-  const closes5m = bars5m.map(b => b.c);
-  let ema13_5m = closes5m.slice(0, 13).reduce((s, c) => s + c, 0) / 13;
-  for (let i = 13; i < closes5m.length; i++) ema13_5m = closes5m[i] * k + ema13_5m * (1 - k);
-  const last5 = closes5m[closes5m.length - 1];
-  const valid = direction === "call" ? last5 > ema13_5m : last5 < ema13_5m;
-
-  let ok;
-  if (direction === "call") ok = hBull && dBull && valid;
-  else ok = !hBull && !dBull && valid;
-  return { ok, hBull, dBull, valid, ema13_1h, smaD, smaPeriod, ema13_5m };
-}
-
-// VWAP/EMA13/BB/SAR for in-trade monitoring (compact: just current value vs price)
-function computeOCMIndicators(bars5m) {
-  if (!bars5m || bars5m.length < 30) return null;
-  const closes = bars5m.map(b => b.c);
-  const highs = bars5m.map(b => b.h);
-  const lows = bars5m.map(b => b.l);
-  const vols = bars5m.map(b => b.v);
-  // EMA13
-  const k13 = 2 / 14;
-  let ema13 = closes.slice(0, 13).reduce((s, c) => s + c, 0) / 13;
-  for (let i = 13; i < closes.length; i++) ema13 = closes[i] * k13 + ema13 * (1 - k13);
-  // EMA21 (for reversal stack)
-  const k21 = 2 / 22;
-  let ema21 = closes.slice(0, 21).reduce((s, c) => s + c, 0) / 21;
-  for (let i = 21; i < closes.length; i++) ema21 = closes[i] * k21 + ema21 * (1 - k21);
-  // VWAP (cumulative over session — approximated over last 78 bars = ~6.5h)
-  const N = Math.min(bars5m.length, 78);
-  let pv = 0, vv = 0;
-  for (let i = bars5m.length - N; i < bars5m.length; i++) {
-    const tp = (bars5m[i].h + bars5m[i].l + bars5m[i].c) / 3;
-    pv += tp * bars5m[i].v;
-    vv += bars5m[i].v;
-  }
-  const vwap = vv > 0 ? pv / vv : closes[closes.length - 1];
-  // BB(20, 2) on 5m
-  const bbN = Math.min(20, closes.length);
-  const recent = closes.slice(-bbN);
-  const bbMean = recent.reduce((s, c) => s + c, 0) / bbN;
-  const bbVar = recent.reduce((s, c) => s + (c - bbMean) * (c - bbMean), 0) / bbN;
-  const bbStd = Math.sqrt(bbVar);
-  const bbUpper = bbMean + 2 * bbStd;
-  const bbLower = bbMean - 2 * bbStd;
-  // SAR (simple approximation: trend direction based on close vs prior 5-bar swing)
-  const last5Highs = highs.slice(-5);
-  const last5Lows = lows.slice(-5);
-  const sarBull = closes[closes.length - 1] > Math.min(...last5Lows);
-  return {
-    close: closes[closes.length - 1],
-    ema13, ema21, vwap,
-    bbMid: bbMean, bbUpper, bbLower,
-    sarBull,
-  };
-}
-
-// Reversal stack scoring (6 signals, count those firing AGAINST position direction)
-function computeReversalScore(ind5m, position, orb) {
-  if (!ind5m) return { score: 0, max: 6, signals: {} };
-  const isLong = position.dir === "call";
-  const signals = {};
-  // 1. SAR flip against
-  signals.sar = isLong ? !ind5m.sarBull : ind5m.sarBull;
-  // 2. VWAP flip against
-  signals.vwap = isLong ? ind5m.close < ind5m.vwap : ind5m.close > ind5m.vwap;
-  // 3. EMA13 cross against
-  signals.ema13 = isLong ? ind5m.close < ind5m.ema13 : ind5m.close > ind5m.ema13;
-  // 4. BB midline cross against
-  signals.bbMid = isLong ? ind5m.close < ind5m.bbMid : ind5m.close > ind5m.bbMid;
-  // 5. Doji at structural level (open/close within 10% of high/low range, near ORB extreme)
-  signals.doji = false;  // simplified: requires last-bar OHLC inspection, computed at exit check
-  // 6. Fib retracement touch (38.2/50/61.8 of ORB range from breakout direction)
-  if (orb && orb.high && orb.low) {
-    const range = orb.high - orb.low;
-    const fib382 = isLong ? orb.high - range * 0.382 : orb.low + range * 0.382;
-    const fib50  = isLong ? orb.high - range * 0.50  : orb.low + range * 0.50;
-    const fib618 = isLong ? orb.high - range * 0.618 : orb.low + range * 0.618;
-    const px = ind5m.close;
-    const near = (lvl) => Math.abs(px - lvl) / lvl < 0.003;
-    signals.fib = isLong
-      ? (px < fib382 && (near(fib382) || near(fib50) || near(fib618)))
-      : (px > fib382 && (near(fib382) || near(fib50) || near(fib618)));
-  } else {
-    signals.fib = false;
-  }
-  const score = Object.values(signals).filter(Boolean).length;
-  return { score, max: 6, signals };
-}
-
-// Select OCM contract: ATM 0DTE for ETFs; Δ0.40-0.80 weekly for stocks, max-gamma min-theta
-function selectOCMContract(chain, direction, underlying, ticker) {
-  if (!chain || chain.length === 0) return null;
-  const todayMs = Date.now();
-  const isETF = OCM_ETF_SET.has(ticker);
-  const wantType = direction === "call" ? "call" : "put";
-  const filtered = chain.filter(o =>
-    o.details && o.details.contract_type === wantType &&
-    o.greeks && typeof o.greeks.delta === "number" &&
-    o.day && typeof o.day.close === "number" && o.day.close > 0
-  );
-  if (filtered.length === 0) return null;
-  // Group by expiration
-  const byExp = {};
-  for (const c of filtered) {
-    const e = c.details.expiration_date;
-    if (!byExp[e]) byExp[e] = [];
-    byExp[e].push(c);
-  }
-  const exps = Object.keys(byExp).sort();
-  let candidateExps = [];
-  if (isETF) {
-    // Prefer 0DTE (today) for ETFs
-    const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
-    if (byExp[todayStr]) candidateExps = [todayStr];
-    else {
-      // Fallback: nearest expiration > today
-      for (const e of exps) {
-        const days = (new Date(e + "T16:00:00-04:00").getTime() - todayMs) / 86400000;
-        if (days >= 0) { candidateExps = [e]; break; }
-      }
-    }
-  } else {
-    // Weekly: nearest expiration ~5-10 days out
-    for (const e of exps) {
-      const days = (new Date(e + "T16:00:00-04:00").getTime() - todayMs) / 86400000;
-      if (days >= 2 && days <= 10) { candidateExps.push(e); break; }
-    }
-    if (candidateExps.length === 0) {
-      // fallback nearest future
-      for (const e of exps) {
-        const days = (new Date(e + "T16:00:00-04:00").getTime() - todayMs) / 86400000;
-        if (days >= 1) { candidateExps = [e]; break; }
-      }
-    }
-  }
-  if (candidateExps.length === 0) return null;
-  const exp = candidateExps[0];
-  const pool = byExp[exp];
-  if (isETF) {
-    // ATM: smallest |strike - underlying|
-    let best = null, bestDiff = Infinity;
-    for (const c of pool) {
-      const d = Math.abs(c.details.strike_price - underlying);
-      if (d < bestDiff) { bestDiff = d; best = c; }
-    }
-    return best ? formatOCMContract(best, exp) : null;
-  }
-  // Stocks: Δ in [0.40, 0.80], theta abs ≤ ½ delta, maximize gamma
-  const deltaSign = direction === "call" ? 1 : -1;
-  const inBand = pool.filter(c => {
-    const d = Math.abs(c.greeks.delta);
-    if (d < 0.40 || d > 0.80) return false;
-    if (Math.sign(c.greeks.delta) !== deltaSign) return false;
-    if (typeof c.greeks.theta === "number" && Math.abs(c.greeks.theta) > d * 0.5) return false;
-    return true;
-  });
-  if (inBand.length === 0) return null;
-  let best = null, bestGamma = -Infinity;
-  for (const c of inBand) {
-    const g = typeof c.greeks.gamma === "number" ? c.greeks.gamma : 0;
-    if (g > bestGamma) { bestGamma = g; best = c; }
-  }
-  return best ? formatOCMContract(best, exp) : null;
-}
-
-function formatOCMContract(c, exp) {
-  // Use last close as proxy for premium; ask/bid not always in snapshot
-  const ask = (c.last_quote && c.last_quote.ask) || c.day.close;
-  const bid = (c.last_quote && c.last_quote.bid) || c.day.close;
-  return {
-    contractTicker: c.details.ticker,
-    expiration: exp,
-    strike: c.details.strike_price,
-    type: c.details.contract_type,
-    delta: c.greeks.delta,
-    gamma: c.greeks.gamma,
-    theta: c.greeks.theta,
-    vega: c.greeks.vega,
-    iv: c.implied_volatility,
-    premium: c.day.close,
-    bid, ask,
-    openInterest: c.open_interest || 0,
-  };
 }
 
 // ============================================================================
@@ -1413,21 +843,18 @@ async function fetchOptionsChainSnapshot(underlying, apiKey) {
 function findDelta25Call(chain, targetDaysOut = 7) {
   if (!chain || chain.length === 0) return null;
   const todayMs = Date.now();
-  // Filter to calls with delta and ask quote
   const calls = chain.filter(o =>
     o.details && o.details.contract_type === "call" &&
     o.greeks && typeof o.greeks.delta === "number" &&
     o.day && typeof o.day.close === "number"
   );
   if (calls.length === 0) return null;
-  // Group by expiration
   const byExp = {};
   for (const c of calls) {
     const e = c.details.expiration_date;
     if (!byExp[e]) byExp[e] = [];
     byExp[e].push(c);
   }
-  // Pick expiration closest to targetDaysOut
   let bestExp = null, bestDiff = Infinity;
   for (const e of Object.keys(byExp)) {
     const days = (new Date(e + "T16:00:00-04:00").getTime() - todayMs) / 86400000;
@@ -1436,7 +863,6 @@ function findDelta25Call(chain, targetDaysOut = 7) {
     if (diff < bestDiff) { bestDiff = diff; bestExp = e; }
   }
   if (!bestExp) return null;
-  // Within that expiration, find call with delta closest to 0.25
   let best = null, bestDeltaDiff = Infinity;
   for (const c of byExp[bestExp]) {
     const dDiff = Math.abs(c.greeks.delta - 0.25);
@@ -2207,35 +1633,6 @@ const HEARTBEAT_LIVE = {
 // Curated S&P 500 (top ~200 most-traded, sufficient for RVOL ranking).
 // Massive will silently skip any unknown symbol.
 // v.25 — Optionable + Liquid Universe (curated: avg daily option vol > 5K verified)
-// ~80 names spanning megacap, tech, finance, energy, healthcare, consumer, industrials, ETFs
-// ============================================================================
-// v.26 — OCM UNIVERSE (32 tickers, fixed) + Daily SMA tier mapping
-// ============================================================================
-const OCM_UNIVERSE = [
-  // ETFs (0DTE allowed, ATM)
-  "SPY", "QQQ",
-  // Mag7
-  "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA",
-  // 23 mega-caps (weekly options, Δ0.40-0.80)
-  "AMD", "AVGO", "NFLX", "BRK.B", "JPM", "V", "MA", "UNH", "LLY", "JNJ",
-  "XOM", "CVX", "WMT", "COST", "HD", "LOW", "DIS", "BAC", "ORCL", "CRM",
-  "ADBE", "PYPL", "TSM", "NKE", "BA",
-];
-
-// Per-ticker daily SMA tier for HTF gate
-const OCM_SMA_TIER = {
-  // SMA200 — stable defensives
-  "WMT": 200, "HD": 200, "COST": 200, "LOW": 200, "JNJ": 200,
-  "BRK.B": 200, "V": 200, "MA": 200, "UNH": 200, "LLY": 200,
-  // SMA50 — high-vol growth
-  "NVDA": 50, "TSLA": 50,
-  // Default SMA100 for the rest (applied dynamically)
-};
-function ocmSmaPeriodFor(sym) { return OCM_SMA_TIER[sym] || 100; }
-
-// ETFs allow 0DTE
-const OCM_ETF_SET = new Set(["SPY", "QQQ"]);
-
 const OPTIONABLE_LIQUID = [
   // Megacap tech
   "AAPL","MSFT","GOOGL","GOOG","AMZN","NVDA","META","TSLA","AVGO","ORCL",
@@ -2553,7 +1950,7 @@ function MarketHeartbeat({ account, liveHeartbeat }) {
             <div>
               <span style={{ color: C.muted }} className="text-[10px] tracking-[0.1em]">P/L </span>
               <span style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-[13px] font-mono font-bold">
-                {account.dayPnL >= 0 ? "+" : ""}${account.dayPnL.toFixed(2)} ({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)
+                {account.dayPnL >= 0 ? "+" : ""}${account.dayPnL} ({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)
               </span>
             </div>
           </div>
@@ -2631,7 +2028,7 @@ function LoginPage({ onLogin }) {
 // ============================================================================
 // AccountSummary — with dark mode toggle
 // ============================================================================
-function AccountSummary({ account, positions, universe, darkMode, setDarkMode, onLogout, onSelect, riskProfile, onRetakeRisk, polygonKey, onSetPolygonKey, paperAccount, onResetAccount, sessions, onNewSession, onDeleteSession, liveData, scannerStatus, topRVOL, ledger, onResetLedger, showDiagnostics, onToggleDiagnostics, livePrices, coveredCalls, multiTickerEngine, ecmAccount, ocmAccount, ocmLedger, orbCache , onHardReset }) {
+function AccountSummary({ account, positions, universe, darkMode, setDarkMode, onLogout, onSelect, riskProfile, onRetakeRisk, polygonKey, onSetPolygonKey, paperAccount, onResetAccount, sessions, onNewSession, onDeleteSession, liveData, scannerStatus, topRVOL, ledger, onResetLedger, showDiagnostics, onToggleDiagnostics, livePrices, coveredCalls, multiTickerEngine }) {
   // v.24.3 — Open positions sourced from live account stats (ledger-derived)
   const openPositions = (account.openPositions || []).map(p => ({
     sym: p.sym, side: p.side, pnl: p.pnl,
@@ -2650,17 +2047,17 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       <div className="grid grid-cols-2 gap-2">
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">EQUITY</div>
-          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.equity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.equity.toLocaleString()}</div>
         </div>
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">BUYING POWER</div>
-          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.buyingPower.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.buyingPower.toLocaleString()}</div>
         </div>
       </div>
       <div style={{ backgroundColor: C.surface, borderColor: account.dayPnL >= 0 ? C.long : C.short }} className="border-2 rounded-xl p-2.5">
         <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">TODAY'S P/L</div>
         <div className="flex items-baseline gap-2 mt-0.5">
-          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-xl font-mono font-bold">{account.dayPnL >= 0 ? "+" : ""}${account.dayPnL.toFixed(2)}</div>
+          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-xl font-mono font-bold">{account.dayPnL >= 0 ? "+" : ""}${account.dayPnL}</div>
           <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-sm font-mono">({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)</div>
           <div style={{ color: C.dim }} className="text-[12px] font-mono ml-auto">{account.tradesToday} trades</div>
         </div>
@@ -2682,11 +2079,11 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       <div className="grid grid-cols-2 gap-2">
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">WEEK</div>
-          <div style={{ color: account.weekPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.weekPnL >= 0 ? "+" : ""}${account.weekPnL.toFixed(2)} ({account.weekPnLPct.toFixed(2)}%)</div>
+          <div style={{ color: account.weekPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.weekPnL >= 0 ? "+" : ""}${account.weekPnL} ({account.weekPnLPct.toFixed(2)}%)</div>
         </div>
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">MONTH</div>
-          <div style={{ color: account.monthPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.monthPnL >= 0 ? "+" : ""}${account.monthPnL.toFixed(2)} ({account.monthPnLPct.toFixed(2)}%)</div>
+          <div style={{ color: account.monthPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.monthPnL >= 0 ? "+" : ""}${account.monthPnL} ({account.monthPnLPct.toFixed(2)}%)</div>
         </div>
       </div>
       <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
@@ -2704,13 +2101,12 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       </div>
 
       {/* v.19 — Risk Profile */}
-      {/* v.fix: Risk Profile section hidden — settings still active behind the scenes, controlled via Retake when needed */}
+      <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em] font-mono font-bold flex items-center gap-1.5 mt-1"><Shield size={10} color={C.muted}/> RISK PROFILE</div>
+      <RiskProfileCard profile={riskProfile} onRetake={onRetakeRisk} />
 
       {/* v.19 — Paper Account */}
-      <PaperAccountCard account={paperAccount} onReset={onResetAccount} onHardReset={onHardReset} />
-      <CapitalAllocationCard ecmAccount={ecmAccount} ocmAccount={ocmAccount} ecmLedger={ledger} ocmLedger={ocmLedger} livePrices={livePrices} />
+      <PaperAccountCard account={paperAccount} onReset={onResetAccount} />
       <PaperLedger ledger={ledger} onReset={onResetLedger} livePrices={livePrices} coveredCalls={coveredCalls} multiTickerEngine={multiTickerEngine} />
-      <OCMLedger ledger={ocmLedger} account={ocmAccount} ecmLedger={ledger} orbCache={orbCache} />
 
       {/* v.19 — Polygon Key */}
       <PolygonKeyField value={polygonKey} onChange={onSetPolygonKey} />
@@ -3315,150 +2711,6 @@ function BottomTabBar({ view, setView, activeCount }) {
 // Main App
 // ============================================================================
 // ============================================================================
-// v.26 — Capital Allocation Widget (ECM 70% / OCM 30%)
-// ============================================================================
-function CapitalAllocationCard({ ecmAccount, ocmAccount, ecmLedger, ocmLedger, livePrices }) {
-  const ecmStart = ecmAccount.startingBalance || 70000;
-  const ocmStart = ocmAccount.startingBalance || 30000;
-  // ECM equity = balance + unrealized on equity opens
-  let ecmUnreal = 0;
-  for (const t of ecmLedger) {
-    if (t.status !== "open") continue;
-    const px = livePrices && livePrices[t.ticker];
-    if (!px) continue;
-    ecmUnreal += t.dir === 1 ? (px - t.entryPrice) * t.currentShares : (t.entryPrice - px) * t.currentShares;
-  }
-  const ecmEquity = ecmAccount.balance + ecmUnreal;
-  // OCM equity = balance + sum of current option positions value (mark-to-market via highWaterPremium proxy)
-  let ocmUnreal = 0;
-  for (const t of ocmLedger) {
-    if (t.status !== "open") continue;
-    const mark = t.highWaterPremium || t.entryPremium;
-    ocmUnreal += (mark - t.entryPremium) * t.currentContracts * 100;
-  }
-  const ocmEquity = ocmAccount.balance + ocmUnreal;
-  const total = ecmEquity + ocmEquity;
-  const ecmPct = total > 0 ? (ecmEquity / total) * 100 : 70;
-  const ocmPct = total > 0 ? (ocmEquity / total) * 100 : 30;
-
-  return (
-    <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
-      <div style={{ color: C.muted }} className="text-[11px] tracking-[0.2em] font-mono font-bold mb-2">CAPITAL ALLOCATION</div>
-      <div className="grid grid-cols-2 gap-3">
-        <div style={{ backgroundColor: C.track, borderColor: C.border }} className="border rounded-lg p-2">
-          <div style={{ color: C.muted }} className="text-[10px] font-mono">ECM (Equity)</div>
-          <div style={{ color: C.text }} className="text-[15px] font-bold font-mono">${ecmEquity.toFixed(0)}</div>
-          <div style={{ color: ecmEquity >= ecmStart ? C.long : C.short }} className="text-[11px] font-mono">
-            {ecmEquity >= ecmStart ? "+" : ""}${(ecmEquity - ecmStart).toFixed(0)} ({ecmPct.toFixed(0)}%)
-          </div>
-        </div>
-        <div style={{ backgroundColor: C.track, borderColor: C.border }} className="border rounded-lg p-2">
-          <div style={{ color: C.muted }} className="text-[10px] font-mono">OCM (Options)</div>
-          <div style={{ color: C.text }} className="text-[15px] font-bold font-mono">${ocmEquity.toFixed(0)}</div>
-          <div style={{ color: ocmEquity >= ocmStart ? C.long : C.short }} className="text-[11px] font-mono">
-            {ocmEquity >= ocmStart ? "+" : ""}${(ocmEquity - ocmStart).toFixed(0)} ({ocmPct.toFixed(0)}%)
-          </div>
-        </div>
-      </div>
-      <div className="mt-2 pt-2" style={{ borderTopColor: C.border, borderTopWidth: 1, borderTopStyle: "solid" }}>
-        <div className="flex items-center justify-between">
-          <div style={{ color: C.muted }} className="text-[11px] font-mono">Total Equity</div>
-          <div style={{ color: C.text }} className="text-[13px] font-bold font-mono">${total.toFixed(2)}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// v.26 — OCM Ledger Card (separate from ECM PaperLedger)
-// ============================================================================
-function OCMLedger({ ledger, account, optionsChainCache, ecmLedger, orbCache }) {
-  const open = ledger.filter(t => t.status === "open");
-  const closed = ledger.filter(t => t.status === "closed");
-  const totalRealized = closed.reduce((s, t) => s + (t.realizedPnL || 0), 0);
-  const winners = closed.filter(t => (t.realizedPnL || 0) > 0).length;
-  const winRate = closed.length > 0 ? (winners / closed.length * 100) : 0;
-  const fmtTime = (t) => new Date(t).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-
-  return (
-    <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <div style={{ color: C.muted }} className="text-[11px] tracking-[0.2em] font-mono font-bold flex-1">OCM LEDGER · Options</div>
-        <div style={{ color: C.dim }} className="text-[11px] font-mono">{ledger.length} trades</div>
-      </div>
-      <div style={{ backgroundColor: C.track }} className="rounded px-2 py-1 mb-2">
-        <div style={{ color: C.dim }} className="text-[10px] font-mono">⚠ DELAYED DATA (15-min) — paper PnL is optimistic vs real fills</div>
-      </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-mono mb-2">
-        <div style={{ color: C.muted }}>Open</div>
-        <div style={{ color: C.text }} className="text-right font-bold">{open.length}</div>
-        <div style={{ color: C.muted }}>Closed</div>
-        <div style={{ color: C.text }} className="text-right font-bold">{closed.length}</div>
-        <div style={{ color: C.muted }}>Win Rate</div>
-        <div style={{ color: C.text }} className="text-right font-bold">{winRate.toFixed(0)}%</div>
-        <div style={{ color: C.muted }}>Realized</div>
-        <div style={{ color: totalRealized >= 0 ? C.long : C.short }} className="text-right font-bold">
-          {totalRealized >= 0 ? "+" : ""}${totalRealized.toFixed(2)}
-        </div>
-        <div style={{ color: C.muted }}>Balance</div>
-        <div style={{ color: C.text }} className="text-right font-bold">${account.balance.toFixed(2)}</div>
-      </div>
-      {open.length > 0 && (
-        <div className="mt-3 pt-2" style={{ borderTopColor: C.border, borderTopWidth: 1, borderTopStyle: "solid" }}>
-          <div style={{ color: C.muted }} className="text-[10px] tracking-[0.15em] font-mono mb-1">OPEN POSITIONS</div>
-          {open.map(t => {
-            const live = optionsChainCache && optionsChainCache[t.ticker];
-            const cur = live && live.find ? live.find(c => c.contractTicker === t.contractTicker) : null;
-            const mark = (cur && cur.bid) || t.highWaterPremium || t.entryPremium;
-            const pnl = (mark - t.entryPremium) * t.currentContracts * 100;
-            const pct = ((mark - t.entryPremium) / t.entryPremium) * 100;
-            return (
-              <div key={t.id} className="py-1.5 border-b last:border-b-0" style={{ borderBottomColor: C.border }}>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span style={{ color: t.dir === "call" ? C.long : C.short }} className="text-[12px] font-mono font-bold">
-                    {t.dir === "call" ? "C" : "P"} {t.ticker}
-                  </span>
-                  <span style={{ color: C.text }} className="text-[11px] font-mono">${t.strike}</span>
-                  <span style={{ color: C.dim }} className="text-[10px] font-mono">{t.expiration}</span>
-                  <span style={{ color: C.text }} className="text-[11px] font-mono ml-auto">{t.currentContracts}c @${t.entryPremium.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-[10px] font-mono">
-                  <span style={{ color: C.dim }}>{fmtTime(t.entryTime)} · Δ{t.entryDelta.toFixed(2)}</span>
-                  <span style={{ color: pnl >= 0 ? C.long : C.short }} className="ml-auto font-bold">
-                    {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)} ({pct >= 0 ? "+" : ""}{pct.toFixed(0)}%)
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {closed.length > 0 && (
-        <div className="mt-3 pt-2" style={{ borderTopColor: C.border, borderTopWidth: 1, borderTopStyle: "solid" }}>
-          <div style={{ color: C.muted }} className="text-[10px] tracking-[0.15em] font-mono mb-1">CLOSED (last 10)</div>
-          {closed.slice(-10).reverse().map(t => {
-            const pnl = t.realizedPnL || 0;
-            return (
-              <div key={t.id} className="py-1 border-b last:border-b-0 text-[10px] font-mono" style={{ borderBottomColor: C.border }}>
-                <div className="flex items-center gap-2">
-                  <span style={{ color: t.dir === "call" ? C.long : C.short }} className="font-bold">{t.dir === "call" ? "C" : "P"} {t.ticker} ${t.strike}</span>
-                  <span style={{ color: C.dim }}>{t.exitType}</span>
-                  <span style={{ color: pnl >= 0 ? C.long : C.short }} className="ml-auto font-bold">{pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {ledger.length === 0 && (
-        <div style={{ color: C.dim }} className="text-[11px] mt-2">No OCM trades yet. ORB locks at 8:45 AM CST. Entries fire on break+pullback+rejection with HTF gate.</div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
 // v.22c.2 — PaperLedger card (executed trades from auto-loop)
 // ============================================================================
 function PaperLedger({ ledger, onReset, livePrices, coveredCalls, multiTickerEngine }) {
@@ -3574,7 +2826,6 @@ function PaperLedger({ ledger, onReset, livePrices, coveredCalls, multiTickerEng
                     </span>
                   )}
                 </div>
-                {/* v.25 — covered call candidate for underwater longs */}
                 {t.dir === 1 && coveredCalls && coveredCalls[t.ticker] && (
                   <div className="mt-1 px-2 py-1 rounded" style={{ backgroundColor: C.track }}>
                     <div style={{ color: C.tp }} className="text-[10px] font-mono font-bold">COVERED CALL</div>
@@ -3984,7 +3235,7 @@ function PolygonKeyField({ value, onChange }) {
 // ============================================================================
 // v.19 — PaperAccountCard
 // ============================================================================
-function PaperAccountCard({ account, onReset, onHardReset }) {
+function PaperAccountCard({ account, onReset }) {
   const pnl = account.balance - account.startingBalance;
   const pnlPct = (pnl / account.startingBalance) * 100;
   return (
@@ -4002,10 +3253,6 @@ function PaperAccountCard({ account, onReset, onHardReset }) {
       </div>
       <div style={{ borderColor: C.border }} className="px-3 py-2 border-t">
         <button onClick={onReset} style={{ borderColor: C.border, color: C.text }} className="w-full py-1.5 rounded border text-[12px] font-mono uppercase tracking-wider">Reset to $100,000</button>
-        <button onClick={() => { if (confirm("HARD RESET: clear ALL data (paper account, ledger, sessions, caches, OCM data, ORB cache) and reload the page? This cannot be undone.")) onHardReset(); }}
-          style={{ backgroundColor: C.short, color: "#fff" }} className="w-full py-1.5 rounded mt-1.5 font-bold text-[12px] uppercase tracking-wider">
-          Hard Reset (clear everything)
-        </button>
       </div>
     </div>
   );
@@ -4180,12 +3427,6 @@ function MTSApp() {
   const [sessions, setSessions] = useState(() => loadJSON(STORAGE.SESS, []));
   const [ledger, setLedger] = useState(() => loadJSON(STORAGE.LEDGER, []));
   const [execState, setExecState] = useState(() => loadJSON(STORAGE.EXEC_STATE, {}));
-  // v.26 — OCM state
-  const [ocmLedger, setOcmLedger] = useState(() => loadJSON(STORAGE.OCM_LEDGER, []));
-  const [ocmExecState, setOcmExecState] = useState(() => loadJSON(STORAGE.OCM_EXEC, {}));
-  const [ocmAccount, setOcmAccount] = useState(() => loadJSON(STORAGE.OCM_ACCT, { balance: 30000, startingBalance: 30000 }));
-  const [ecmAccount, setEcmAccount] = useState(() => loadJSON(STORAGE.ECM_ACCT, { balance: 70000, startingBalance: 70000 }));
-  const [orbCache, setOrbCache] = useState(() => loadJSON(STORAGE.ORB_CACHE, { date: null, perTicker: {} }));
   const [showDiagnostics, setShowDiagnostics] = useState(() => loadJSON(STORAGE.SHOW_DIAG, false));
   const toggleDiagnostics = () => {
     const next = !showDiagnostics;
@@ -4228,9 +3469,15 @@ function MTSApp() {
             const m = multiTickerEngine[s];
             if (m && m.indicators) currentPrices[s] = m.indicators.close;
           });
+          let trendGate = null;
+          try {
+            const cc = trendCacheRef.current.TSLA;
+            if (cc && cc.hourly && cc.daily) trendGate = computeTrendGate(cc.hourly, cc.daily);
+          } catch (e) {}
           const result = processEngineSignals({
             ticker: "TSLA", engine, bars, atr: ind.atr14,
             ledger, execState, account: paperAccount, riskProfile, sessions, currentPrices,
+            trendGate,
           });
           if (result.fills.length > 0) {
             setLedger(result.newLedger); saveJSON(STORAGE.LEDGER, result.newLedger);
@@ -4372,11 +3619,12 @@ function MTSApp() {
     return () => { cancelled = true; clearInterval(iv); };
   }, [polygonKey, loggedIn]);
 
-  // v.23 — Multi-ticker engine state: { TICKER: { indicators, engine, bars, lastFetch, trendGate } }
+  // v.23 — Multi-ticker engine state: { TICKER: { indicators, engine, bars, lastFetch } }
   const [multiTickerEngine, setMultiTickerEngine] = useState({});
+
   // v.25 — trend gate cache (refs so we don't trigger re-renders on cache fill)
   const trendCacheRef = useRef({});
-  // v.25 — covered call candidates per ticker (state — used by UI)
+  // v.25 — covered call candidates per ticker
   const [coveredCalls, setCoveredCalls] = useState({});
 
   // v.21 — Top-20 RVOL scanner
@@ -4413,28 +3661,19 @@ function MTSApp() {
         if (cancelled) return;
         const ranked = [];
         for (const s of snaps) {
-          // v.fix — accept prevDay.v as fallback when day.v is null
-          // (15-min delay leaves first 15min of session with no today's volume yet)
-          const todayV = (s.day && s.day.v) ? s.day.v : 0;
-          const prevV = (s.prevDay && s.prevDay.v) ? s.prevDay.v : 0;
-          const useV = todayV > 0 ? todayV : prevV;
-          if (useV <= 0) continue;
+          if (!s.day || !s.day.v) continue;
           const avgV = avg[s.ticker];
           if (!avgV || avgV < 100000) continue; // skip illiquid
-          const rvol = useV / avgV;
-          const closePx = (s.day && s.day.c) || (s.prevDay && s.prevDay.c) || (s.lastQuote && s.lastQuote.P) || 0;
+          const rvol = s.day.v / avgV;
           ranked.push({
             sym: s.ticker,
-            price: closePx,
+            price: s.day.c,
             change: s.todaysChange || 0,
             changePct: s.todaysChangePerc || 0,
-            volume: useV,
+            volume: s.day.v,
             avgVol: avgV,
             rvol: rvol,
-            high: (s.day && s.day.h) || closePx,
-            low: (s.day && s.day.l) || closePx,
-            open: (s.day && s.day.o) || closePx,
-            stalePrev: todayV === 0,  // flag: using prevDay fallback
+            high: s.day.h, low: s.day.l, open: s.day.o,
           });
         }
         ranked.sort((a, b) => b.rvol - a.rvol);
@@ -4451,6 +3690,122 @@ function MTSApp() {
     const iv = setInterval(pullScanner, 60000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [polygonKey, loggedIn]);
+
+  // v.23/v.25 — Multi-ticker engine + execution for top-20 RVOL tickers (with trend gate)
+  useEffect(() => {
+    if (!polygonKey || !loggedIn || !riskProfile || !topRVOL || topRVOL.length === 0) return;
+    let cancelled = false;
+    const TICKERS = topRVOL.slice(0, 20).map(t => t.sym).filter(s => s !== "TSLA");
+    if (TICKERS.length === 0) return;
+
+    const pullAll = async () => {
+      const BATCH = 4;
+      let curLedger = ledger, curExec = execState, curAccount = paperAccount;
+      const allUpdates = {};
+      for (let i = 0; i < TICKERS.length; i += BATCH) {
+        if (cancelled) return;
+        const batch = TICKERS.slice(i, i + BATCH);
+        const results = await Promise.allSettled(batch.map(async (sym) => {
+          const to = ymdDaysAgo(0);
+          const from = ymdDaysAgo(10);
+          const bars = await fetchMassiveBars(sym, 15, "minute", from, to, polygonKey);
+          if (cancelled || bars.length < 100) return null;
+          const ind = computeIndicators(bars);
+          const engine = computeMMGEngineState(bars);
+          let trendGate = null;
+          try {
+            const cache = trendCacheRef.current[sym];
+            const now = Date.now();
+            const HOURLY_TTL = 60 * 60 * 1000;
+            const DAILY_TTL = 4 * 60 * 60 * 1000;
+            const needHourly = !cache || !cache.hourlyAt || (now - cache.hourlyAt) > HOURLY_TTL;
+            const needDaily = !cache || !cache.dailyAt || (now - cache.dailyAt) > DAILY_TTL;
+            if (needHourly || needDaily) {
+              const [h1, d1] = await Promise.all([
+                needHourly ? fetchHourlyBars(sym, polygonKey) : Promise.resolve(cache && cache.hourly),
+                needDaily ? fetchDailyBars(sym, polygonKey) : Promise.resolve(cache && cache.daily),
+              ]);
+              trendCacheRef.current[sym] = {
+                hourly: h1, daily: d1,
+                hourlyAt: needHourly ? now : (cache && cache.hourlyAt),
+                dailyAt: needDaily ? now : (cache && cache.dailyAt),
+              };
+            }
+            const cc = trendCacheRef.current[sym];
+            trendGate = computeTrendGate(cc.hourly, cc.daily);
+          } catch (e) {}
+          return { sym, ind, engine, bars, trendGate };
+        }));
+        for (const r of results) {
+          if (r.status === "fulfilled" && r.value) {
+            const { sym, ind, engine, bars, trendGate } = r.value;
+            allUpdates[sym] = { indicators: ind, engine, bars, trendGate, lastFetch: Date.now() };
+            if (engine && ind && ind.atr14) {
+              const cp = { [sym]: ind.close };
+              if (liveData && liveData.TSLA && liveData.TSLA.indicators) cp.TSLA = liveData.TSLA.indicators.close;
+              Object.keys(allUpdates).forEach(s => { if (allUpdates[s].indicators) cp[s] = allUpdates[s].indicators.close; });
+              const result = processEngineSignals({
+                ticker: sym, engine, bars, atr: ind.atr14,
+                ledger: curLedger, execState: curExec, account: curAccount, riskProfile, sessions, currentPrices: cp,
+                trendGate,
+              });
+              if (result.fills.length > 0) {
+                curLedger = result.newLedger;
+                curExec = result.newExecState;
+                curAccount = result.newAccount;
+              }
+            }
+          }
+        }
+        if (i + BATCH < TICKERS.length) await new Promise(r => setTimeout(r, 250));
+      }
+      if (cancelled) return;
+      setMultiTickerEngine(prev => ({ ...prev, ...allUpdates }));
+      if (curLedger !== ledger) { setLedger(curLedger); saveJSON(STORAGE.LEDGER, curLedger); }
+      if (curExec !== execState) { setExecState(curExec); saveJSON(STORAGE.EXEC_STATE, curExec); }
+      if (curAccount !== paperAccount) { setPaperAccount(curAccount); saveJSON(STORAGE.ACCT, curAccount); }
+    };
+
+    pullAll();
+    const iv2 = setInterval(pullAll, 60000);
+    return () => { cancelled = true; clearInterval(iv2); };
+  }, [polygonKey, loggedIn, riskProfile, topRVOL.map(t => t.sym).join(",")]);
+
+  // v.25 — Covered call identifier: for LONG positions underwater past threshold
+  useEffect(() => {
+    if (!polygonKey || !loggedIn) return;
+    let cancelled = false;
+    const CC_THRESHOLD_PCT = -2.0;
+    const CC_REFRESH_MS = 10 * 60 * 1000;
+    const checkCoveredCalls = async () => {
+      const opens = ledger.filter(t => t.status === "open" && t.dir === 1);
+      const liveP = (livePricesMapRef.current || {});
+      const updates = {};
+      for (const t of opens) {
+        const px = liveP[t.ticker];
+        if (!px) continue;
+        const unrealPct = ((px - t.entryPrice) / t.entryPrice) * 100;
+        if (unrealPct > CC_THRESHOLD_PCT) continue;
+        const cached = coveredCalls[t.ticker];
+        if (cached && (Date.now() - cached.fetchedAt) < CC_REFRESH_MS) continue;
+        try {
+          const chain = await fetchOptionsChainSnapshot(t.ticker, polygonKey);
+          if (cancelled || !chain) continue;
+          const cc = findDelta25Call(chain, 7);
+          if (cc) {
+            updates[t.ticker] = { ...cc, fetchedAt: Date.now(), underlyingPx: px, unrealPct };
+            console.log("[v.25] " + t.ticker + " covered call: " + cc.daysOut + "d $" + cc.strike + " Δ" + cc.delta.toFixed(2) + " premium $" + cc.premium.toFixed(2));
+          }
+        } catch (e) {}
+      }
+      if (!cancelled && Object.keys(updates).length > 0) {
+        setCoveredCalls(prev => ({ ...prev, ...updates }));
+      }
+    };
+    checkCoveredCalls();
+    const iv = setInterval(checkCoveredCalls, 5 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [polygonKey, loggedIn, ledger]);
 
   // v.23 — Multi-ticker engine + execution for top-20 RVOL tickers
   useEffect(() => {
@@ -4474,35 +3829,12 @@ function MTSApp() {
           if (cancelled || bars.length < 100) return null;
           const ind = computeIndicators(bars);
           const engine = computeMMGEngineState(bars);
-          // v.25 — trend gate: fetch 1H + daily, cache 1h/4h respectively
-          let trendGate = null;
-          try {
-            const cache = trendCacheRef.current[sym];
-            const now = Date.now();
-            const HOURLY_TTL = 60 * 60 * 1000;       // 1h
-            const DAILY_TTL = 4 * 60 * 60 * 1000;    // 4h
-            const needHourly = !cache || !cache.hourlyAt || (now - cache.hourlyAt) > HOURLY_TTL;
-            const needDaily = !cache || !cache.dailyAt || (now - cache.dailyAt) > DAILY_TTL;
-            if (needHourly || needDaily) {
-              const [h1, d1] = await Promise.all([
-                needHourly ? fetchHourlyBars(sym, polygonKey) : Promise.resolve(cache && cache.hourly),
-                needDaily ? fetchDailyBars(sym, polygonKey) : Promise.resolve(cache && cache.daily),
-              ]);
-              trendCacheRef.current[sym] = {
-                hourly: h1, daily: d1,
-                hourlyAt: needHourly ? now : (cache && cache.hourlyAt),
-                dailyAt: needDaily ? now : (cache && cache.dailyAt),
-              };
-            }
-            const cc = trendCacheRef.current[sym];
-            trendGate = computeTrendGate(cc.hourly, cc.daily);
-          } catch (e) { /* trend gate unavailable, allow trade */ }
-          return { sym, ind, engine, bars, trendGate };
+          return { sym, ind, engine, bars };
         }));
         for (const r of results) {
           if (r.status === "fulfilled" && r.value) {
-            const { sym, ind, engine, bars, trendGate } = r.value;
-            allUpdates[sym] = { indicators: ind, engine, bars, trendGate, lastFetch: Date.now() };
+            const { sym, ind, engine, bars } = r.value;
+            allUpdates[sym] = { indicators: ind, engine, bars, lastFetch: Date.now() };
             if (engine && ind && ind.atr14) {
               const cp = { [sym]: ind.close };
               if (liveData && liveData.TSLA && liveData.TSLA.indicators) cp.TSLA = liveData.TSLA.indicators.close;
@@ -4510,7 +3842,6 @@ function MTSApp() {
               const result = processEngineSignals({
                 ticker: sym, engine, bars, atr: ind.atr14,
                 ledger: curLedger, execState: curExec, account: curAccount, riskProfile, sessions, currentPrices: cp,
-                trendGate: r.value.trendGate,
               });
               if (result.fills.length > 0) {
                 curLedger = result.newLedger;
@@ -4535,125 +3866,6 @@ function MTSApp() {
     return () => { cancelled = true; clearInterval(iv2); };
   }, [polygonKey, loggedIn, riskProfile, topRVOL.map(t => t.sym).join(",")]);
 
-  // v.26 — OCM POLLING LOOP: scan OCM_UNIVERSE every 60s
-  // Computes ORB once daily, then runs entry/management on each ticker
-  useEffect(() => {
-    if (!polygonKey || !loggedIn || !riskProfile) return;
-    let cancelled = false;
-    const pullOCM = async () => {
-      const today = todayCST();
-      const minCST = nowMinuteCST();
-      // Refresh ORB cache if new day
-      let cache = orbCache;
-      if (cache.date !== today) {
-        cache = { date: today, perTicker: {} };
-        setOrbCache(cache);
-        saveJSON(STORAGE.ORB_CACHE, cache);
-        console.log("[v.26 OCM] New trading day, ORB cache reset");
-      }
-
-      let curLedger = ocmLedger, curExec = ocmExecState, curAccount = ocmAccount;
-      const BATCH = 3;
-      for (let i = 0; i < OCM_UNIVERSE.length; i += BATCH) {
-        if (cancelled) return;
-        const batch = OCM_UNIVERSE.slice(i, i + BATCH);
-        await Promise.allSettled(batch.map(async (sym) => {
-          try {
-            const bars5m = await fetchOCM5mBars(sym, polygonKey);
-            if (cancelled || !bars5m || bars5m.length < 30) return;
-            // Compute or use cached ORB
-            let orb = cache.perTicker[sym];
-            if (!orb && minCST >= CST_ORB_LOCK) {
-              const computed = computeORBFromBars(bars5m, today);
-              if (computed) {
-                orb = computed;
-                cache.perTicker[sym] = orb;
-              }
-            }
-            if (!orb) return;  // ORB not yet locked
-            // Fetch 1H, daily, options chain (1H/daily cached via separate trendCache)
-            const tc = trendCacheRef.current[sym] || {};
-            const now = Date.now();
-            const needH = !tc.hourlyAt || (now - tc.hourlyAt) > 60*60*1000;
-            const needD = !tc.dailyAt || (now - tc.dailyAt) > 4*60*60*1000;
-            if (needH || needD) {
-              const [h1, d1] = await Promise.all([
-                needH ? fetchHourlyBars(sym, polygonKey) : Promise.resolve(tc.hourly),
-                needD ? fetchDailyBars(sym, polygonKey) : Promise.resolve(tc.daily),
-              ]);
-              trendCacheRef.current[sym] = {
-                hourly: h1, daily: d1,
-                hourlyAt: needH ? now : tc.hourlyAt,
-                dailyAt: needD ? now : tc.dailyAt,
-              };
-            }
-            const cc = trendCacheRef.current[sym];
-            const chain = await fetchOptionsChainSnapshot(sym, polygonKey);
-            if (cancelled || !chain) return;
-            // Run OCM engine
-            const result = processOCMSignals({
-              ticker: sym, bars5m, bars1h: cc.hourly, barsD: cc.daily,
-              orb, chain, ledger: curLedger, execState: curExec, account: curAccount,
-              riskProfile, ecmLedger: ledger, currentMinCST: minCST,
-            });
-            if (result.fills.length > 0) {
-              curLedger = result.newLedger;
-              curExec = result.newExecState;
-              curAccount = result.newAccount;
-            }
-          } catch (e) { console.log("[v.26 OCM] " + sym + " error:", e.message); }
-        }));
-        if (i + BATCH < OCM_UNIVERSE.length) await new Promise(r => setTimeout(r, 300));
-      }
-      if (cancelled) return;
-      // Persist ORB cache (now has all tickers ORB'd)
-      saveJSON(STORAGE.ORB_CACHE, cache);
-      if (curLedger !== ocmLedger) { setOcmLedger(curLedger); saveJSON(STORAGE.OCM_LEDGER, curLedger); }
-      if (curExec !== ocmExecState) { setOcmExecState(curExec); saveJSON(STORAGE.OCM_EXEC, curExec); }
-      if (curAccount !== ocmAccount) { setOcmAccount(curAccount); saveJSON(STORAGE.OCM_ACCT, curAccount); }
-    };
-    pullOCM();
-    const iv = setInterval(pullOCM, 60 * 1000);
-    return () => { cancelled = true; clearInterval(iv); };
-  }, [polygonKey, loggedIn, riskProfile, ocmLedger.length, ledger.length]);
-
-  // v.25 — Covered call identifier: for LONG positions underwater past threshold,
-  // fetch option chain + find Delta ~0.25 call. Refresh every 10 minutes per ticker.
-  useEffect(() => {
-    if (!polygonKey || !loggedIn) return;
-    let cancelled = false;
-    const CC_THRESHOLD_PCT = -2.0;  // start looking at -2% unrealized
-    const CC_REFRESH_MS = 10 * 60 * 1000;
-    const checkCoveredCalls = async () => {
-      const opens = ledger.filter(t => t.status === "open" && t.dir === 1);
-      const liveP = (livePricesMapRef.current || {});
-      const updates = {};
-      for (const t of opens) {
-        const px = liveP[t.ticker];
-        if (!px) continue;
-        const unrealPct = ((px - t.entryPrice) / t.entryPrice) * 100;
-        if (unrealPct > CC_THRESHOLD_PCT) continue;  // not underwater enough yet
-        const cached = coveredCalls[t.ticker];
-        if (cached && (Date.now() - cached.fetchedAt) < CC_REFRESH_MS) continue;
-        try {
-          const chain = await fetchOptionsChainSnapshot(t.ticker, polygonKey);
-          if (cancelled || !chain) continue;
-          const cc = findDelta25Call(chain, 7);
-          if (cc) {
-            updates[t.ticker] = { ...cc, fetchedAt: Date.now(), underlyingPx: px, unrealPct };
-            console.log("[v.25] " + t.ticker + " covered call candidate: " + cc.daysOut + "d $" + cc.strike + " delta " + cc.delta.toFixed(2) + " premium $" + cc.premium.toFixed(2));
-          }
-        } catch (e) { /* skip */ }
-      }
-      if (!cancelled && Object.keys(updates).length > 0) {
-        setCoveredCalls(prev => ({ ...prev, ...updates }));
-      }
-    };
-    checkCoveredCalls();
-    const iv = setInterval(checkCoveredCalls, 5 * 60 * 1000);  // poll every 5 min
-    return () => { cancelled = true; clearInterval(iv); };
-  }, [polygonKey, loggedIn, ledger]);
-
   // v.24.3: merged live macro tiles map: heartbeat ETFs + treasury yields
   const liveMacroMap = useMemo(() => {
     const m = { ...(liveHeartbeat || {}) };
@@ -4671,9 +3883,6 @@ function MTSApp() {
     return m;
   }, [liveHeartbeat, treasuryYields]);
 
-  // v.25 — ref to expose latest livePricesMap to covered call effect without re-running it
-  const livePricesMapRef = useRef({});
-
   // v.24.1: live prices map for unrealized P/L on open positions
   const livePricesMap = useMemo(() => {
     const m = {};
@@ -4685,7 +3894,9 @@ function MTSApp() {
     return m;
   }, [liveData, multiTickerEngine]);
 
-  // v.25 — keep ref in sync
+  // v.25 — ref to expose latest livePricesMap to covered call effect
+  const livePricesMapRef = useRef({});
+
   useEffect(() => { livePricesMapRef.current = livePricesMap; }, [livePricesMap]);
 
   // v.24.3 — Live account stats computed from paper ledger
@@ -4725,7 +3936,7 @@ function MTSApp() {
     document.body.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  const activeCount = ledger.filter(t => t.status === "open").length + ocmLedger.filter(t => t.status === "open").length;  // v.26: ECM + OCM
+  const activeCount = ledger.filter(t => t.status === "open").length;  // v.24.3
   const addCustomTicker = (sym) => {
     setUniverse(u => {
       if (u.find(t => t.sym === sym)) return u;
@@ -4742,7 +3953,7 @@ function MTSApp() {
 
   return (
     <div style={{ backgroundColor: C.bg, color: C.text }} className="min-h-screen font-sans">
-      {false && <MarketHeartbeat account={accountStats} liveHeartbeat={liveMacroMap} />}
+      {showMacro && <MarketHeartbeat account={accountStats} liveHeartbeat={liveMacroMap} />}
       <div className={`max-w-md mx-auto px-3 py-3 ${showTabs ? "pb-20" : "pb-4"}`}>
         {view === "scanner" && <Scanner universe={universeForUI} positions={positions} onSelect={(sym) => handleSelect(sym, "scanner")} />}
         {view === "active" && <Active universe={enrichedUniverse} positions={positions} onSelect={(sym) => handleSelect(sym, "active")} />}
@@ -4757,11 +3968,6 @@ function MTSApp() {
           polygonKey={polygonKey} onSetPolygonKey={updatePolygonKey}
           paperAccount={paperAccount} onResetAccount={resetPaperAccount}
           sessions={sessions} onNewSession={() => setOverlay("session-create")}
-          onHardReset={() => {
-            try { Object.keys(STORAGE).forEach(k => localStorage.removeItem(STORAGE[k])); } catch (e) {}
-            try { localStorage.removeItem("mts-v21-avgvol-cache"); } catch (e) {}
-            window.location.reload();
-          }}
           onDeleteSession={(id) => {
             const next = sessions.filter(s => s.id !== id);
             setSessions(next);
@@ -4775,7 +3981,6 @@ function MTSApp() {
           livePrices={livePricesMap}
           coveredCalls={coveredCalls}
           multiTickerEngine={multiTickerEngine}
-          ecmAccount={ecmAccount} ocmAccount={ocmAccount} ocmLedger={ocmLedger} orbCache={orbCache}
         />}
         {view === "deck" && <Deck ticker={selected} universe={enrichedUniverse} positions={positions} setPositions={setPositions} fills={fills} setFills={setFills} onBack={() => setView(returnTo)} />}
       </div>
