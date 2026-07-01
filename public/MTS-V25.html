@@ -2097,8 +2097,7 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       </div>
 
       {/* v.19 — Risk Profile */}
-      <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em] font-mono font-bold flex items-center gap-1.5 mt-1"><Shield size={10} color={C.muted}/> RISK PROFILE</div>
-      <RiskProfileCard profile={riskProfile} onRetake={onRetakeRisk} />
+
 
       {/* v.19 — Paper Account */}
       <PaperAccountCard account={paperAccount} onReset={onResetAccount} />
@@ -3899,7 +3898,7 @@ function MTSApp() {
 
   return (
     <div style={{ backgroundColor: C.bg, color: C.text }} className="min-h-screen font-sans">
-      {showMacro && <MarketHeartbeat account={accountStats} liveHeartbeat={liveMacroMap} />}
+      {false && showMacro && <MarketHeartbeat account={accountStats} liveHeartbeat={liveMacroMap} />}
       <div className={`max-w-md mx-auto px-3 py-3 ${showTabs ? "pb-20" : "pb-4"}`}>
         {view === "scanner" && <Scanner universe={universeForUI} positions={positions} onSelect={(sym) => handleSelect(sym, "scanner")} />}
         {view === "active" && <Active universe={enrichedUniverse} positions={positions} onSelect={(sym) => handleSelect(sym, "active")} />}
