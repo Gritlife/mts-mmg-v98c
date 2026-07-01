@@ -543,6 +543,15 @@ function processEngineSignals({ ticker, engine, bars, atr, ledger, execState, ac
   const activeSession = activeSessionForToday(sessions);
   const tickerState = newExecState[ticker] || { lastExecutedKey: null, lastExitTime: null };
 
+  // v.25.1 — signal-replay guard: if no lastExecutedKey, prime with the most recent
+  // signal so we don't replay history and don't flip ledger state on every poll.
+  // Future signals AFTER this prime point will fire normally.
+  if (!tickerState.lastExecutedKey && engine.signalHistory.length > 0) {
+    const last = engine.signalHistory[engine.signalHistory.length - 1];
+    tickerState.lastExecutedKey = signalKey(ticker, last);
+    newExecState[ticker] = tickerState;
+    return { newLedger, newExecState, newAccount, fills };
+  }
   for (const sig of engine.signalHistory) {
     const key = signalKey(ticker, sig);
     const lastKey = tickerState.lastExecutedKey;
