@@ -825,59 +825,7 @@ function computeTrendGate(hourlyBars, dailyBars) {
   return { state, hBullish, dBullish, ema21h: ema21, sma200d: sma200, last1H, lastD };
 }
 
-// ============================================================================
-// v.25 — Massive Options Chain + Covered Call Identifier (Delta ~0.25)
-// ============================================================================
-async function fetchOptionsChainSnapshot(underlying, apiKey) {
-  const url = `https://api.massive.com/v3/snapshot/options/${underlying}?limit=250&apiKey=${apiKey}`;
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    const j = await resp.json();
-    return j.results || [];
-  } catch (e) {
-    return null;
-  }
-}
 
-function findDelta25Call(chain, targetDaysOut = 7) {
-  if (!chain || chain.length === 0) return null;
-  const todayMs = Date.now();
-  const calls = chain.filter(o =>
-    o.details && o.details.contract_type === "call" &&
-    o.greeks && typeof o.greeks.delta === "number" &&
-    o.day && typeof o.day.close === "number"
-  );
-  if (calls.length === 0) return null;
-  const byExp = {};
-  for (const c of calls) {
-    const e = c.details.expiration_date;
-    if (!byExp[e]) byExp[e] = [];
-    byExp[e].push(c);
-  }
-  let bestExp = null, bestDiff = Infinity;
-  for (const e of Object.keys(byExp)) {
-    const days = (new Date(e + "T16:00:00-04:00").getTime() - todayMs) / 86400000;
-    if (days < 1) continue;
-    const diff = Math.abs(days - targetDaysOut);
-    if (diff < bestDiff) { bestDiff = diff; bestExp = e; }
-  }
-  if (!bestExp) return null;
-  let best = null, bestDeltaDiff = Infinity;
-  for (const c of byExp[bestExp]) {
-    const dDiff = Math.abs(c.greeks.delta - 0.25);
-    if (dDiff < bestDeltaDiff) { bestDeltaDiff = dDiff; best = c; }
-  }
-  if (!best) return null;
-  return {
-    expiration: bestExp,
-    strike: best.details.strike_price,
-    delta: best.greeks.delta,
-    premium: best.day.close,
-    impliedVol: best.implied_volatility,
-    daysOut: Math.round(bestDiff < Infinity ? ((new Date(bestExp + "T16:00:00-04:00").getTime() - todayMs) / 86400000) : 7),
-  };
-}
 
 // ============================================================================
 // v.22c.1 — Full MMG Engine State Walker (Liquidity + Train + ADD/TP)
@@ -1950,7 +1898,7 @@ function MarketHeartbeat({ account, liveHeartbeat }) {
             <div>
               <span style={{ color: C.muted }} className="text-[10px] tracking-[0.1em]">P/L </span>
               <span style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-[13px] font-mono font-bold">
-                {account.dayPnL >= 0 ? "+" : ""}${account.dayPnL} ({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)
+                {account.dayPnL >= 0 ? "+" : ""}${account.dayPnL.toFixed(2)} ({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)
               </span>
             </div>
           </div>
@@ -2028,7 +1976,7 @@ function LoginPage({ onLogin }) {
 // ============================================================================
 // AccountSummary — with dark mode toggle
 // ============================================================================
-function AccountSummary({ account, positions, universe, darkMode, setDarkMode, onLogout, onSelect, riskProfile, onRetakeRisk, polygonKey, onSetPolygonKey, paperAccount, onResetAccount, sessions, onNewSession, onDeleteSession, liveData, scannerStatus, topRVOL, ledger, onResetLedger, showDiagnostics, onToggleDiagnostics, livePrices, coveredCalls, multiTickerEngine }) {
+function AccountSummary({ account, positions, universe, darkMode, setDarkMode, onLogout, onSelect, riskProfile, onRetakeRisk, polygonKey, onSetPolygonKey, paperAccount, onResetAccount, sessions, onNewSession, onDeleteSession, liveData, scannerStatus, topRVOL, ledger, onResetLedger, showDiagnostics, onToggleDiagnostics, livePrices, multiTickerEngine }) {
   // v.24.3 — Open positions sourced from live account stats (ledger-derived)
   const openPositions = (account.openPositions || []).map(p => ({
     sym: p.sym, side: p.side, pnl: p.pnl,
@@ -2047,17 +1995,17 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       <div className="grid grid-cols-2 gap-2">
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">EQUITY</div>
-          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.equity.toLocaleString()}</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.equity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2.5">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">BUYING POWER</div>
-          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.buyingPower.toLocaleString()}</div>
+          <div style={{ color: C.text }} className="text-base font-mono font-bold mt-0.5">${account.buyingPower.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
       </div>
       <div style={{ backgroundColor: C.surface, borderColor: account.dayPnL >= 0 ? C.long : C.short }} className="border-2 rounded-xl p-2.5">
         <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">TODAY'S P/L</div>
         <div className="flex items-baseline gap-2 mt-0.5">
-          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-xl font-mono font-bold">{account.dayPnL >= 0 ? "+" : ""}${account.dayPnL}</div>
+          <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-xl font-mono font-bold">{account.dayPnL >= 0 ? "+" : ""}${account.dayPnL.toFixed(2)}</div>
           <div style={{ color: account.dayPnL >= 0 ? C.long : C.short }} className="text-sm font-mono">({account.dayPnL >= 0 ? "+" : ""}{account.dayPnLPct.toFixed(2)}%)</div>
           <div style={{ color: C.dim }} className="text-[12px] font-mono ml-auto">{account.tradesToday} trades</div>
         </div>
@@ -2079,11 +2027,11 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
       <div className="grid grid-cols-2 gap-2">
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">WEEK</div>
-          <div style={{ color: account.weekPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.weekPnL >= 0 ? "+" : ""}${account.weekPnL} ({account.weekPnLPct.toFixed(2)}%)</div>
+          <div style={{ color: account.weekPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.weekPnL >= 0 ? "+" : ""}${account.weekPnL.toFixed(2)} ({account.weekPnLPct.toFixed(2)}%)</div>
         </div>
         <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
           <div style={{ color: C.muted }} className="text-[11px] tracking-[0.15em]">MONTH</div>
-          <div style={{ color: account.monthPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.monthPnL >= 0 ? "+" : ""}${account.monthPnL} ({account.monthPnLPct.toFixed(2)}%)</div>
+          <div style={{ color: account.monthPnL >= 0 ? C.long : C.short }} className="text-xs font-mono font-bold">{account.monthPnL >= 0 ? "+" : ""}${account.monthPnL.toFixed(2)} ({account.monthPnLPct.toFixed(2)}%)</div>
         </div>
       </div>
       <div style={{ backgroundColor: C.surface, borderColor: C.border }} className="border rounded-xl p-2">
@@ -2106,7 +2054,7 @@ function AccountSummary({ account, positions, universe, darkMode, setDarkMode, o
 
       {/* v.19 — Paper Account */}
       <PaperAccountCard account={paperAccount} onReset={onResetAccount} />
-      <PaperLedger ledger={ledger} onReset={onResetLedger} livePrices={livePrices} coveredCalls={coveredCalls} multiTickerEngine={multiTickerEngine} />
+      <PaperLedger ledger={ledger} onReset={onResetLedger} livePrices={livePrices} multiTickerEngine={multiTickerEngine} />
 
       {/* v.19 — Polygon Key */}
       <PolygonKeyField value={polygonKey} onChange={onSetPolygonKey} />
@@ -2713,7 +2661,7 @@ function BottomTabBar({ view, setView, activeCount }) {
 // ============================================================================
 // v.22c.2 — PaperLedger card (executed trades from auto-loop)
 // ============================================================================
-function PaperLedger({ ledger, onReset, livePrices, coveredCalls, multiTickerEngine }) {
+function PaperLedger({ ledger, onReset, livePrices, multiTickerEngine }) {
   const open = ledger.filter(t => t.status === "open");
   const closed = ledger.filter(t => t.status === "closed");
   const totalRealized = closed.reduce((s, t) => s + (t.realizedPnL || 0), 0);
@@ -2826,15 +2774,6 @@ function PaperLedger({ ledger, onReset, livePrices, coveredCalls, multiTickerEng
                     </span>
                   )}
                 </div>
-                {t.dir === 1 && coveredCalls && coveredCalls[t.ticker] && (
-                  <div className="mt-1 px-2 py-1 rounded" style={{ backgroundColor: C.track }}>
-                    <div style={{ color: C.tp }} className="text-[10px] font-mono font-bold">COVERED CALL</div>
-                    <div style={{ color: C.text }} className="text-[10px] font-mono">
-                      {coveredCalls[t.ticker].daysOut}d · ${coveredCalls[t.ticker].strike.toFixed(0)} call · Δ {coveredCalls[t.ticker].delta.toFixed(2)} · premium ${coveredCalls[t.ticker].premium.toFixed(2)}
-                    </div>
-                    <div style={{ color: C.dim }} className="text-[9px] font-mono">exp {coveredCalls[t.ticker].expiration}</div>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -3624,8 +3563,6 @@ function MTSApp() {
 
   // v.25 — trend gate cache (refs so we don't trigger re-renders on cache fill)
   const trendCacheRef = useRef({});
-  // v.25 — covered call candidates per ticker
-  const [coveredCalls, setCoveredCalls] = useState({});
 
   // v.21 — Top-20 RVOL scanner
   const [topRVOL, setTopRVOL] = useState([]);
@@ -3771,41 +3708,6 @@ function MTSApp() {
     return () => { cancelled = true; clearInterval(iv2); };
   }, [polygonKey, loggedIn, riskProfile, topRVOL.map(t => t.sym).join(",")]);
 
-  // v.25 — Covered call identifier: for LONG positions underwater past threshold
-  useEffect(() => {
-    if (!polygonKey || !loggedIn) return;
-    let cancelled = false;
-    const CC_THRESHOLD_PCT = -2.0;
-    const CC_REFRESH_MS = 10 * 60 * 1000;
-    const checkCoveredCalls = async () => {
-      const opens = ledger.filter(t => t.status === "open" && t.dir === 1);
-      const liveP = (livePricesMapRef.current || {});
-      const updates = {};
-      for (const t of opens) {
-        const px = liveP[t.ticker];
-        if (!px) continue;
-        const unrealPct = ((px - t.entryPrice) / t.entryPrice) * 100;
-        if (unrealPct > CC_THRESHOLD_PCT) continue;
-        const cached = coveredCalls[t.ticker];
-        if (cached && (Date.now() - cached.fetchedAt) < CC_REFRESH_MS) continue;
-        try {
-          const chain = await fetchOptionsChainSnapshot(t.ticker, polygonKey);
-          if (cancelled || !chain) continue;
-          const cc = findDelta25Call(chain, 7);
-          if (cc) {
-            updates[t.ticker] = { ...cc, fetchedAt: Date.now(), underlyingPx: px, unrealPct };
-            console.log("[v.25] " + t.ticker + " covered call: " + cc.daysOut + "d $" + cc.strike + " Δ" + cc.delta.toFixed(2) + " premium $" + cc.premium.toFixed(2));
-          }
-        } catch (e) {}
-      }
-      if (!cancelled && Object.keys(updates).length > 0) {
-        setCoveredCalls(prev => ({ ...prev, ...updates }));
-      }
-    };
-    checkCoveredCalls();
-    const iv = setInterval(checkCoveredCalls, 5 * 60 * 1000);
-    return () => { cancelled = true; clearInterval(iv); };
-  }, [polygonKey, loggedIn, ledger]);
 
   // v.23 — Multi-ticker engine + execution for top-20 RVOL tickers
   useEffect(() => {
@@ -3894,10 +3796,6 @@ function MTSApp() {
     return m;
   }, [liveData, multiTickerEngine]);
 
-  // v.25 — ref to expose latest livePricesMap to covered call effect
-  const livePricesMapRef = useRef({});
-
-  useEffect(() => { livePricesMapRef.current = livePricesMap; }, [livePricesMap]);
 
   // v.24.3 — Live account stats computed from paper ledger
   const accountStats = useMemo(
@@ -3979,7 +3877,6 @@ function MTSApp() {
           ledger={ledger} onResetLedger={() => { setLedger([]); setExecState({}); saveJSON(STORAGE.LEDGER, []); saveJSON(STORAGE.EXEC_STATE, {}); }}
           showDiagnostics={showDiagnostics} onToggleDiagnostics={toggleDiagnostics}
           livePrices={livePricesMap}
-          coveredCalls={coveredCalls}
           multiTickerEngine={multiTickerEngine}
         />}
         {view === "deck" && <Deck ticker={selected} universe={enrichedUniverse} positions={positions} setPositions={setPositions} fills={fills} setFills={setFills} onBack={() => setView(returnTo)} />}
